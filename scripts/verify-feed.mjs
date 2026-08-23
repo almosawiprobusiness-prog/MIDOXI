@@ -75,6 +75,15 @@ const rest = (path, headers = svc, init = {}) =>
 console.log("\ncolumns and tables 0023 adds\n");
 
 for (const [table, columns] of [
+  // 0003's, which had never actually been run — the community worked in demo
+  // mode and nowhere else. Pinned here so that cannot happen quietly again.
+  ["community_posts", "id, user_id, author_name, author_handle, author_position, author_avatar, title, body, clip_title, clip_start, clip_tags, clip_sentiment, video_source, video_external_id, tags, created_at"],
+  ["post_comments", "id, post_id, user_id, author_name, author_handle, body, created_at"],
+  ["post_reactions", "post_id, user_id, created_at"],
+  // `handle` is the one the feed cannot work without: it is how
+  // /app/community/[handle] resolves a profile.
+  ["player_profiles", "user_id, handle, play_style, favorite_players, strengths, achievements, socials"],
+  // 0023's own.
   ["community_posts", "id, user_id, caption, media_url, media_kind, media_width, media_height, visibility, created_at"],
   ["follows", "follower_id, following_id, created_at"],
   ["user_blocks", "blocker_id, blocked_id, created_at"],
@@ -91,13 +100,29 @@ for (const [table, columns] of [
   is the one the INSERT hits.
 */
 if (PROBE) {
-  const anyUser = await rest("community_posts?select=user_id&limit=1");
-  const [row] = anyUser.ok ? await anyUser.json() : [];
-  if (row?.user_id) {
+  /*
+    Needs a real user id to hang a post off. The obvious source is an existing
+    post — and the first version of this stopped there, which meant that on a
+    database with no posts yet (that is, every database on the day 0023 lands)
+    both checks below quietly did not run and the script still printed a pass.
+    That is the failure this whole file exists to catch, reproduced inside the
+    file itself. So: fall back to any account, and if there is genuinely no
+    account at all, SAY so rather than skipping in silence.
+  */
+  let uid = null;
+  const anyPost = await rest("community_posts?select=user_id&limit=1");
+  if (anyPost.ok) uid = (await anyPost.json())[0]?.user_id ?? null;
+  if (!uid) {
+    const users = await fetch(`${url}/auth/v1/admin/users?per_page=1`, { headers: svc });
+    if (users.ok) uid = ((await users.json()).users ?? [])[0]?.id ?? null;
+  }
+  if (!uid) bad("the post constraints", "no account exists to test with — checks SKIPPED, not passed");
+
+  if (uid) {
     const res = await rest("community_posts", svc, {
       method: "POST",
       headers: { "content-type": "application/json", prefer: "return=representation" },
-      body: JSON.stringify({ user_id: row.user_id, caption: "verify-feed probe", visibility: "public" }),
+      body: JSON.stringify({ user_id: uid, caption: "verify-feed probe", visibility: "public" }),
     });
     if (res.ok) {
       const [made] = await res.json();
@@ -110,8 +135,8 @@ if (PROBE) {
     // And the floor under it: a row that is nothing at all must be refused.
     const empty = await rest("community_posts", svc, {
       method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ user_id: row.user_id, caption: "   " }),
+      headers: { "content-type": "application/json", prefer: "return=representation" },
+      body: JSON.stringify({ user_id: uid, caption: "   " }),
     });
     if (empty.ok) {
       const made = await empty.json();
@@ -125,8 +150,14 @@ if (PROBE) {
 // ── 2 · the grant ────────────────────────────────────────────
 console.log("\nthe anon key must be refused by all three\n");
 
+/*
+  Six, not three. 0003's tables were never granted or revoked at all, so they
+  inherited Supabase's default grant to anon and were held back only by RLS
+  having no policy that matched an anonymous request — one policy edit away
+  from a leak. 0023 closes them at the grant, and this is where that is proven.
+*/
 const anon = { apikey: anonKey, authorization: `Bearer ${anonKey}` };
-for (const table of ["follows", "user_blocks", "post_reports"]) {
+for (const table of ["community_posts", "post_comments", "post_reactions", "follows", "user_blocks", "post_reports"]) {
   const res = await rest(`${table}?select=*&limit=1`, anon);
   if (res.ok) {
     const rows = await res.json();

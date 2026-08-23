@@ -56,19 +56,27 @@ create table if not exists post_reactions (
 );
 
 -- ---- RLS ----
+-- Each policy is dropped first so this file can be replayed; the
+-- first version could only ever be run once.
 alter table community_posts enable row level security;
 alter table post_comments enable row level security;
 alter table post_reactions enable row level security;
 
 -- The community is visible to any signed-in user; only owners write.
+drop policy if exists posts_read on community_posts;
 create policy posts_read on community_posts for select to authenticated using (true);
+drop policy if exists posts_owner on community_posts;
 create policy posts_owner on community_posts for all to authenticated
   using (user_id = auth.uid()) with check (user_id = auth.uid());
 
+drop policy if exists comments_read on post_comments;
 create policy comments_read on post_comments for select to authenticated using (true);
+drop policy if exists comments_owner on post_comments;
 create policy comments_owner on post_comments for all to authenticated
   using (user_id = auth.uid()) with check (user_id = auth.uid());
 
+drop policy if exists reactions_read on post_reactions;
 create policy reactions_read on post_reactions for select to authenticated using (true);
+drop policy if exists reactions_owner on post_reactions;
 create policy reactions_owner on post_reactions for all to authenticated
   using (user_id = auth.uid()) with check (user_id = auth.uid());

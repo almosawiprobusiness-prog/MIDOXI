@@ -17,7 +17,117 @@
 -- mechanism costs nothing today; retrofitting it would cost a lot.
 --
 -- Safe to re-run.
+--
+-- ── WHY THIS MIGRATION CREATES TABLES 0003 ALREADY DECLARES ──
+--
+-- The first version of this file opened with `alter table
+-- community_posts` and failed: relation does not exist. 0003 was
+-- never run against this database. The community section has only
+-- ever worked in demo mode, which is why nobody noticed — demo
+-- mode serves an in-memory store and never touches Postgres, so
+-- every route rendered fine and every test passed while the three
+-- tables underneath them did not exist.
+--
+-- An audit of all 77 relations the migration history declares
+-- found 0003 to be the only gap; the rest of the history is
+-- present. So section 0 creates exactly what 0003 creates, in the
+-- shape 0003 creates it. On a database where 0003 DID run, every
+-- statement in section 0 is a no-op and the shape is unchanged.
+--
+-- The three things 0003 got wrong are fixed here rather than left
+-- for whoever sets up the next environment: its policies used a
+-- bare `create policy` and so could not be re-run, it never
+-- revoked anon (Supabase grants the public schema to anon by
+-- default, so the grant was open and only RLS stood in the way),
+-- and it never granted `authenticated` explicitly.
 -- ============================================================
+
+-- ── 0 · what 0003 should have left behind ────────────────────
+
+-- The public half of a profile. `handle` is the one the feed
+-- cannot work without: it is how /app/community/[handle] resolves.
+alter table player_profiles
+  add column if not exists handle text unique,
+  add column if not exists play_style text,
+  add column if not exists favorite_players text[],
+  add column if not exists strengths text[],
+  add column if not exists achievements text,
+  add column if not exists socials jsonb not null default '{}'::jsonb;
+
+/*
+  Posts.
+
+  Created NULLABLE in `title` and `body` where 0003 had them NOT
+  NULL, because section 1 drops those constraints two dozen lines
+  below and creating them only to drop them reads like a mistake.
+  On a database where 0003 ran, the drop below does the same job.
+
+  The denormalised author and clip columns are 0003's and are kept:
+  the feed still selects them, and a shared clip renders from them
+  without exposing the private tables it came from.
+*/
+create table if not exists community_posts (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  author_name text,
+  author_handle text,
+  author_position text,
+  author_avatar text,
+  title text,
+  body text,
+  clip_id uuid references clips(id) on delete set null,
+  clip_title text,
+  clip_start numeric,
+  clip_tags text[],
+  clip_sentiment text,
+  video_source text,        -- 'youtube' | 'url' | 'upload'
+  video_external_id text,   -- youtube id, for public embed
+  tags text[],
+  created_at timestamptz not null default now()
+);
+create index if not exists community_posts_recent on community_posts (created_at desc);
+
+create table if not exists post_comments (
+  id uuid primary key default gen_random_uuid(),
+  post_id uuid not null references community_posts(id) on delete cascade,
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  author_name text,
+  author_handle text,
+  body text not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists post_comments_thread on post_comments (post_id, created_at);
+
+create table if not exists post_reactions (
+  post_id uuid not null references community_posts(id) on delete cascade,
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (post_id, user_id)
+);
+
+alter table community_posts enable row level security;
+alter table post_comments  enable row level security;
+alter table post_reactions enable row level security;
+
+-- Visible to any signed-in user; only owners write. Dropped first
+-- so this file can be run twice, which 0003 could not be.
+drop policy if exists posts_read on community_posts;
+create policy posts_read on community_posts for select to authenticated using (true);
+drop policy if exists posts_owner on community_posts;
+create policy posts_owner on community_posts for all to authenticated
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+drop policy if exists comments_read on post_comments;
+create policy comments_read on post_comments for select to authenticated using (true);
+drop policy if exists comments_owner on post_comments;
+create policy comments_owner on post_comments for all to authenticated
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+drop policy if exists reactions_read on post_reactions;
+create policy reactions_read on post_reactions for select to authenticated using (true);
+drop policy if exists reactions_owner on post_reactions;
+create policy reactions_owner on post_reactions for all to authenticated
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 -- ── 1 · posts become media-first ─────────────────────────────
 
@@ -185,6 +295,26 @@ revoke all on post_reports from anon; revoke all on post_reports from public;
 grant select, insert, delete on follows      to authenticated;
 grant select, insert, delete on user_blocks  to authenticated;
 grant select, insert         on post_reports to authenticated;
+
+/*
+  And 0003's three tables, which it never granted or revoked at all.
+
+  Supabase grants the public schema to `anon` by default, so these
+  have been sitting open to the anon key since the day 0003 was
+  written — reachable, and held back only by RLS having no policy
+  that matches an anonymous request. That is one policy edit away
+  from being a leak, and it is not the guarantee the rest of this
+  schema is built on. Closed properly now: anon is refused at the
+  grant, and `authenticated` is named explicitly rather than
+  relying on a default privilege nobody wrote down.
+*/
+revoke all on community_posts from anon; revoke all on community_posts from public;
+revoke all on post_comments   from anon; revoke all on post_comments   from public;
+revoke all on post_reactions  from anon; revoke all on post_reactions  from public;
+
+grant select, insert, update, delete on community_posts to authenticated;
+grant select, insert, update, delete on post_comments   to authenticated;
+grant select, insert,         delete on post_reactions  to authenticated;
 
 comment on table follows is
   'Who follows whom. Public to read (a follower count needs that), writable only by the follower.';
