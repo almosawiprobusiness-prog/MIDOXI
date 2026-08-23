@@ -1,10 +1,22 @@
+/*
+  Shapes the DEMO STORE still speaks.
+
+  The community became a feed, and the live product reads `feed-types.ts` and
+  `feed.ts` for everything. This file is what is left: the demo store keeps an
+  in-memory copy of posts and comments so demo mode has something to render,
+  and it was written against these names.
+
+  Nothing in the real product imports this. If the demo store is ever rewritten
+  against `Post` from `feed-types.ts`, this file goes with it.
+*/
+
 export interface PostClip {
   title: string;
   start: number;
   tags: string[];
   sentiment: string | null;
-  videoSource: string | null;       // 'youtube' | 'url' | 'upload'
-  videoExternalId: string | null;   // youtube id for embed
+  videoSource: string | null;
+  videoExternalId: string | null;
 }
 
 export interface FeedPost {
@@ -32,28 +44,4 @@ export interface PostComment {
   authorHandle: string | null;
   body: string;
   createdAt: string;
-}
-
-export interface PostDetail {
-  post: FeedPost;
-  comments: PostComment[];
-}
-
-export interface PostInput {
-  title: string;
-  body: string;
-  clipId?: string | null;
-  tags?: string[];
-}
-
-export function timeAgo(iso: string): string {
-  const s = Math.max(1, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h`;
-  const d = Math.floor(h / 24);
-  if (d < 7) return `${d}d`;
-  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
