@@ -1,0 +1,50 @@
+{
+  "name": "mido-xi",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "smoke": "node scripts/smoke.mjs",
+    "dev:demo": "node scripts/dev-demo.mjs",
+    "verify:schema": "node scripts/verify-schema.mjs",
+    "verify:security": "node scripts/verify-security.mjs",
+    "verify:columns": "node scripts/verify-columns.mjs",
+    "verify:redirect": "node scripts/verify-redirect.mjs https://mido-xi.vercel.app",
+    "founding50": "node scripts/create-founding-coupon.mjs",
+    "coupons": "node scripts/audit-coupons.mjs",
+    "verify:db": "node scripts/verify-schema.mjs && node scripts/verify-columns.mjs && node scripts/verify-security.mjs && node scripts/verify-timeline.mjs",
+    "verify:timeline": "node scripts/verify-timeline.mjs",
+    "verify:gemini": "node scripts/verify-gemini.mjs",
+    "try:film": "node scripts/try-film-read.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.116.0",
+    "@supabase/ssr": "^0.12.4",
+    "@supabase/supabase-js": "^2.112.2",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.31.0",
+    "motion": "^13.0.0",
+    "next": "16.3.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "stripe": "^22.4.0",
+    "tailwind-merge": "^3.6.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.0",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "vitest": "^4.1.10"
+  }
+}

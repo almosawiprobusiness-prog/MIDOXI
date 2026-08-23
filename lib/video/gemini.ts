@@ -1,0 +1,398 @@
+import "server-only";
+import { env } from "@/lib/env";
+
+/*
+  ============================================================
+  GEMINI — the only model family that reads video natively
+  ------------------------------------------------------------
+  Claude reads images. It does not read video, and MIDO's frame
+  reader exists because of that: twelve stills over a few seconds,
+  described honestly as stills.
+
+  Reading the clip itself is a different capability, and today it
+  needs a different provider. This is a small REST client for it —
+  no SDK, because the surface used here is three endpoints and a
+  dependency is not worth it.
+
+    upload      resumable upload of a video file
+    waitReady   files are PROCESSING before they are ACTIVE
+    generate    generateContent with a JSON response schema
+
+  Nothing in here decides anything about football. It moves bytes
+  and returns tokens. The judgement lives in native-video.ts.
+  ============================================================
+*/
+
+const BASE = "https://generativelanguage.googleapis.com";
+
+/**
+ * The model id is configurable because model names move faster than
+ * deployments do. The default is the current general Flash model; a deployment
+ * that wants the cheaper lite variant sets GEMINI_VIDEO_MODEL and the provider
+ * reports whichever it actually used.
+ */
+export const VIDEO_MODEL = env.geminiVideoModel || "gemini-3.6-flash";
+
+/**
+ * Uploaded sources are fetched by the server and forwarded. That is fine for a
+ * clip and impossible for a full match: a 4.5GB file will not move through a
+ * request-scoped function, and pretending otherwise would mean a spinner that
+ * never resolves. Above this, the provider says exactly what to do instead.
+ */
+export const MAX_SOURCE_BYTES = 200 * 1024 * 1024;
+
+/** Files the API holds expire on their side. Re-upload before we get close. */
+export const FILE_TTL_HOURS = 47;
+
+export function geminiConfigured(): boolean {
+  return Boolean(env.geminiKey);
+}
+
+function headers(extra: Record<string, string> = {}): Record<string, string> {
+  return { "x-goog-api-key": env.geminiKey, ...extra };
+}
+
+export interface GeminiFile {
+  /** `files/abc123` — the handle, not a URL. */
+  name: string;
+  /** The URI a generateContent part refers to. */
+  uri: string;
+  mimeType: string;
+  state: "PROCESSING" | "ACTIVE" | "FAILED";
+  sizeBytes?: number;
+}
+
+export type GeminiOutcome<T> = { ok: true; value: T } | { ok: false; error: string };
+
+// ---------------------------------------------------------------------------
+// Upload
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch a video from `sourceUrl` and hand it to the Files API.
+ *
+ * The body is streamed straight through rather than buffered — a 200MB
+ * Buffer in a request-scoped function is how a deploy runs out of memory
+ * under two concurrent users.
+ */
+export async function uploadFromUrl(
+  sourceUrl: string,
+  displayName: string,
+): Promise<GeminiOutcome<GeminiFile>> {
+  if (!geminiConfigured()) return { ok: false, error: "Video model is not configured." };
+
+  let source: Response;
+  try {
+    source = await fetch(sourceUrl);
+  } catch {
+    return { ok: false, error: "The video could not be read from storage." };
+  }
+  if (!source.ok || !source.body) {
+    return { ok: false, error: `The video could not be read from storage (${source.status}).` };
+  }
+
+  const length = Number(source.headers.get("content-length") ?? 0);
+  const mimeType = source.headers.get("content-type") || "video/mp4";
+
+  if (!length) {
+    // Without a length there is no resumable upload, and no way to check the
+    // size before committing to it. Refuse rather than stream blind.
+    source.body.cancel();
+    return { ok: false, error: "The video source did not report its size, so it cannot be uploaded." };
+  }
+  if (length > MAX_SOURCE_BYTES) {
+    source.body.cancel();
+    return {
+      ok: false,
+      error: `That file is ${(length / 1024 / 1024).toFixed(0)}MB. Native video reading handles up to ${MAX_SOURCE_BYTES / 1024 / 1024}MB — trim the clip, or add the match as a link instead of an upload.`,
+    };
+  }
+
+  // 1 · open a resumable session
+  const start = await fetch(`${BASE}/upload/v1beta/files`, {
+    method: "POST",
+    headers: headers({
+      "X-Goog-Upload-Protocol": "resumable",
+      "X-Goog-Upload-Command": "start",
+      "X-Goog-Upload-Header-Content-Length": String(length),
+      "X-Goog-Upload-Header-Content-Type": mimeType,
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify({ file: { display_name: displayName.slice(0, 120) } }),
+  });
+  const uploadUrl = start.headers.get("x-goog-upload-url");
+  if (!start.ok || !uploadUrl) {
+    source.body.cancel();
+    return { ok: false, error: `Upload could not be started (${start.status}).` };
+  }
+
+  // 2 · send the bytes
+  const put = await fetch(uploadUrl, {
+    method: "POST",
+    headers: {
+      "Content-Length": String(length),
+      "X-Goog-Upload-Offset": "0",
+      "X-Goog-Upload-Command": "upload, finalize",
+    },
+    body: source.body,
+    // Required by undici whenever the body is a stream.
+    duplex: "half",
+  } as RequestInit & { duplex: "half" });
+
+  if (!put.ok) return { ok: false, error: `The upload did not complete (${put.status}).` };
+
+  const json = (await put.json()) as { file?: Record<string, unknown> };
+  const file = json.file;
+  if (!file?.uri) return { ok: false, error: "The upload completed but returned no file." };
+
+  return {
+    ok: true,
+    value: {
+      name: String(file.name ?? ""),
+      uri: String(file.uri),
+      mimeType: String(file.mimeType ?? mimeType),
+      state: (file.state as GeminiFile["state"]) ?? "PROCESSING",
+      sizeBytes: length,
+    },
+  };
+}
+
+/**
+ * A freshly uploaded video is PROCESSING, not ACTIVE. Referring to it too early
+ * fails with an unhelpful error, so wait — with a ceiling, because a file that
+ * never becomes ACTIVE has failed and the user needs to hear that rather than
+ * watch a spinner.
+ */
+export async function waitReady(name: string, timeoutMs = 90_000): Promise<GeminiOutcome<GeminiFile>> {
+  const deadline = Date.now() + timeoutMs;
+  let waitMs = 1000;
+
+  while (Date.now() < deadline) {
+    const res = await fetch(`${BASE}/v1beta/${name}`, { headers: headers() });
+    if (!res.ok) return { ok: false, error: `The video could not be checked (${res.status}).` };
+    const file = (await res.json()) as Record<string, unknown>;
+    const state = String(file.state ?? "PROCESSING") as GeminiFile["state"];
+
+    if (state === "ACTIVE") {
+      return {
+        ok: true,
+        value: {
+          name: String(file.name ?? name),
+          uri: String(file.uri ?? ""),
+          mimeType: String(file.mimeType ?? "video/mp4"),
+          state,
+          sizeBytes: Number(file.sizeBytes ?? 0) || undefined,
+        },
+      };
+    }
+    if (state === "FAILED") {
+      return { ok: false, error: "The video could not be processed. Try a different file or format." };
+    }
+
+    await new Promise((r) => setTimeout(r, waitMs));
+    waitMs = Math.min(waitMs * 1.5, 6000);
+  }
+  return { ok: false, error: "The video is still being processed. Try the analysis again shortly." };
+}
+
+// ---------------------------------------------------------------------------
+// Generate
+// ---------------------------------------------------------------------------
+
+export interface GeminiUsage {
+  input: number;
+  /**
+   * Visible output PLUS thinking.
+   *
+   * `gemini-3.6-flash` is a reasoning model: it spends tokens thinking before
+   * it answers, those tokens are billed as output, and they arrive in
+   * `thoughtsTokenCount` — which is NOT included in `candidatesTokenCount`.
+   * Recording only the visible count under-reports the bill by roughly 2x,
+   * measured, and under-reporting is the dangerous direction: the global spend
+   * ceiling reads this number.
+   */
+  output: number;
+  /** The thinking share, kept separately so the split stays visible. */
+  thoughts: number;
+}
+
+export interface VideoPart {
+  /** Either a Files API uri or, for YouTube, the watch URL itself. */
+  fileUri: string;
+  mimeType: string;
+  /** Whole seconds. Omit to read the entire video. */
+  startSeconds?: number;
+  endSeconds?: number;
+}
+
+export interface GenerateInput {
+  system: string;
+  prompt: string;
+  video: VideoPart;
+  /** OpenAPI-subset schema. Note: no `additionalProperties` — it is rejected. */
+  schema: Record<string, unknown>;
+  maxTokens?: number;
+}
+
+export interface GenerateResult<T> {
+  data: T;
+  usage: GeminiUsage;
+  model: string;
+  /** True when the range had to be dropped and stated in the prompt instead. */
+  rangeInPromptOnly: boolean;
+}
+
+function buildBody(input: GenerateInput, withRange: boolean): Record<string, unknown> {
+  const part: Record<string, unknown> = {
+    fileData: { fileUri: input.video.fileUri, mimeType: input.video.mimeType },
+  };
+  if (withRange && input.video.startSeconds !== undefined && input.video.endSeconds !== undefined) {
+    part.videoMetadata = {
+      startOffset: `${Math.floor(input.video.startSeconds)}s`,
+      endOffset: `${Math.ceil(input.video.endSeconds)}s`,
+    };
+  }
+  return {
+    systemInstruction: { parts: [{ text: input.system }] },
+    // The video goes first: the documented best practice is one video per
+    // request with the text after it.
+    contents: [{ role: "user", parts: [part, { text: input.prompt }] }],
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: input.schema,
+      // Measured on a six-observation read: ~1000 tokens of thinking and ~600
+      // visible. Thinking is charged against THIS ceiling, so a budget sized
+      // for the answer alone returns finishReason MAX_TOKENS with empty
+      // content — a film read that silently never arrives. Sized with room.
+      maxOutputTokens: input.maxTokens ?? 6000,
+      temperature: 0.3,
+    },
+  };
+}
+
+/**
+ * One generateContent call against a video.
+ *
+ * `videoMetadata` is how a request asks for a slice of a longer video rather
+ * than the whole thing, and it is the difference between reading 60 seconds and
+ * reading 90 minutes. It is sent first; if the API rejects the field, the call
+ * is retried once without it and the range is stated in the prompt in MM:SS
+ * instead — which the model handles, just less cheaply. The result reports
+ * which path it took, so a degraded read is never presented as a clean one.
+ */
+export async function generateFromVideo<T>(input: GenerateInput): Promise<GeminiOutcome<GenerateResult<T>>> {
+  if (!geminiConfigured()) return { ok: false, error: "Video model is not configured." };
+
+  const attempt = async (withRange: boolean) =>
+    fetch(`${BASE}/v1beta/models/${VIDEO_MODEL}:generateContent`, {
+      method: "POST",
+      headers: headers({ "Content-Type": "application/json" }),
+      body: JSON.stringify(buildBody(input, withRange)),
+    });
+
+  let rangeInPromptOnly = false;
+  let res = await attempt(true);
+
+  if (res.status === 400) {
+    const text = await res.text();
+    if (/videoMetadata|video_metadata|startOffset|start_offset|Unknown name/i.test(text)) {
+      rangeInPromptOnly = true;
+      res = await attempt(false);
+    } else {
+      return { ok: false, error: `The video read was rejected: ${text.slice(0, 300)}` };
+    }
+  }
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    if (res.status === 503) {
+      // Seen in practice: the model reports high demand and refuses. Nothing
+      // to do with the clip, and worth saying so rather than showing a raw
+      // upstream error to someone who just wanted their film read.
+      return {
+        ok: false,
+        error:
+          "The video model is busy right now and refused the request. Nothing was charged against your allowance — try again in a minute.",
+      };
+    }
+    if (res.status === 429) {
+      /*
+        Worth quoting the provider rather than guessing. The free tier caps
+        generateContent requests per window, and its 429 carries a real
+        `retryDelay` and says which quota was hit — "retry in a minute" is a
+        guess that is wrong whenever the cap is a daily one.
+      */
+      let text = "";
+      try {
+        text = await res.text();
+      } catch {
+        /* the status is the message */
+      }
+      const seconds = text.match(/retry in ([\d.]+)s/i)?.[1];
+      const daily = /per day|PerDay|free_tier_requests/i.test(text);
+      return {
+        ok: false,
+        error: daily
+          ? "The video model's request quota for this project is used up. Nothing was charged against your allowance."
+          : `The video model is rate limited right now${seconds ? ` — try again in about ${Math.ceil(Number(seconds))}s` : ""}. Nothing was charged against your allowance.`,
+      };
+    }
+    return { ok: false, error: `The video read failed (${res.status}). ${text.slice(0, 200)}` };
+  }
+
+  const json = (await res.json()) as {
+    candidates?: { content?: { parts?: { text?: string }[] }; finishReason?: string }[];
+    usageMetadata?: {
+      promptTokenCount?: number;
+      candidatesTokenCount?: number;
+      thoughtsTokenCount?: number;
+    };
+  };
+
+  const candidate = json.candidates?.[0];
+  const text = candidate?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
+  if (!text) {
+    return {
+      ok: false,
+      error:
+        candidate?.finishReason === "MAX_TOKENS"
+          ? "The read used its whole token budget before producing an answer. This is a limit on MIDO's side, not on your clip."
+          : "The video read came back empty.",
+    };
+  }
+
+  let data: T;
+  try {
+    data = JSON.parse(text) as T;
+  } catch {
+    return { ok: false, error: "The video read came back in a shape that could not be used." };
+  }
+
+  return {
+    ok: true,
+    value: {
+      data,
+      usage: {
+        input: json.usageMetadata?.promptTokenCount ?? 0,
+        // Thinking is billed as output. Sum it, or the meter lies.
+        output:
+          (json.usageMetadata?.candidatesTokenCount ?? 0) +
+          (json.usageMetadata?.thoughtsTokenCount ?? 0),
+        thoughts: json.usageMetadata?.thoughtsTokenCount ?? 0,
+      },
+      model: VIDEO_MODEL,
+      rangeInPromptOnly,
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Sources
+// ---------------------------------------------------------------------------
+
+const YOUTUBE = /^https?:\/\/(www\.|m\.)?(youtube\.com\/watch\?|youtu\.be\/|youtube\.com\/shorts\/)/i;
+
+/** YouTube URLs are passed straight through — no upload, no size ceiling. */
+export function isYouTube(url: string): boolean {
+  return YOUTUBE.test(url.trim());
+}

@@ -1,0 +1,479 @@
+@import "tailwindcss";
+
+/*
+  ============================================================
+  MIDO XI — DESIGN SYSTEM  ·  "THE FILM ROOM"
+  Dark-first. Cinematic. Editorial. Football-technical.
+  Base graphite + off-white + a single MIDO signal (violet).
+  Football semantics (positive / review / correction) live
+  only inside film, clip and performance contexts.
+  ============================================================
+*/
+
+:root {
+  /* Ink — the graphite canvas */
+  --ink-950: #08090b;
+  --ink-925: #0a0c0f;
+  --ink-900: #0d1014;
+  --ink-850: #111419;
+  --ink-800: #161a20;
+  --ink-750: #1b2028;
+  --ink-700: #222831;
+  --ink-650: #2b323d;
+  --ink-600: #363f4c;
+
+  /* Hairlines */
+  --line: rgba(255, 255, 255, 0.06);
+  --line-soft: rgba(255, 255, 255, 0.04);
+  --line-strong: rgba(255, 255, 255, 0.11);
+
+  /* Text */
+  --text-hi: #f3f5f8;
+  --text: #c4cbd4;
+  --text-dim: #838d99;
+  --text-faint: #565f6b;
+
+  /* MIDO signal — electric violet */
+  --signal: #7b61ff;
+  --signal-bright: #9d88ff;
+  --signal-deep: #5a3fe0;
+  --signal-wash: rgba(123, 97, 255, 0.13);
+  --signal-line: rgba(123, 97, 255, 0.32);
+
+  /* Football semantics — used sparingly, in-context only */
+  --positive: #57d996;
+  --positive-wash: rgba(87, 217, 150, 0.12);
+  --review: #e7a53c;
+  --review-wash: rgba(231, 165, 60, 0.12);
+  --correction: #f0655f;
+  --correction-wash: rgba(240, 101, 95, 0.12);
+  --info: #4ea6e6;
+
+  /* Radii */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 20px;
+}
+
+@theme inline {
+  --color-ink-950: var(--ink-950);
+  --color-ink-925: var(--ink-925);
+  --color-ink-900: var(--ink-900);
+  --color-ink-850: var(--ink-850);
+  --color-ink-800: var(--ink-800);
+  --color-ink-750: var(--ink-750);
+  --color-ink-700: var(--ink-700);
+  --color-ink-650: var(--ink-650);
+  --color-ink-600: var(--ink-600);
+
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-line-strong: var(--line-strong);
+
+  --color-text-hi: var(--text-hi);
+  --color-text: var(--text);
+  --color-text-dim: var(--text-dim);
+  --color-text-faint: var(--text-faint);
+
+  --color-signal: var(--signal);
+  --color-signal-bright: var(--signal-bright);
+  --color-signal-deep: var(--signal-deep);
+
+  --color-positive: var(--positive);
+  --color-review: var(--review);
+  --color-correction: var(--correction);
+  --color-info: var(--info);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-display: var(--font-display);
+
+  --radius-sm: var(--r-sm);
+  --radius-md: var(--r-md);
+  --radius-lg: var(--r-lg);
+  --radius-xl: var(--r-xl);
+}
+
+* {
+  border-color: var(--line);
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--ink-950);
+  color: var(--text);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-feature-settings: "ss01", "cv01";
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Pitch-grid ambient texture for the app canvas */
+.pitch-grid {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+.field-glow {
+  background:
+    radial-gradient(
+      120% 80% at 50% -10%,
+      rgba(123, 97, 255, 0.08),
+      transparent 60%
+    );
+}
+
+/* ---------- Typographic motifs ---------- */
+
+.font-display {
+  font-family: var(--font-display), var(--font-sans), sans-serif;
+}
+
+.label-tech {
+  font-family: var(--font-mono), monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  font-weight: 500;
+}
+
+.data-mono {
+  font-family: var(--font-mono), monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.stat-figure {
+  font-family: var(--font-display), sans-serif;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 0.9;
+  color: var(--text-hi);
+}
+
+/* ---------- Surfaces ---------- */
+
+.panel {
+  background: var(--ink-900);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+}
+
+.panel-raised {
+  background: linear-gradient(180deg, var(--ink-850), var(--ink-900));
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+}
+
+.hairline {
+  border-color: var(--line);
+}
+
+/* ---------- Chips ---------- */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  font-family: var(--font-mono), monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+/*
+  A chip carrying a sentence rather than a tag.
+
+  `.chip` is `nowrap` because a tag that wraps looks broken. But the study
+  openers are whole prompts — "Summarise development trends across the club" —
+  and a nowrap chip holding one is 340px wide, which overflows a phone before
+  anything else on the page gets a say. These wrap, read as prose, and keep the
+  chip's outline.
+*/
+.chip-prose {
+  white-space: normal;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: 0.01em;
+  font-size: 11.5px;
+  line-height: 1.45;
+  border-radius: 8px;
+  padding: 5px 10px;
+  max-width: 100%;
+}
+
+.chip-signal {
+  border-color: var(--signal-line);
+  background: var(--signal-wash);
+  color: var(--signal-bright);
+}
+
+/* Matchday notation MD / MD-1 / MD+1 */
+.md-tag {
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+/* ---------- Focus / interaction ---------- */
+
+button,
+a {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.nav-item {
+  position: relative;
+  transition:
+    color 0.18s ease,
+    background-color 0.18s ease;
+}
+
+.nav-item::before {
+  content: "";
+  position: absolute;
+  left: -13px;
+  top: 50%;
+  transform: translateY(-50%) scaleY(0);
+  width: 3px;
+  height: 18px;
+  border-radius: 0 3px 3px 0;
+  background: var(--signal);
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.nav-item[data-active="true"]::before {
+  transform: translateY(-50%) scaleY(1);
+}
+
+/* ---------- Scrollbar ---------- */
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--ink-700);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-650);
+  background-clip: padding-box;
+}
+
+/* ---------- Animations ---------- */
+
+@keyframes mido-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(123, 97, 255, 0.5);
+  }
+  50% {
+    opacity: 0.7;
+    box-shadow: 0 0 0 5px rgba(123, 97, 255, 0);
+  }
+}
+
+.pulse-dot {
+  animation: mido-pulse 2.2s ease-in-out infinite;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rise-in {
+  animation: rise-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* ---------- Range slider (check-in) ---------- */
+
+.mido-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--ink-700);
+  cursor: pointer;
+}
+.mido-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--signal);
+  border: 3px solid var(--ink-900);
+  box-shadow: 0 0 0 1px var(--signal-line);
+  transition: transform 0.12s ease;
+}
+.mido-range::-webkit-slider-thumb:hover {
+  transform: scale(1.12);
+}
+.mido-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--signal);
+  border: 3px solid var(--ink-900);
+}
+
+/* ---------- Reduced motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------- Print ----------
+
+   MIDO XI is dark-first, and a dark page is the wrong thing to put on paper:
+   it empties a cartridge, and a development report handed to a coach should
+   look like a document rather than a screenshot of an app.
+
+   So print flips the palette rather than fighting it. The tokens are
+   redefined once, here, and every component that already uses them comes out
+   correct — no second stylesheet, no print-only markup, nothing that can
+   drift away from what the screen shows.
+
+   `.no-print` removes chrome: navigation, the command bar, buttons, and the
+   report's own controls. What is left is the content.
+*/
+
+@media print {
+  :root {
+    --ink-950: #ffffff;
+    --ink-925: #ffffff;
+    --ink-900: #ffffff;
+    --ink-850: #f6f7f9;
+    --ink-800: #eef0f3;
+    --ink-750: #e6e9ed;
+    --ink-700: #dce0e6;
+    --ink-650: #cdd3db;
+    --ink-600: #b7bfca;
+
+    --line: rgba(0, 0, 0, 0.14);
+    --line-soft: rgba(0, 0, 0, 0.08);
+    --line-strong: rgba(0, 0, 0, 0.24);
+
+    --text-hi: #0d1014;
+    --text: #232a33;
+    --text-dim: #4c5560;
+    --text-faint: #6b7581;
+
+    /* The signal survives, darkened enough to stay legible on white. */
+    --signal: #5a3fe0;
+    --signal-bright: #4a31c9;
+    --signal-deep: #3c27a8;
+    --signal-wash: rgba(90, 63, 224, 0.08);
+    --signal-line: rgba(90, 63, 224, 0.3);
+
+    --positive: #1c8a52;
+    --review: #a86c10;
+    --correction: #c23a34;
+    --info: #1d6fa5;
+  }
+
+  @page {
+    margin: 16mm 14mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: var(--text);
+  }
+
+  /* Chrome, and anything that only makes sense to click. */
+  .no-print,
+  aside,
+  header[data-shell-topbar] {
+    display: none !important;
+  }
+
+  /* Decoration that costs ink and adds nothing on paper. */
+  .pitch-grid,
+  .field-glow {
+    background: none !important;
+  }
+
+  .panel,
+  .panel-raised {
+    background: #ffffff !important;
+    border: 1px solid var(--line) !important;
+    box-shadow: none !important;
+  }
+
+  .chip {
+    border: 1px solid var(--line) !important;
+    background: none !important;
+  }
+
+  /* Entrance animations mid-print leave half-faded elements on the page. */
+  .rise-in,
+  [class*="animate-"] {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  a {
+    color: inherit !important;
+    text-decoration: none !important;
+  }
+
+  /* Keep a section and its heading together, and never split a row. */
+  section,
+  article,
+  tr,
+  li {
+    break-inside: avoid;
+  }
+  h1,
+  h2,
+  h3 {
+    break-after: avoid;
+  }
+
+  .print-break {
+    break-before: page;
+  }
+}

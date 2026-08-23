@@ -1,0 +1,114 @@
+import { Crown, Sparkles, Zap } from "lucide-react";
+import { features, isDemoMode } from "@/lib/env";
+import { getMembershipOverview } from "@/lib/billing/membership";
+import { tierOf, tierLabel } from "@/lib/billing/plans";
+import { SectionHeader } from "@/components/ui/primitives";
+import { PlanCards } from "@/components/membership/plan-cards";
+import { UsageMeters } from "@/components/membership/usage-meters";
+import { ManageButton } from "@/components/membership/manage-button";
+import { WhatMidoBuilds } from "@/components/membership/what-mido-builds";
+import { getCurrentUser } from "@/lib/auth/session";
+
+export const metadata = { title: "Membership — MIDO XI" };
+
+function fmtDate(iso: string | null): string | null {
+  if (!iso) return null;
+  return new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+}
+
+export default async function MembershipPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ checkout?: string }>;
+}) {
+  const { checkout } = await searchParams;
+  const [{ membership, usage }, user] = await Promise.all([
+    getMembershipOverview(),
+    getCurrentUser(),
+  ]);
+  const renew = fmtDate(membership.currentPeriodEnd);
+  const tier = tierOf(membership.planId);
+  const isTopTier = tier === "club";
+  const interval = membership.planId.endsWith("annual") ? "Annual" : "Monthly";
+
+  return (
+    <div className="mx-auto max-w-[1000px] px-4 py-8 md:px-6">
+      <div className="mb-6 flex items-center gap-3">
+        <span className="grid size-11 place-items-center rounded-lg border border-line bg-ink-850 text-signal-bright">
+          <Crown className="size-5" />
+        </span>
+        <div>
+          <h1 className="font-display text-2xl font-bold tracking-tight text-text-hi">Membership</h1>
+          <p className="text-sm text-text-dim">Your plan, your AI allowances.</p>
+        </div>
+        {membership.isPro && (
+          <span
+            className={`ml-auto inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium ${
+              isTopTier ? "border-review/40 bg-review/10 text-review" : "border-signal-line bg-signal/10 text-signal-bright"
+            }`}
+          >
+            {isTopTier ? <Zap className="size-4" /> : <Sparkles className="size-4" />} {tierLabel(tier)}
+          </span>
+        )}
+      </div>
+
+      {checkout === "success" && (
+        <p className="mb-6 rounded-lg border border-positive/30 bg-positive/10 px-3 py-2 text-sm text-positive">
+          Welcome aboard — your AI analyst is now live. It can take a moment to activate.
+        </p>
+      )}
+      {checkout === "cancelled" && (
+        <p className="mb-6 rounded-lg border border-line bg-ink-850 px-3 py-2 text-sm text-text-dim">
+          Checkout cancelled — no charge was made.
+        </p>
+      )}
+
+      {/* Current status */}
+      {membership.isPro && (
+        <div className="mb-8 panel-raised flex flex-wrap items-center gap-4 p-5">
+          <div className="flex-1">
+            <div className="label-tech">Current plan</div>
+            <div className="mt-0.5 font-display text-lg font-semibold text-text-hi">
+              MIDO XI {tierLabel(tier)} · {interval}
+            </div>
+            <p className="mt-1 text-sm text-text-dim">
+              {membership.comped
+                ? `Earned by referring people — runs until ${renew ?? "it expires"}, then returns to free.`
+                : membership.cancelAtPeriodEnd
+                  ? `Cancels on ${renew ?? "period end"}.`
+                  : renew
+                    ? `Renews ${renew}.`
+                    : "Active."}
+            </p>
+          </div>
+          <ManageButton />
+        </div>
+      )}
+
+      {/* Usage */}
+      <section className="mb-8">
+        <SectionHeader label={membership.isPro ? "This month’s usage" : "What Pro unlocks"} />
+        <UsageMeters usage={usage} locked={!membership.isPro} />
+      </section>
+
+      {/* What the AI actually builds — read from the capability registry, so it
+          cannot drift away from what the software does. */}
+      <section className="mb-8">
+        <SectionHeader label="What MIDO builds for you" />
+        <WhatMidoBuilds role={user?.role ?? "player"} isPro={membership.isPro} />
+      </section>
+
+      {/* Plans */}
+      <section>
+        <SectionHeader label={membership.isPro ? "Change plan" : "Plans"} />
+        <PlanCards currentPlan={membership.planId} billingConfigured={features.billing} />
+      </section>
+
+      {isDemoMode && (
+        <p className="mt-6 text-center text-[11px] text-text-faint">
+          Demo mode — billing is disabled. Connect Supabase and Stripe to enable Pro.
+        </p>
+      )}
+    </div>
+  );
+}
