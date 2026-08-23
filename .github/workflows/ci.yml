@@ -1,0 +1,77 @@
+name: CI
+
+# Every push and every pull request. There is no "only on main" here on
+# purpose: the point of CI is to catch a break BEFORE it is merged, and a
+# workflow that only runs after the fact is a notification service.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # So a red build can be re-run after a flake without an empty commit.
+  workflow_dispatch:
+
+# A second push to the same branch cancels the first. Nobody needs the result
+# of a commit that has already been replaced.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: types · lint · tests · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # No secrets are used anywhere in this job, and that is deliberate — see
+    # the build step. A workflow with no secrets cannot leak one.
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Match the version this is developed on. A CI that passes on a
+          # different major than the one people run locally is a CI that
+          # disagrees with reality.
+          node-version: 24
+          cache: npm
+
+      # `ci` rather than `install`: it installs exactly the lockfile and fails
+      # if package.json and the lock have drifted, which is itself worth
+      # catching.
+      - run: npm ci
+
+      # Ordered cheapest-first, and each step runs even if an earlier one
+      # failed, so one push tells you everything that is wrong rather than
+      # only the first thing.
+      #
+      # `!cancelled()` rather than `always()`: cancel-in-progress above means
+      # runs get cancelled routinely when you push twice, and `always()` would
+      # make each of those finish the whole matrix anyway.
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Lint
+        if: '!cancelled()'
+        run: npx eslint
+
+      - name: Tests
+        if: '!cancelled()'
+        run: npm test
+
+      # Builds with NO environment variables at all.
+      #
+      # MIDO XI degrades to demo mode when the Supabase keys are absent (see
+      # lib/env.ts), so this compiles the whole app without needing a single
+      # secret in CI. That is worth more than it costs: it proves the demo
+      # path still builds, and it means this workflow can run on a fork or a
+      # pull request from anyone without exposing anything.
+      #
+      # It does not prove the app runs against a real database. `npm run
+      # verify:db` does that, and it needs credentials, so it stays a thing a
+      # human runs deliberately.
+      - name: Build (demo mode, no secrets)
+        if: '!cancelled()'
+        run: npx next build
