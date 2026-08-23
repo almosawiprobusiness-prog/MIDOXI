@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "mido-xi",
   "version": "0.1.0",
   "private": true,
@@ -19,6 +19,7 @@
     "coupons": "node scripts/audit-coupons.mjs",
     "verify:db": "node scripts/verify-schema.mjs && node scripts/verify-columns.mjs && node scripts/verify-security.mjs && node scripts/verify-timeline.mjs",
     "verify:timeline": "node scripts/verify-timeline.mjs",
+    "verify:feed": "node scripts/verify-feed.mjs",
     "verify:gemini": "node scripts/verify-gemini.mjs",
     "try:film": "node scripts/try-film-read.mjs"
   },
