@@ -1,5 +1,8 @@
 import { HeartPulse, Activity, Info, MessageSquare } from "lucide-react";
 import { getRecovery } from "@/lib/data/recovery";
+import { listConnections, listRecoverySamples } from "@/lib/data/wearables";
+import { hasWhoop } from "@/lib/env";
+import { WearablePanel } from "@/components/recovery/wearable-panel";
 import {
   BAND_META,
   CHECKIN_FIELDS,
@@ -36,8 +39,21 @@ function fieldColor(value: number, inverted: boolean) {
   return good >= 4 ? "var(--positive)" : good >= 3 ? "var(--signal)" : "var(--review)";
 }
 
-export default async function RecoveryPage() {
-  const { source, days, today, streak } = await getRecovery();
+export default async function RecoveryPage({ searchParams }: PageProps<"/app/recovery">) {
+  const { whoop } = await searchParams;
+  const [{ source, days, today, streak }, connections, samples] = await Promise.all([
+    getRecovery(),
+    listConnections(),
+    listRecoverySamples(14),
+  ]);
+  const whoopConnection = connections.find((c) => c.provider === "whoop") ?? null;
+  /*
+    Once a strap is connected these ARE measured, so the section below
+    must stop saying they are not. A page that keeps insisting HRV is
+    unavailable while showing an HRV reading is worse than either claim
+    on its own.
+  */
+  const measuring = Boolean(whoopConnection) && samples.length > 0;
   const band = bandOf(today?.readiness ?? null);
   const meta = BAND_META[band];
   const scored = days.filter((d): d is ScoredCheckin & { readiness: number } => d.readiness !== null);
@@ -175,7 +191,19 @@ export default async function RecoveryPage() {
         </>
       )}
 
-      {/* What MIDO does not measure */}
+      {/* Wearables */}
+      <section className="mb-8">
+        <SectionHeader label="Measured" />
+        <WearablePanel
+          connection={whoopConnection}
+          samples={samples}
+          configured={hasWhoop}
+          notice={typeof whoop === "string" ? whoop : undefined}
+        />
+      </section>
+
+      {/* What MIDO does not measure — only while nothing is measuring it */}
+      {!measuring && (
       <section>
         <SectionHeader label="What MIDO does not measure" />
         <div className="min-w-0 panel p-5">
@@ -197,6 +225,7 @@ export default async function RecoveryPage() {
           </div>
         </div>
       </section>
+      )}
     </div>
   );
 }

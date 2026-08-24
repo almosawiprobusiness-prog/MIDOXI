@@ -25,6 +25,15 @@ export const env = {
   // and it is genuinely optional: without this key the film room keeps its
   // frame reader and says plainly what the other one would add.
   geminiKey: clean(process.env.GEMINI_API_KEY),
+
+  /*
+    WHOOP. Both are needed before the integration offers itself —
+    `hasWhoop` below is what the Recovery page checks, so a half-configured
+    deployment shows nothing rather than a Connect button that dead-ends on
+    the provider's error page.
+  */
+  whoopClientId: clean(process.env.WHOOP_CLIENT_ID),
+  whoopClientSecret: clean(process.env.WHOOP_CLIENT_SECRET),
   geminiVideoModel: clean(process.env.GEMINI_VIDEO_MODEL),
   youtubeKey: clean(process.env.YOUTUBE_API_KEY),
   // Global monthly Claude spend ceiling in USD. 0 / unset = no cap.
@@ -56,6 +65,15 @@ export const isSupabaseConfigured = Boolean(env.supabaseUrl && env.supabaseAnonK
 
 /** True when running without a backend — seed data, no persistence. */
 export const isDemoMode = !isSupabaseConfigured;
+
+/*
+  WHOOP needs a real backend to store tokens against a real account, so
+  demo mode never offers it. Both halves of the credential are required:
+  a Connect button that sends somebody to WHOOP and back to an error is
+  worse than no button.
+*/
+export const hasWhoop =
+  isSupabaseConfigured && Boolean(env.whoopClientId && env.whoopClientSecret);
 
 export const features = {
   auth: isSupabaseConfigured,
