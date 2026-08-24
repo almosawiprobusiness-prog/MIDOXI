@@ -18,6 +18,7 @@ import {
 } from "@/lib/video/provider";
 import type { ClipAnalysis } from "@/lib/data/analyses";
 import { fmtTime } from "@/lib/data/film-types";
+import { loadCapturableVideo } from "./capture";
 import { FormError, FormNote } from "@/components/forms/ui";
 import { AnalysisCard } from "./analysis-card";
 import { cn } from "@/lib/utils";
@@ -49,53 +50,6 @@ const FOCUS_SUGGESTIONS = [
   "Pressing angle and timing",
   "Defensive shape and distances",
 ];
-
-/**
- * Load a second, offscreen copy of the video with CORS enabled.
- *
- * The visible player is deliberately left alone: adding `crossOrigin` to it
- * would stop playback entirely on any host that does not send the header, which
- * would be a bad trade for a feature the user may never use. Capturing from a
- * separate element means the worst case is a clear message about this one host,
- * and the user's playback position is never disturbed.
- */
-function loadCapturableVideo(url: string): Promise<HTMLVideoElement> {
-  return new Promise((resolve, reject) => {
-    const el = document.createElement("video");
-    el.crossOrigin = "anonymous";
-    el.preload = "auto";
-    el.muted = true;
-    el.playsInline = true;
-
-    const timer = setTimeout(() => {
-      cleanup();
-      reject(new Error("The film took too long to load for reading."));
-    }, 20000);
-
-    const cleanup = () => {
-      clearTimeout(timer);
-      el.removeEventListener("loadeddata", onReady);
-      el.removeEventListener("error", onError);
-    };
-    const onReady = () => {
-      cleanup();
-      resolve(el);
-    };
-    const onError = () => {
-      cleanup();
-      reject(
-        new Error(
-          "This film is hosted somewhere that does not allow its frames to be read. Upload it to MIDO XI and analysis works on it.",
-        ),
-      );
-    };
-
-    el.addEventListener("loadeddata", onReady);
-    el.addEventListener("error", onError);
-    el.src = url;
-    el.load();
-  });
-}
 
 async function captureFrames(
   sourceUrl: string,

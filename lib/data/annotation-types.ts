@@ -121,3 +121,36 @@ export function atLabel(seconds: number): string {
   const s = Math.max(0, Math.floor(seconds));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
+
+/**
+ * A filename for an exported board that somebody can find again.
+ *
+ * The timestamp is in it because the common case is four boards from
+ * one match, and `board.png`, `board (1).png`, `board (2).png` is how
+ * they become indistinguishable the moment they reach a Downloads
+ * folder. Lives here rather than with the canvas code so it stays pure
+ * — it is the one part of exporting that can be tested without a DOM.
+ */
+export function boardFilename(title: string, atSeconds: number): string {
+  const slug = title
+    /*
+      Accents are folded to their base letter rather than thrown away.
+      NFD splits "í" into "i" plus a combining mark, which the strip
+      below then removes — so "TJ Baník Kalinovo vs. FTC Fiľakovo"
+      becomes "tj-banik-kalinovo-vs-ftc-filakovo" and not the
+      "tj-ban-k-...-fi-akovo" you get from treating every accented
+      letter as punctuation. This matters here: half the fixtures this
+      is ever pointed at are Slovak.
+    */
+    .normalize("NFD")
+    // \p{M} is every combining mark — exactly what NFD just split off.
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48)
+    // A slug trimmed mid-word can end on the separator again.
+    .replace(/-+$/, "");
+  const stamp = atLabel(atSeconds).replace(":", "-");
+  return `${slug || "film"}-${stamp}.png`;
+}

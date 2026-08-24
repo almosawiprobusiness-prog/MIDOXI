@@ -6,6 +6,7 @@ import {
   colorCss,
   atLabel,
   MAX_SHAPES,
+  boardFilename,
   NOTE_MAX,
   type Shape,
 } from "../../lib/data/annotation-types";
@@ -161,5 +162,56 @@ describe("atLabel", () => {
     // A full match is 90 minutes. Showing 30:00 for 90:00 would be a
     // wrong timestamp on the one file type this tool exists for.
     expect(atLabel(5400)).toBe("90:00");
+  });
+});
+
+describe("boardFilename", () => {
+  it("names the file after the match and the moment", () => {
+    expect(boardFilename("vs Halton away", 77)).toBe("vs-halton-away-1-17.png");
+  });
+
+  it("puts the timestamp in, so four boards from one match stay apart", () => {
+    // The whole point. Without it these collide into board(1), board(2)…
+    const a = boardFilename("vs Halton", 12);
+    const b = boardFilename("vs Halton", 640);
+    expect(a).not.toBe(b);
+    expect(a).toBe("vs-halton-0-12.png");
+    expect(b).toBe("vs-halton-10-40.png");
+  });
+
+  it("never emits a colon, which Windows and macOS both refuse", () => {
+    expect(boardFilename("Match", 3661)).not.toContain(":");
+  });
+
+  it("folds accents to their base letter instead of dropping them", () => {
+    // Slovak fixture names are the normal case here, not an edge one.
+    // Treating every accented letter as punctuation gives the unreadable
+    // "tj-ban-k-kalinovo-vs-ftc-fi-akovo".
+    expect(boardFilename("TJ Baník Kalinovo vs. FTC Fiľakovo!", 5)).toBe(
+      "tj-banik-kalinovo-vs-ftc-filakovo-0-05.png",
+    );
+  });
+
+  it("keeps digits, which are half of how matches are named", () => {
+    expect(boardFilename("Match 3 vs U21", 5)).toBe("match-3-vs-u21-0-05.png");
+  });
+
+  it("falls back rather than producing a nameless file", () => {
+    expect(boardFilename("", 5)).toBe("film-0-05.png");
+    expect(boardFilename("!!! ???", 5)).toBe("film-0-05.png");
+  });
+
+  it("caps a very long title without leaving a trailing separator", () => {
+    const got = boardFilename("a".repeat(80), 5);
+    expect(got).toBe(`${"a".repeat(48)}-0-05.png`);
+    expect(got).not.toContain("--");
+  });
+
+  it("does not end the slug on a hyphen when the cut lands mid-word", () => {
+    // 48 characters lands exactly on a space here, which used to leave
+    // "…something--0-05.png".
+    const title = `${"word ".repeat(9)}tail`;
+    const got = boardFilename(title, 5);
+    expect(got).not.toContain("--");
   });
 });

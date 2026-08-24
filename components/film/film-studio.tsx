@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Play, Pause, Rewind, FastForward, ChevronLeft, ChevronRight,
-  Scissors, Star, Trash2, Loader2, Flag, Film, TriangleAlert, PenLine, X,
+  Scissors, Star, Trash2, Loader2, Flag, Film, TriangleAlert, PenLine, X, Repeat, Download,
 } from "lucide-react";
 import {
   createClip, deleteClip, toggleClipFavorite,
@@ -25,6 +25,7 @@ import { FilmReading } from "./film-reading";
 import { Telestration, TelestrationTools } from "./telestration";
 import { videoElementPlayer, type FilmPlayer } from "./film-player";
 import { YouTubeStage } from "./youtube-stage";
+import { exportBoard, boardFilename, saveBlob } from "./capture";
 import type { ClipAnalysis } from "@/lib/data/analyses";
 
 const SPEEDS = [0.5, 1, 1.5, 2];
@@ -123,6 +124,17 @@ export function FilmStudio({
   const [drawError, setDrawError] = useState<string | null>(null);
   const [viewing, setViewing] = useState<Annotation | null>(null);
 
+  // Saving a board to disk, and looping the marked range.
+  const [saving, setSaving] = useState(false);
+  /*
+    Its own error rather than the composer's. An export can be started
+    from the drawing bar OR from a saved row, and `drawError` only
+    renders while drawing — so a failure from the list would have gone
+    nowhere at all.
+  */
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [looping, setLooping] = useState(false);
+
   const isYouTube = video.source === "youtube";
   const isHls = !isYouTube && isHlsUrl(video.url);
 
@@ -181,6 +193,32 @@ export function FilmStudio({
   }, [isYouTube, isHls, unplayable, video.url]);
 
   /*
+    Adopt the duration the element already knows.
+
+    `onLoadedMetadata` is not enough on its own. With `preload
+    ="metadata"` the browser can finish reading the header BEFORE React
+    hydrates and attaches that handler, and the event is gone by the
+    time anyone is listening. The seeded value then stands forever.
+
+    That is not cosmetic. `seek` clamps to `duration`, so a stale one
+    walls off everything past it: measured here on a 60s video seeded
+    as 15s, the scrubber's max stayed 15 and the last three quarters of
+    the film could not be reached at all. On a match whose stored
+    duration is wrong or missing, most of the game is unreachable.
+
+    So the value is pulled rather than waited for, and `onDurationChange`
+    below catches the case where it is revised later.
+  */
+  useEffect(() => {
+    if (isYouTube) return;
+    const el = videoRef.current;
+    if (!el) return;
+    if (el.readyState >= 1 && Number.isFinite(el.duration) && el.duration > 0) {
+      setDuration(el.duration);
+    }
+  }, [isYouTube, video.url]);
+
+  /*
     Give up waiting after this long with nothing at all.
 
     Fifteen seconds is past any reasonable wait for METADATA — which is
@@ -222,6 +260,24 @@ export function FilmStudio({
   const playClip = (c: FilmClip) => {
     seek(c.startSeconds);
     player().play();
+  };
+
+  /*
+    The playhead moved.
+
+    Both sources funnel through here — a <video> firing timeupdate and a
+    YouTube embed polled every 100ms — which is also where the loop
+    lives. Deliberately NOT an effect watching `current`: that reacts to
+    the new position by setting state again, which is a cascading render
+    on every frame of playback. This is the event itself, handled once.
+  */
+  const handleTime = (t: number) => {
+    if (looping && markIn != null && markOut != null && markOut > markIn && t >= markOut) {
+      player().seek(markIn);
+      setCurrent(markIn);
+      return;
+    }
+    setCurrent(t);
   };
 
   const toggleTag = (t: string) =>
@@ -318,6 +374,138 @@ export function FilmStudio({
     setViewing(a);
   };
 
+  /*
+    Keyboard.
+
+    The difference between a video tool people tolerate and one they
+    live in. Reviewing a match is hundreds of small movements — back a
+    touch, forward a touch, mark, back again — and doing that with a
+    mouse is what makes an hour of film feel like an hour of admin.
+
+    Deliberately invisible: no new controls, and the keys are named in
+    the tooltips of the buttons they mirror plus one muted line under
+    the transport. Nothing here fires while a field has focus, or a
+    coach typing "I noticed" into a clip note would mark in twice.
+  */
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (
+        t &&
+        (t.tagName === "INPUT" ||
+          t.tagName === "TEXTAREA" ||
+          t.tagName === "SELECT" ||
+          t.isContentEditable)
+      ) {
+        return;
+      }
+      if (e.metaKey || e.ctrlKey) {
+        // Undo the last mark, matching every drawing tool ever made.
+        if (drawing && e.key.toLowerCase() === "z") {
+          e.preventDefault();
+          setShapes((s) => s.slice(0, -1));
+        }
+        return;
+      }
+      if (e.altKey) return;
+
+      switch (e.key) {
+        case " ":
+          e.preventDefault();
+          if (!drawing) togglePlay();
+          break;
+        case "ArrowLeft":
+          e.preventDefault();
+          nudge(e.shiftKey ? -5 : -0.1);
+          break;
+        case "ArrowRight":
+          e.preventDefault();
+          nudge(e.shiftKey ? 5 : 0.1);
+          break;
+        case "i":
+        case "I":
+          setMarkIn(current);
+          break;
+        case "o":
+        case "O":
+          setMarkOut(current);
+          break;
+        case "l":
+        case "L":
+          // Only meaningful once a range exists; silently ignored
+          // otherwise rather than turning on an invisible mode.
+          if (markIn != null && markOut != null && markOut > markIn) {
+            setLooping((v) => !v);
+          }
+          break;
+        case "d":
+        case "D":
+          if (!unplayable) (drawing ? stopDrawing : startDrawing)();
+          break;
+        case "Escape":
+          if (drawing) stopDrawing();
+          else if (viewing) setViewing(null);
+          break;
+        // Tools, while drawing. Free to add, and the order matches the bar.
+        case "1":
+          if (drawing) setTool("arrow");
+          break;
+        case "2":
+          if (drawing) setTool("ellipse");
+          break;
+        case "3":
+          if (drawing) setTool("pen");
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drawing, viewing, playing, current, duration, unplayable, markIn, markOut]);
+
+  /*
+    Save the board.
+
+    Exports whatever is on the glass right now — the frame plus the
+    marks — as a PNG with a caption strip. This is how a drawing leaves
+    the app: into a message to the player it is about.
+
+    Refused on YouTube before anything is attempted, because the
+    picture lives inside another origin's iframe and no page can read
+    those pixels. Saying so up front beats a SecurityError.
+  */
+  const saveBoard = async (atSeconds: number, marks: Shape[], caption: string | null) => {
+    if (isYouTube) {
+      setSaveError(
+        "A YouTube frame cannot be saved as an image — the picture belongs to YouTube's player, and this page cannot read it. Uploaded and direct-link footage saves fine.",
+      );
+      return;
+    }
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const blob = await exportBoard({
+        videoUrl: video.url,
+        title: video.title,
+        atSeconds,
+        shapes: marks,
+        note: caption,
+      });
+      saveBlob(blob, boardFilename(video.title, atSeconds));
+    } catch (e) {
+      setSaveError(
+        e instanceof DOMException && e.name === "SecurityError"
+          ? "This film is served without the permissions needed to read its frames, so it cannot be saved as an image. Uploaded footage saves fine."
+          : e instanceof Error
+            ? e.message
+            : "The image could not be saved.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const dropAnnotation = async (a: Annotation) => {
     if (viewing?.id === a.id) setViewing(null);
     await removeAnnotation(a.id, video.id);
@@ -377,7 +565,7 @@ export function FilmStudio({
                   onReady={(p) => {
                     ytPlayer.current = p;
                   }}
-                  onTime={setCurrent}
+                  onTime={handleTime}
                   onDuration={setDuration}
                   onPlayingChange={(p) => {
                     setPlaying(p);
@@ -401,7 +589,13 @@ export function FilmStudio({
                   preload="metadata"
                   onError={() => setUnplayable(true)}
                   onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
-                  onTimeUpdate={(e) => setCurrent(e.currentTarget.currentTime)}
+                  // Fires when the real length becomes known or is
+                  // revised — the case a single loadedmetadata misses.
+                  onDurationChange={(e) => {
+                    const d = e.currentTarget.duration;
+                    if (Number.isFinite(d) && d > 0) setDuration(d);
+                  }}
+                  onTimeUpdate={(e) => handleTime(e.currentTarget.currentTime)}
                   onPlay={() => {
                     setPlaying(true);
                     // A drawing belongs to one frame. Once the footage is
@@ -451,16 +645,66 @@ export function FilmStudio({
             <div className="mt-3 rounded-lg border border-line bg-ink-900 p-3">
               <div className="flex items-center gap-3">
                 <span className="data-mono text-sm text-signal-bright">{fmtTime(current)}</span>
-                <input
-                  type="range"
-                  min={0}
-                  max={duration || 0}
-                  step={0.05}
-                  value={current}
-                  onChange={(e) => seek(Number(e.target.value))}
-                  className="mido-range flex-1"
-                  aria-label="Seek"
-                />
+
+                {/*
+                  The tape, with everything already found on it.
+
+                  Ticks for clips and drawings turn the scrubber from a
+                  position into a map: you can see that the second half
+                  has three marks and the first has none without opening
+                  anything. They are `pointer-events-none` so the bar
+                  underneath still takes the drag.
+                */}
+                <div className="relative flex-1">
+                  <input
+                    type="range"
+                    min={0}
+                    max={duration || 0}
+                    step={0.05}
+                    value={current}
+                    onChange={(e) => seek(Number(e.target.value))}
+                    className="mido-range w-full"
+                    aria-label="Seek"
+                  />
+                  {duration > 0 && (
+                    <div className="pointer-events-none absolute inset-x-0 -bottom-1.5 h-1.5">
+                      {clips.map((c) => {
+                        const sm = sentimentMeta(c.sentiment);
+                        return (
+                          <span
+                            key={`c-${c.id}`}
+                            className="absolute top-0 h-1.5 w-[2px] rounded-full"
+                            style={{
+                              left: `${Math.min(100, (c.startSeconds / duration) * 100)}%`,
+                              background: sm?.color ?? "var(--text-faint)",
+                            }}
+                          />
+                        );
+                      })}
+                      {annotations.map((a) => (
+                        <span
+                          key={`a-${a.id}`}
+                          className="absolute top-0 size-1.5 rounded-full"
+                          style={{
+                            left: `${Math.min(100, (a.atSeconds / duration) * 100)}%`,
+                            background: "var(--signal-bright)",
+                          }}
+                        />
+                      ))}
+                      {/* The marked range, while one is being cut. */}
+                      {markIn != null && markOut != null && markOut > markIn && (
+                        <span
+                          className="absolute top-0.5 h-[3px] rounded-full bg-signal/60"
+                          style={{
+                            left: `${(markIn / duration) * 100}%`,
+                            width: `${Math.max(0.5, ((markOut - markIn) / duration) * 100)}%`,
+                          }}
+                        />
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 <span className="data-mono text-sm text-text-dim">{fmtTime(duration)}</span>
               </div>
               <div className="mt-3 flex items-center justify-between">
@@ -499,6 +743,14 @@ export function FilmStudio({
                   </button>
                 </div>
               </div>
+
+              {/*
+                The keys, said once, quietly. A tool with shortcuts
+                nobody is told about has no shortcuts.
+              */}
+              <p className="data-mono mt-2.5 select-none text-[10px] leading-relaxed text-text-faint">
+                space play · ←→ frame · shift ←→ 5s · I/O mark · L loop · D draw · esc exit
+              </p>
             </div>
 
             {/* Drawing bar — only while drawing, so it is never in the way */}
@@ -529,6 +781,7 @@ export function FilmStudio({
                 />
 
                 {drawError && <p className="mt-2 text-sm text-correction">{drawError}</p>}
+                {saveError && <p className="mt-2 text-sm text-correction">{saveError}</p>}
 
                 <div className="mt-3 flex items-center gap-3">
                   <button
@@ -538,6 +791,25 @@ export function FilmStudio({
                   >
                     {drawBusy ? <Loader2 className="size-4 animate-spin" /> : <PenLine className="size-4" />}
                     Save drawing
+                  </button>
+                  {/*
+                    Save without saving. This exports what is on the
+                    glass right now, drawn or not, so it doubles as
+                    "grab this frame" — one button rather than two that
+                    would need explaining apart.
+                  */}
+                  <button
+                    onClick={() => saveBoard(current, shapes, drawNote)}
+                    disabled={saving || isYouTube}
+                    title={
+                      isYouTube
+                        ? "A YouTube frame cannot be read out of the embed"
+                        : "Save this frame and the drawing as an image"
+                    }
+                    className="flex h-10 items-center gap-2 rounded-lg border border-line px-3 text-sm text-text-dim transition-colors hover:border-signal-line hover:text-text disabled:opacity-40"
+                  >
+                    {saving ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+                    Save image
                   </button>
                   <button
                     onClick={stopDrawing}
@@ -563,6 +835,26 @@ export function FilmStudio({
                 <button onClick={() => setMarkOut(current)} className="flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-xs text-text transition-colors hover:border-signal-line">
                   <Flag className="size-3.5" /> Mark out {markOut != null && <span className="data-mono text-signal-bright">{fmtTime(markOut)}</span>}
                 </button>
+
+                {/*
+                  Looping the range you just cut. Only offered once
+                  there is one — a loop button with nothing to loop is
+                  a control that does nothing, which is worse than no
+                  control at all.
+                */}
+                {markIn != null && markOut != null && markOut > markIn && (
+                  <button
+                    onClick={() => setLooping((v) => !v)}
+                    title="Play the marked range on repeat (L)"
+                    className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs transition-colors ${
+                      looping
+                        ? "border-signal-line bg-signal/10 text-signal-bright"
+                        : "border-line text-text-dim hover:border-signal-line hover:text-text"
+                    }`}
+                  >
+                    <Repeat className="size-3.5" /> Loop
+                  </button>
+                )}
               </div>
 
               <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Clip title — e.g. Run in behind" className={inp} />
@@ -684,6 +976,10 @@ export function FilmStudio({
               <PenLine className="size-4 text-text-dim" />
               <span className="label-tech">Drawings · {annotations.length}</span>
             </div>
+            {/* An export can be started from here, so a failure has to land here too. */}
+            {!drawing && saveError && (
+              <p className="mb-2 text-sm text-correction">{saveError}</p>
+            )}
             <div className="space-y-2">
               {annotations.map((a) => {
                 const open = viewing?.id === a.id;
@@ -711,13 +1007,26 @@ export function FilmStudio({
                           {a.shapes.length} {a.shapes.length === 1 ? "mark" : "marks"}
                         </span>
                       </div>
-                      <button
-                        onClick={() => dropAnnotation(a)}
-                        aria-label="Delete drawing"
-                        className="shrink-0 text-text-faint opacity-0 transition-opacity hover:text-correction group-hover:opacity-100"
-                      >
-                        <Trash2 className="size-3.5" />
-                      </button>
+                      <div className="flex shrink-0 flex-col items-center gap-1.5">
+                        {!isYouTube && (
+                          <button
+                            onClick={() => saveBoard(a.atSeconds, a.shapes, a.note)}
+                            disabled={saving}
+                            aria-label="Save as image"
+                            title="Save this drawing as an image"
+                            className="text-text-faint transition-colors hover:text-signal-bright disabled:opacity-40"
+                          >
+                            <Download className="size-3.5" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => dropAnnotation(a)}
+                          aria-label="Delete drawing"
+                          className="text-text-faint opacity-0 transition-opacity hover:text-correction group-hover:opacity-100"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
