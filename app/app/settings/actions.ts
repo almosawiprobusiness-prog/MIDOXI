@@ -140,6 +140,45 @@ export async function updatePassword(password: string): Promise<Result> {
   return { ok: true };
 }
 
+/*
+  Every table cascades off `auth.users` — deleting the row takes the
+  matches, clips, posts, meetings, everything with it. Storage objects
+  do not: a bucket file is not a foreign key, nothing in Postgres knows
+  it exists, and `on delete cascade` has no way to reach it. Left alone,
+  a deleted account's uploaded video, avatar and community media sit in
+  storage forever with no owner reference left to find them by — which
+  is a real gap against "deletion removes your uploads," not a
+  theoretical one.
+
+  Run BEFORE the auth user is deleted, because the `videos` rows this
+  reads from are about to cascade away with it.
+*/
+async function purgeUserStorage(
+  admin: NonNullable<ReturnType<typeof createAdminClient>>,
+  userId: string,
+): Promise<void> {
+  // avatars/<userId>/ and posts/<userId>/ are fixed-prefix conventions —
+  // list what's actually there rather than assuming a single filename,
+  // since a post can carry more than one piece of media.
+  for (const bucket of ["avatars", "posts"] as const) {
+    const { data: files } = await admin.storage.from(bucket).list(userId);
+    const paths = (files ?? []).map((f) => `${userId}/${f.name}`);
+    if (paths.length > 0) await admin.storage.from(bucket).remove(paths);
+  }
+
+  // Uploaded video has no fixed-prefix convention — its path is
+  // whatever was recorded per row, so the rows are the only reliable
+  // list of what to remove.
+  const { data: videos } = await admin
+    .from("videos")
+    .select("storage_path")
+    .eq("user_id", userId)
+    .eq("source", "upload")
+    .not("storage_path", "is", null);
+  const videoPaths = (videos ?? []).map((v) => v.storage_path as string).filter(Boolean);
+  if (videoPaths.length > 0) await admin.storage.from("videos").remove(videoPaths);
+}
+
 /** Permanently delete the account. Real mode uses the service-role client. */
 export async function deleteAccount(): Promise<Result> {
   if (isDemoMode) return { ok: true, demo: true };
@@ -149,6 +188,12 @@ export async function deleteAccount(): Promise<Result> {
 
   const admin = createAdminClient();
   if (!admin) return { ok: false, error: "Account deletion is unavailable — service key not configured." };
+
+  // Best-effort and never blocking: a storage sweep that failed is a
+  // cleanup problem to notice and retry, not a reason to leave the
+  // account — and the data behind it — sitting there because a bucket
+  // call hiccuped.
+  await purgeUserStorage(admin, userId).catch(() => {});
 
   const { error } = await admin.auth.admin.deleteUser(userId);
   if (error) return { ok: false, error: error.message };
