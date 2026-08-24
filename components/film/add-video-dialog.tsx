@@ -5,11 +5,10 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { X, Loader2, Plus, Link2, Upload, FileVideo } from "lucide-react";
 import { addVideo, createUploadedVideo } from "@/app/app/film-room/actions";
-import { videoUrlKind, LONG_FOOTAGE_ADVICE } from "@/lib/data/film-types";
+import { videoUrlKind, LONG_FOOTAGE_ADVICE, UPLOAD_MAX_BYTES, UPLOAD_MAX_MB } from "@/lib/data/film-types";
 import { createClient } from "@/lib/supabase/client";
 import { env, isDemoMode } from "@/lib/env";
 
-const MAX_BYTES = 50 * 1024 * 1024; // free-tier bucket cap
 
 function readDuration(file: File): Promise<number | null> {
   return new Promise((resolve) => {
@@ -75,7 +74,7 @@ export function AddVideoDialog() {
       and pasted the page their match was streaming on. Name the thing
       that actually works instead.
     */
-    if (f.size > MAX_BYTES) { setError(`That file is ${(f.size / 1048576).toFixed(0)} MB — over the 50 MB limit. ${LONG_FOOTAGE_ADVICE}`); return; }
+    if (f.size > UPLOAD_MAX_BYTES) { setError(`That file is ${(f.size / 1048576).toFixed(0)} MB — over the ${UPLOAD_MAX_MB} MB limit. ${LONG_FOOTAGE_ADVICE}`); return; }
     setFile(f);
     if (!upTitle) setUpTitle(f.name.replace(/\.[^.]+$/, ""));
   };
@@ -161,7 +160,7 @@ export function AddVideoDialog() {
                     <button onClick={() => fileInput.current?.click()} disabled={isDemoMode} className="mt-3 flex w-full flex-col items-center gap-2 rounded-lg border border-dashed border-line-strong bg-ink-925 py-8 text-text-dim transition-colors hover:border-signal-line hover:text-text disabled:opacity-50">
                       <Upload className="size-6" />
                       <span className="text-sm">Choose a video file</span>
-                      <span className="text-[11px] text-text-faint">MP4 / WebM / MOV · up to 50 MB</span>
+                      <span className="text-[11px] text-text-faint">MP4 / WebM / MOV · up to {UPLOAD_MAX_MB} MB</span>
                     </button>
                   ) : (
                     <div className="mt-3 rounded-lg border border-line bg-ink-850 p-3">
@@ -211,6 +210,9 @@ export function AddVideoDialog() {
                     )}
                     {detected?.kind === "direct" && (
                       <span className="mt-1 block text-xs text-signal-bright">Detected: direct video file</span>
+                    )}
+                    {detected?.kind === "hls" && (
+                      <span className="mt-1 block text-xs text-signal-bright">Detected: HLS stream</span>
                     )}
                     {detected?.kind === "unsupported" && (
                       <span className="mt-1 block text-xs leading-relaxed text-review">

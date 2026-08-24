@@ -116,9 +116,29 @@ export function youtubeId(url: string): string | null {
 */
 const PLAYABLE_EXT = /\.(mp4|webm|mov|m4v|ogv)$/i;
 
+/*
+  HLS — the format most sports and analysis platforms actually stream.
+
+  A `.m3u8` is a playlist, not a file, and no browser except Safari can
+  play one from a plain `src`. It is listed separately from `direct`
+  because it needs a different playback path (hls.js, loaded only when
+  one of these turns up), not because it is any less real.
+*/
+const HLS_EXT = /\.m3u8$/i;
+
+export function isHlsUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  try {
+    return HLS_EXT.test(new URL(url).pathname);
+  } catch {
+    return false;
+  }
+}
+
 export type VideoUrlKind =
   | { kind: "youtube"; id: string }
   | { kind: "direct" }
+  | { kind: "hls" }
   | { kind: "unsupported"; reason: string };
 
 export function videoUrlKind(raw: string): VideoUrlKind {
@@ -139,6 +159,7 @@ export function videoUrlKind(raw: string): VideoUrlKind {
     return { kind: "unsupported", reason: "Only http and https links work here." };
   }
 
+  if (HLS_EXT.test(parsed.pathname)) return { kind: "hls" };
   if (PLAYABLE_EXT.test(parsed.pathname)) return { kind: "direct" };
 
   /*
@@ -159,3 +180,33 @@ export function videoUrlKind(raw: string): VideoUrlKind {
  */
 export const LONG_FOOTAGE_ADVICE =
   "For a full match, upload it to YouTube as unlisted and paste that link. It stays private to anyone without the link, there is no length limit, and MIDO can play and analyse it.";
+
+/*
+  How large an uploaded file may be.
+
+  ONE constant, because there are two enforcement points and they had
+  already drifted: the dialog refused anything over 50 MB while the
+  Supabase bucket refused anything over 48. A 49 MB file passed the
+  check the person could see and failed at the one they could not, with
+  a bare "Upload failed (413)".
+
+  The bucket is the real ceiling — it is enforced server-side and cannot
+  be talked out of it — so this number and the bucket's own
+  `file_size_limit` have to agree. `npm run verify:storage` checks that
+  they still do.
+
+  50 MB is not a number chosen for product reasons — it is the ceiling
+  the Supabase project itself enforces, measured rather than assumed:
+  setting the bucket to 100, 200 or 500 MB is refused outright with a
+  413, and only 50 is accepted. That is the free plan's global upload
+  limit, above any per-bucket setting. Raising it means upgrading the
+  Supabase plan; until then, writing a larger number here would just
+  recreate the drift this constant exists to prevent.
+
+  So direct upload is for short clips — well under a minute of 1080p.
+  Anything longer goes to YouTube, which is what LONG_FOOTAGE_ADVICE
+  says and why HLS and YouTube are first-class sources rather than
+  fallbacks.
+*/
+export const UPLOAD_MAX_MB = 50;
+export const UPLOAD_MAX_BYTES = UPLOAD_MAX_MB * 1024 * 1024;

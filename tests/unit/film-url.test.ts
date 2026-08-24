@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { videoUrlKind, youtubeId } from "../../lib/data/film-types";
+import { videoUrlKind, youtubeId, isHlsUrl, UPLOAD_MAX_MB } from "../../lib/data/film-types";
 
 /*
   The film room used to call every non-YouTube link a "Direct video",
@@ -59,6 +59,39 @@ describe("what actually plays", () => {
     // case that was never broken.
     const url = "https://abc.supabase.co/storage/v1/object/public/videos/user/clip.mp4";
     expect(videoUrlKind(url).kind).toBe("direct");
+  });
+});
+
+describe("HLS streams", () => {
+  it("recognises a playlist, which most sports platforms actually serve", () => {
+    expect(videoUrlKind("https://cdn.example.com/match/index.m3u8").kind).toBe("hls");
+    expect(videoUrlKind("https://cdn.example.com/live/stream.m3u8?token=abc").kind).toBe("hls");
+  });
+
+  it("tells the player which path to take", () => {
+    // A playlist needs hls.js; a file must NOT go through it.
+    expect(isHlsUrl("https://cdn.example.com/match/index.m3u8")).toBe(true);
+    expect(isHlsUrl("https://cdn.example.com/match.mp4")).toBe(false);
+    expect(isHlsUrl(null)).toBe(false);
+    expect(isHlsUrl("not a url")).toBe(false);
+  });
+
+  it("does not confuse a playlist with a plain file", () => {
+    // These take different playback paths, so the distinction has to hold.
+    expect(videoUrlKind("https://cdn.example.com/match.mp4").kind).toBe("direct");
+  });
+});
+
+describe("the upload limit", () => {
+  it("is whatever storage actually enforces, not a rounder number", () => {
+    /*
+      Pinned because the app once claimed 50 MB while the bucket enforced
+      48, so a 49 MB file passed the visible check and failed the hidden
+      one. `npm run verify:storage` checks this against the live bucket;
+      this just stops the constant being edited to a number that sounds
+      better without the bucket moving too.
+    */
+    expect(UPLOAD_MAX_MB).toBe(50);
   });
 });
 

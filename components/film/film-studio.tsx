@@ -10,7 +10,7 @@ import {
   createClip, deleteClip, toggleClipFavorite,
 } from "@/app/app/film-room/actions";
 import {
-  SENTIMENTS, CLIP_TAGS, sentimentMeta, fmtTime, LONG_FOOTAGE_ADVICE,
+  SENTIMENTS, CLIP_TAGS, sentimentMeta, fmtTime, LONG_FOOTAGE_ADVICE, isHlsUrl,
   type Video, type FilmClip, type ClipSentiment, type ClipInput,
 } from "@/lib/data/film-types";
 import { AddToCollection } from "./add-to-collection";
@@ -65,6 +65,61 @@ export function FilmStudio({
   const [error, setError] = useState<string | null>(null);
 
   const isYouTube = video.source === "youtube";
+  const isHls = !isYouTube && isHlsUrl(video.url);
+
+  /*
+    HLS, for the streams most sports platforms actually serve.
+
+    A `.m3u8` is a playlist. Every browser except Safari needs it fed
+    through Media Source Extensions, which is what hls.js does — so it is
+    imported ONLY when one turns up, keeping it out of the bundle for the
+    ordinary mp4 and YouTube cases.
+
+    Modern Safari is deliberately left to play these natively: its own
+    implementation handles them better than MSE does, and hls.js's own
+    documentation says to prefer it where `ManagedMediaSource` exists.
+
+    Note the `src` attribute is withheld for HLS below. Setting it would
+    have the browser try to decode the playlist as a media file, fail,
+    and trip the error handler before hls.js ever attached.
+  */
+  useEffect(() => {
+    if (isYouTube || unplayable || !isHls) return;
+    const el = videoRef.current;
+    if (!el) return;
+
+    if (el.canPlayType("application/vnd.apple.mpegurl") && "ManagedMediaSource" in window) {
+      el.src = video.url;
+      return;
+    }
+
+    let cancelled = false;
+    let instance: { destroy: () => void } | null = null;
+
+    import("hls.js")
+      .then(({ default: Hls }) => {
+        if (cancelled || !videoRef.current) return;
+        if (!Hls.isSupported()) {
+          setUnplayable(true);
+          return;
+        }
+        const hls = new Hls();
+        instance = hls;
+        hls.loadSource(video.url);
+        hls.attachMedia(videoRef.current);
+        // Only `fatal` matters — hls.js recovers from the rest by itself,
+        // and surfacing those would report a failure that did not happen.
+        hls.on(Hls.Events.ERROR, (_evt, data) => {
+          if (data.fatal) setUnplayable(true);
+        });
+      })
+      .catch(() => setUnplayable(true));
+
+    return () => {
+      cancelled = true;
+      instance?.destroy();
+    };
+  }, [isYouTube, isHls, unplayable, video.url]);
 
   /*
     Give up waiting after this long with nothing at all.
@@ -193,7 +248,9 @@ export function FilmStudio({
           ) : (
             <video
               ref={videoRef}
-              src={video.url}
+              // Withheld for HLS: hls.js attaches the stream itself, and a
+              // playlist set as `src` would fail to decode before it could.
+              src={isHls ? undefined : video.url}
               className="aspect-video w-full bg-black"
               playsInline
               preload="metadata"
