@@ -23,6 +23,8 @@ import {
 import { AddToCollection } from "./add-to-collection";
 import { FilmReading } from "./film-reading";
 import { Telestration, TelestrationTools } from "./telestration";
+import { videoElementPlayer, type FilmPlayer } from "./film-player";
+import { YouTubeStage } from "./youtube-stage";
 import type { ClipAnalysis } from "@/lib/data/analyses";
 
 const SPEEDS = [0.5, 1, 1.5, 2];
@@ -43,6 +45,28 @@ export function FilmStudio({
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  /*
+    Whichever player is behind the glass, addressed the same way.
+
+    For an upload or a direct link this wraps the <video> element. For
+    YouTube it is handed over by the embed once its message channel is
+    open. Everything below — the transport, mark in/out, the pen —
+    speaks only to this, which is why one set of controls now drives
+    both instead of YouTube getting a stripped-down page.
+  */
+  const ytPlayer = useRef<FilmPlayer | null>(null);
+  /**
+   * Whoever is behind the glass right now.
+   *
+   * A function rather than a stored value for two reasons. The YouTube
+   * embed hands its player over asynchronously, so anything computed
+   * during render would be the <video> adapter forever and the
+   * transport would silently do nothing on YouTube footage. And it is
+   * only ever called from an event handler, which is what makes
+   * reading a ref here legitimate.
+   */
+  const player = (): FilmPlayer => ytPlayer.current ?? videoElementPlayer(videoRef);
+
   const [current, setCurrent] = useState(0);
   const [duration, setDuration] = useState(video.durationSeconds ?? 0);
   /*
@@ -60,6 +84,13 @@ export function FilmStudio({
     when nothing arrives at all.
   */
   const [unplayable, setUnplayable] = useState(false);
+  /*
+    YouTube says WHY it refused — embedding disabled, private, deleted —
+    and that sentence is worth keeping. "Embedding is turned off for
+    this video" and "your link is wrong" send somebody to fix two
+    completely different things.
+  */
+  const [unplayableReason, setUnplayableReason] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
   const [rate, setRate] = useState(1);
 
@@ -168,25 +199,29 @@ export function FilmStudio({
   }, [isYouTube, unplayable, video.url]);
 
   const seek = (t: number) => {
-    const v = videoRef.current;
-    if (!v) return;
-    v.currentTime = Math.max(0, Math.min(t, duration || t));
+    player().seek(Math.max(0, Math.min(t, duration || t)));
+    /*
+      The playhead is moved optimistically as well as actually. A
+      <video> reports back within a frame, but YouTube is polled every
+      100ms — long enough that a frame nudge felt like it had not
+      registered, and long enough for a second click to compute its
+      step from a stale position.
+    */
+    setCurrent(Math.max(0, Math.min(t, duration || t)));
   };
   const nudge = (delta: number) => seek(current + delta);
   const togglePlay = () => {
-    const v = videoRef.current;
-    if (!v) return;
-    if (v.paused) v.play();
-    else v.pause();
+    if (playing) player().pause();
+    else player().play();
   };
   const setSpeed = (r: number) => {
     setRate(r);
-    if (videoRef.current) videoRef.current.playbackRate = r;
+    player().setRate(r);
   };
 
   const playClip = (c: FilmClip) => {
     seek(c.startSeconds);
-    videoRef.current?.play();
+    player().play();
   };
 
   const toggleTag = (t: string) =>
@@ -233,8 +268,9 @@ export function FilmStudio({
 
   const startDrawing = () => {
     // The freeze-frame. Nothing more elaborate is needed: a paused
-    // <video> is already holding exactly the frame being drawn on.
-    videoRef.current?.pause();
+    // player is already holding exactly the frame being drawn on —
+    // which is as true of a YouTube embed as of a <video>.
+    player().pause();
     setViewing(null);
     setShapes([]);
     setDrawNote("");
@@ -278,7 +314,7 @@ export function FilmStudio({
     }
     setDrawing(false);
     seek(a.atSeconds);
-    videoRef.current?.pause();
+    player().pause();
     setViewing(a);
   };
 
@@ -293,17 +329,7 @@ export function FilmStudio({
       {/* ── Player + composer ── */}
       <div className="min-w-0">
         <div className="overflow-hidden rounded-xl border border-line bg-black">
-          {isYouTube && video.externalId ? (
-            <div className="aspect-video">
-              <iframe
-                className="size-full"
-                src={`https://www.youtube.com/embed/${video.externalId}`}
-                title={video.title}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            </div>
-          ) : unplayable ? (
+          {unplayable ? (
             /*
               Says what happened and what to do about it. The link is
               shown because the usual cause is that it points at a page
@@ -316,17 +342,28 @@ export function FilmStudio({
               </span>
               <p className="text-sm font-medium text-text-hi">This video would not load.</p>
               <p className="max-w-md text-sm leading-relaxed text-text-dim">
-                MIDO could not open the link saved for this video. That usually means it points at
-                a page to watch on rather than at a video file.
+                {/*
+                  YouTube's own reason when there is one. It knows things
+                  this page cannot infer — that embedding is switched
+                  off, that the video was deleted — and repeating its
+                  answer beats guessing at a cause.
+                */}
+                {unplayableReason ??
+                  "MIDO could not open the link saved for this video. That usually means it points at a page to watch on rather than at a video file."}
               </p>
               {video.url && (
                 <code className="max-w-full truncate rounded border border-line bg-ink-850 px-2 py-1 text-[11px] text-text-faint">
                   {video.url}
                 </code>
               )}
-              <p className="max-w-md text-xs leading-relaxed text-text-faint">{LONG_FOOTAGE_ADVICE}</p>
+              {!unplayableReason && (
+                <p className="max-w-md text-xs leading-relaxed text-text-faint">{LONG_FOOTAGE_ADVICE}</p>
+              )}
               <button
-                onClick={() => setUnplayable(false)}
+                onClick={() => {
+                  setUnplayableReason(null);
+                  setUnplayable(false);
+                }}
                 className="mt-1 h-9 rounded-lg border border-line px-4 text-sm text-text-dim transition-colors hover:border-signal-line hover:text-text"
               >
                 Try again
@@ -334,25 +371,46 @@ export function FilmStudio({
             </div>
           ) : (
             <div className="relative">
-              <video
-                ref={videoRef}
-                // Withheld for HLS: hls.js attaches the stream itself, and a
-                // playlist set as `src` would fail to decode before it could.
-                src={isHls ? undefined : video.url}
-                className="aspect-video w-full bg-black"
-                playsInline
-                preload="metadata"
-                onError={() => setUnplayable(true)}
-                onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
-                onTimeUpdate={(e) => setCurrent(e.currentTarget.currentTime)}
-                onPlay={() => {
-                  setPlaying(true);
-                  // A drawing belongs to one frame. Once the footage is
-                  // moving again it is over the wrong one, so it goes.
-                  setViewing(null);
-                }}
-                onPause={() => setPlaying(false)}
-              />
+              {isYouTube && video.externalId ? (
+                <YouTubeStage
+                  externalId={video.externalId}
+                  onReady={(p) => {
+                    ytPlayer.current = p;
+                  }}
+                  onTime={setCurrent}
+                  onDuration={setDuration}
+                  onPlayingChange={(p) => {
+                    setPlaying(p);
+                    // A drawing belongs to one frame. Once the footage
+                    // is moving again it is over the wrong one.
+                    if (p) setViewing(null);
+                  }}
+                  onUnavailable={(reason) => {
+                    setUnplayableReason(reason);
+                    setUnplayable(true);
+                  }}
+                />
+              ) : (
+                <video
+                  ref={videoRef}
+                  // Withheld for HLS: hls.js attaches the stream itself, and a
+                  // playlist set as `src` would fail to decode before it could.
+                  src={isHls ? undefined : video.url}
+                  className="aspect-video w-full bg-black"
+                  playsInline
+                  preload="metadata"
+                  onError={() => setUnplayable(true)}
+                  onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
+                  onTimeUpdate={(e) => setCurrent(e.currentTarget.currentTime)}
+                  onPlay={() => {
+                    setPlaying(true);
+                    // A drawing belongs to one frame. Once the footage is
+                    // moving again it is over the wrong one, so it goes.
+                    setViewing(null);
+                  }}
+                  onPause={() => setPlaying(false)}
+                />
+              )}
 
               {(drawing || viewing) && (
                 <Telestration
@@ -383,8 +441,12 @@ export function FilmStudio({
           )}
         </div>
 
-        {!isYouTube ? (
-          <>
+        {/*
+          One set of tools, both sources. These used to be fenced off
+          behind `!isYouTube`, because the transport could only drive a
+          <video> element. Now that the embed answers the same four
+          verbs, there is nothing left to fence.
+        */}
             {/* Transport */}
             <div className="mt-3 rounded-lg border border-line bg-ink-900 p-3">
               <div className="flex items-center gap-3">
@@ -553,7 +615,7 @@ export function FilmStudio({
             <div className="mt-3">
               <FilmReading
                 videoId={video.id}
-                isYouTube={false}
+                isYouTube={isYouTube}
                 current={current}
                 duration={duration}
                 sourceUrl={video.url}
@@ -561,27 +623,6 @@ export function FilmStudio({
                 analyses={analyses}
               />
             </div>
-          </>
-        ) : (
-          <>
-            <p className="mt-3 rounded-lg border border-line bg-ink-900 p-3 text-sm text-text-dim">
-              In-app clip tools work on uploaded or direct-URL footage. A YouTube video plays here and
-              the Study Engine works from it. Still frames cannot be taken out of the embed — but
-              MIDO can read the clip itself, which does not need them.
-            </p>
-            <div className="mt-3">
-              <FilmReading
-                videoId={video.id}
-                isYouTube
-                current={0}
-                duration={0}
-                sourceUrl={video.url}
-                onSeek={() => {}}
-                analyses={analyses}
-              />
-            </div>
-          </>
-        )}
       </div>
 
       {/* ── Clip list ── */}

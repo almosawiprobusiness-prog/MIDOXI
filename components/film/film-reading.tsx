@@ -317,15 +317,19 @@ export function FilmReading({
                   onChange={(e) => setFrom(Math.max(0, Number(e.target.value) || 0))}
                   className={inp}
                 />
-                {!isYouTube && (
-                  <button
-                    onClick={() => setFrom(Math.floor(current))}
-                    className="chip shrink-0 hover:border-signal-line hover:text-signal-bright"
-                    title="Use the current playhead"
-                  >
-                    now
-                  </button>
-                )}
+                {/*
+                  No longer withheld from YouTube. This was hidden
+                  because the embed had no readable playhead to take
+                  "now" from; the IFrame API supplies one, so the
+                  button means the same thing on both sources.
+                */}
+                <button
+                  onClick={() => setFrom(Math.floor(current))}
+                  className="chip shrink-0 hover:border-signal-line hover:text-signal-bright"
+                  title="Use the current playhead"
+                >
+                  now
+                </button>
               </div>
             </label>
 
