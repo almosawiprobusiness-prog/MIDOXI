@@ -10,6 +10,7 @@ import {
   LineChart,
   GraduationCap,
   CalendarDays,
+  CalendarClock,
   Users,
   User,
   Crown,
@@ -122,6 +123,14 @@ const calendar: NavItem = {
   status: "live",
   group: "more",
 };
+const meetings: NavItem = {
+  label: "Sessions",
+  href: "/app/meetings",
+  icon: CalendarClock,
+  hint: "Time with your people",
+  status: "live",
+  group: "more",
+};
 const community: NavItem = {
   label: "Community",
   href: "/app/community",
@@ -172,6 +181,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
       { label: "Recovery", href: "/app/recovery", icon: HeartPulse, hint: "Readiness & sleep", status: "live", group: "more" },
       { label: "Performance", href: "/app/performance", icon: LineChart, hint: "Analytics", status: "live", group: "more" },
       calendar,
+      meetings,
       community,
     ],
     quickActions: [
@@ -216,6 +226,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
       { label: "Matches", href: "/app/matches", icon: Swords, hint: "Fixtures & analysis", status: "live", group: "more" },
       filmRoom("more"),
       calendar,
+      meetings,
       community,
     ],
     quickActions: [
@@ -258,6 +269,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
       study,
       { label: "Sessions", href: "/app/training", icon: ClipboardList, hint: "Delivered work", status: "live", group: "more" },
       calendar,
+      meetings,
       community,
     ],
     quickActions: [
@@ -301,6 +313,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
       { label: "Development", href: "/app/intelligence", icon: LineChart, hint: "Organization trends", status: "live", group: "primary" },
       study,
       calendar,
+      meetings,
       community,
     ],
     quickActions: [
