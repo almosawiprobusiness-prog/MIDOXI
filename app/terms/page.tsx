@@ -112,9 +112,10 @@ export default function TermsPage() {
 
       <LegalSection heading="Governing law">
         <p>
-          These terms are governed by the laws of [jurisdiction to be confirmed],
+          These terms are governed by the laws of the State of Minnesota, USA,
           without regard to its conflict-of-law rules, and any dispute not resolved
-          informally will be handled in the courts of that jurisdiction.
+          informally will be handled in the state or federal courts located in
+          Minnesota.
         </p>
       </LegalSection>
 
