@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { isDemoMode } from "@/lib/env";
 import { ROLES, ROLE_IDS } from "@/lib/roles/roles";
+import { HeroMotion, ScrollZoomReveal } from "@/components/marketing/scroll-motion";
 
 export const metadata = {
   title: "MIDO XI — Your entire football career. One system.",
@@ -31,23 +32,26 @@ const PILLARS = [
 
 export default function LandingPage() {
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    <div className="relative min-h-screen overflow-x-clip">
+      {/*
+        `overflow-x-clip`, not `overflow-hidden`. An ancestor with
+        `overflow: hidden` establishes a scroll container and silently
+        kills `position: sticky` in every descendant — which would leave
+        the reveal section below as 400vh of nothing. `clip` contains
+        the background glows the same way without creating one.
+      */}
       <div className="pitch-grid absolute inset-0 opacity-60" aria-hidden />
       <div className="field-glow absolute inset-0" aria-hidden />
 
       {/* Full-bleed cinematic hero */}
       <section className="relative min-h-[92vh] w-full overflow-hidden">
-        <video
-          className="absolute inset-0 h-full w-full object-cover"
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="metadata"
-          poster="/hero-poster.jpg"
-        >
-          <source src="/hero.mp4" type="video/mp4" />
-        </video>
+        {/*
+          The video is full-bleed and the headline is readable on the
+          first frame — that is the hero's job. The motion is a slow
+          push-in as you leave it, so the page has some life without the
+          opening being something that has to assemble itself first.
+        */}
+        <HeroMotion src="/hero.mp4" poster="/hero-poster.jpg" />
         {/* legibility scrims — dark on the left for copy, blend into the page at the bottom */}
         <div className="absolute inset-0 bg-gradient-to-r from-ink-950 via-ink-950/70 to-ink-950/5" aria-hidden />
         <div className="absolute inset-0 bg-gradient-to-t from-ink-950 via-transparent to-ink-950/45" aria-hidden />
@@ -116,6 +120,29 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/*
+        The showpiece. Starts as a small rounded frame and grows to fill
+        the screen as you scroll — the effect only works because it
+        starts small, which is precisely why it belongs here rather than
+        at the top of the page.
+      */}
+      <ScrollZoomReveal
+        className="relative z-10"
+        src="/hero.mp4"
+        poster="/hero-poster.jpg"
+        caption={
+          <>
+            <p className="font-display text-3xl font-bold leading-tight tracking-tight text-text-hi md:text-5xl [text-shadow:0_2px_30px_rgba(0,0,0,0.8)]">
+              Watch it again. <span className="text-signal">Properly.</span>
+            </p>
+            <p className="mx-auto mt-4 max-w-xl text-base text-text [text-shadow:0_1px_16px_rgba(0,0,0,0.85)]">
+              Every clip tagged, every moment timestamped, every lesson kept — so
+              the same mistake stops being the same mistake.
+            </p>
+          </>
+        }
+      />
 
       {/* Development loop */}
       <section className="relative z-10 mx-auto max-w-6xl px-5 py-14">
