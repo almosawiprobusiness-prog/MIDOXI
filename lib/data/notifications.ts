@@ -72,6 +72,24 @@ export async function listNotifications(limit = 30): Promise<Notification[]> {
   return rows.map((r) => toNotification(r, r.actor_id ? (actors.get(r.actor_id) ?? null) : null));
 }
 
+/** Whether email is currently on for this account. Defaults true — the column's own default — when no preference row exists yet. */
+export async function getEmailOptIn(): Promise<boolean> {
+  if (isDemoMode) return true;
+
+  const supabase = await createClient();
+  if (!supabase) return true;
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return true;
+
+  const { data } = await supabase
+    .from("user_preferences")
+    .select("email_opt_in")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  return data?.email_opt_in ?? true;
+}
+
 export async function unreadCount(): Promise<number> {
   if (isDemoMode) return demoNotifications().filter((n) => !n.read).length;
 

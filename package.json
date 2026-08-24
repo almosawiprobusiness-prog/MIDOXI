@@ -20,6 +20,7 @@
     "verify:db": "node scripts/verify-schema.mjs && node scripts/verify-columns.mjs && node scripts/verify-security.mjs && node scripts/verify-timeline.mjs && node scripts/verify-migrations.mjs",
     "verify:timeline": "node scripts/verify-timeline.mjs && node scripts/verify-migrations.mjs",
     "verify:access": "node scripts/verify-access.mjs",
+    "verify:email": "node scripts/verify-email.mjs",
     "verify:notifications": "node scripts/verify-notifications.mjs",
     "verify:wearables": "node scripts/verify-wearables.mjs",
     "verify:meetings": "node scripts/verify-meetings.mjs",

@@ -17,6 +17,27 @@ async function requireUser() {
   return { supabase, userId: user?.id ?? null };
 }
 
+/**
+ * On or off, for everything `emailWorthy()` allows — there is one switch,
+ * not one per notification kind. A settings page with a checkbox for every
+ * event a product might ever email is a page nobody configures correctly;
+ * a single "email me" is the version people actually use.
+ */
+export async function updateEmailOptIn(optIn: boolean): Promise<Result> {
+  if (isDemoMode) return { ok: true, demo: true };
+
+  const { supabase, userId } = await requireUser();
+  if (!supabase || !userId) return { ok: false, error: "You must be signed in." };
+
+  const { error } = await supabase
+    .from("user_preferences")
+    .upsert({ user_id: userId, email_opt_in: optIn });
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/app/settings");
+  return { ok: true };
+}
+
 export async function updateProfile(input: ProfileFormInput): Promise<Result> {
   if (!input.fullName?.trim()) return { ok: false, error: "Name is required." };
 

@@ -52,7 +52,14 @@ export const env = {
   stripePriceClubMonthly: clean(process.env.STRIPE_PRICE_CLUB_MONTHLY),
   stripePriceClubAnnual: clean(process.env.STRIPE_PRICE_CLUB_ANNUAL),
 
+  /*
+    Email. `resendKey` was scaffolded before anything used it — `from` is
+    the half that was missing, and Resend refuses to send without a
+    verified sender, so both are required before the product offers email
+    at all. See `hasEmail` below.
+  */
   resendKey: clean(process.env.RESEND_API_KEY),
+  emailFrom: clean(process.env.EMAIL_FROM),
 
   adminEmails: clean(process.env.MIDO_ADMIN_EMAILS)
     .split(",")
@@ -75,6 +82,15 @@ export const isDemoMode = !isSupabaseConfigured;
 export const hasWhoop =
   isSupabaseConfigured && Boolean(env.whoopClientId && env.whoopClientSecret);
 
+/*
+  Same shape as `hasWhoop`: a half-configured integration is worse than
+  none. An API key with no verified sender fails on the first send, and a
+  sender with no key never gets that far — either way the honest answer
+  is "not available yet", not a toggle that quietly does nothing.
+*/
+export const hasEmail =
+  isSupabaseConfigured && Boolean(env.resendKey && env.emailFrom);
+
 export const features = {
   auth: isSupabaseConfigured,
   database: isSupabaseConfigured,
@@ -82,7 +98,7 @@ export const features = {
   nativeVideo: Boolean(env.geminiKey),
   youtube: Boolean(env.youtubeKey),
   billing: Boolean(env.stripeSecret && env.stripePublishable),
-  email: Boolean(env.resendKey),
+  email: hasEmail,
 };
 
 // ---------------------------------------------------------------------------

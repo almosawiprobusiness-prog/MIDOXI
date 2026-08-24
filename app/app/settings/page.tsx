@@ -1,12 +1,14 @@
-import { Settings, User, ShieldCheck, Globe, Eye, TriangleAlert } from "lucide-react";
+import { Settings, User, ShieldCheck, Globe, Eye, Bell, TriangleAlert } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { getProfileSettings } from "@/lib/data/profile";
-import { isDemoMode } from "@/lib/env";
+import { getEmailOptIn } from "@/lib/data/notifications";
+import { isDemoMode, hasEmail } from "@/lib/env";
 import { PageHeader } from "@/components/ui/kit";
 import { ProfileForm } from "@/components/settings/profile-form";
 import { AvatarUpload } from "@/components/settings/avatar-upload";
 import { PublicProfileForm } from "@/components/settings/public-profile-form";
 import { AccountSecurity, PrivacyToggle } from "@/components/settings/account-security";
+import { EmailPreferenceToggle } from "@/components/settings/notification-preferences";
 import { DangerZone } from "@/components/settings/danger-zone";
 
 export const metadata = { title: "Settings — MIDO XI" };
@@ -15,6 +17,7 @@ const NAV: { id: string; label: string; icon: LucideIcon }[] = [
   { id: "profile", label: "Football profile", icon: User },
   { id: "account", label: "Account & security", icon: ShieldCheck },
   { id: "public", label: "Public profile", icon: Globe },
+  { id: "notifications", label: "Notifications", icon: Bell },
   { id: "privacy", label: "Privacy", icon: Eye },
   { id: "data", label: "Data & account", icon: TriangleAlert },
 ];
@@ -32,7 +35,7 @@ function Section({ id, label, icon: Icon, children }: { id: string; label: strin
 }
 
 export default async function SettingsPage() {
-  const profile = await getProfileSettings();
+  const [profile, emailOptIn] = await Promise.all([getProfileSettings(), getEmailOptIn()]);
 
   return (
     <div className="mx-auto max-w-[1000px] px-4 py-8 md:px-6">
@@ -74,6 +77,9 @@ export default async function SettingsPage() {
           </Section>
           <Section id="public" label="Public profile & community" icon={Globe}>
             <PublicProfileForm profile={profile} />
+          </Section>
+          <Section id="notifications" label="Notifications" icon={Bell}>
+            <EmailPreferenceToggle initial={emailOptIn} configured={hasEmail} />
           </Section>
           <Section id="privacy" label="Privacy" icon={Eye}>
             <PrivacyToggle initial={profile.isPublic} />
