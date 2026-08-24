@@ -45,9 +45,20 @@ if (!url || !key) {
 }
 
 const svc = { apikey: key, authorization: `Bearer ${key}` };
+
+/*
+  A failed request must not read as an empty result.
+
+  The first version of this returned `null` on !ok, which is indistinguishable
+  from "no rows" at the call site — so one transient failure on the
+  `subscriptions` read printed a paying subscriber as having no subscription.
+  A tool built to catch billing being wrong quietly reported billing as wrong.
+  Throw instead: a checker that cannot answer must say so, not guess.
+*/
 const rest = async (q) => {
   const r = await fetch(`${url}/rest/v1/${q}`, { headers: svc });
-  return r.ok ? r.json() : null;
+  if (!r.ok) throw new Error(`${q.split("?")[0]}: HTTP ${r.status} ${(await r.text()).slice(0, 160)}`);
+  return r.json();
 };
 
 // Kept in step with lib/billing/plans.ts by hand; the assertion at the bottom
@@ -87,7 +98,7 @@ let problems = 0;
 for (const u of targets) {
   const [sub, comps, prof, pp, cp, tp, clp] = await Promise.all([
     rest(`subscriptions?select=plan_id,status,current_period_end&user_id=eq.${u.id}`),
-    rest(`comped_access?select=tier,source,ends_at&user_id=eq.${u.id}&ends_at=gt.${new Date().toISOString()}&order=ends_at.desc`),
+    rest(`comped_access?select=tier,source,ends_at&user_id=eq.${u.id}&ends_at=gt.${encodeURIComponent(new Date().toISOString())}&order=ends_at.desc`),
     rest(`profiles?select=role&id=eq.${u.id}`),
     rest(`player_profiles?select=user_id&user_id=eq.${u.id}`),
     rest(`coach_profiles?select=user_id&user_id=eq.${u.id}`),
