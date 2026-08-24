@@ -19,6 +19,7 @@
     "coupons": "node scripts/audit-coupons.mjs",
     "verify:db": "node scripts/verify-schema.mjs && node scripts/verify-columns.mjs && node scripts/verify-security.mjs && node scripts/verify-timeline.mjs && node scripts/verify-migrations.mjs",
     "verify:timeline": "node scripts/verify-timeline.mjs && node scripts/verify-migrations.mjs",
+    "verify:access": "node scripts/verify-access.mjs",
     "verify:migrations": "node scripts/verify-migrations.mjs",
     "verify:feed": "node scripts/verify-feed.mjs",
     "verify:gemini": "node scripts/verify-gemini.mjs",

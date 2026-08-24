@@ -5,6 +5,7 @@ import {
   PLANS,
   isProPlan,
   type PlanId,
+  type Tier,
   type MeteredFeature,
   type Entitlements,
 } from "./plans";
@@ -52,15 +53,15 @@ export async function getMembership(): Promise<Membership> {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!data || !activeStatus(String(data.status))) {
-    // No paid subscription — but months earned by referring people are real
-    // access, so they are checked before falling back to free.
-    return (await compedMembership(supabase)) ?? FREE;
-  }
+  // Months earned by referring people, and founder grants, are real access —
+  // read alongside the subscription rather than only when there isn't one.
+  const comped = await compedMembership(supabase);
+
+  if (!data || !activeStatus(String(data.status))) return comped ?? FREE;
 
   const planId = (data.plan_id as PlanId) ?? "free";
   const plan = PLANS[planId] ?? PLANS.free;
-  return {
+  const paid: Membership = {
     planId,
     isPro: isProPlan(planId),
     status: String(data.status),
@@ -69,6 +70,34 @@ export async function getMembership(): Promise<Membership> {
     entitlements: plan.entitlements,
     comped: null,
   };
+
+  /*
+    An account can hold both at once, and this used to return the paid one
+    without looking — the comped branch sat behind an early return that an
+    active subscription never reached.
+
+    That quietly punished the exact person it should not have. A founder holding
+    a comped Club window who then subscribed to Touchline was moved DOWN: Club
+    grants four systems, Touchline three, so paying money removed the Club OS
+    from an account that already had it. Nothing errored and nothing said why —
+    the systems simply stopped being there the day they paid.
+
+    Take the better of the two. Neither grant is revoked by the existence of the
+    other; the comp keeps running underneath and reappears on its own if the
+    subscription lapses first.
+  */
+  if (comped && tierRank(comped.planId) > tierRank(paid.planId)) return comped;
+  return paid;
+}
+
+/**
+ * How much a plan opens, as an order. Only for comparing two live grants on one
+ * account — never for deciding whether something is entitled, which is always a
+ * direct read of the plan.
+ */
+function tierRank(id: PlanId): number {
+  const order: Record<Tier, number> = { free: 0, player: 1, touchline: 2, club: 3 };
+  return order[PLANS[id]?.tier ?? "free"];
 }
 
 /*

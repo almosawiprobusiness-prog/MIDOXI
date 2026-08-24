@@ -124,8 +124,27 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
   let available: RoleId[];
   if (entitled.length > 0) {
-    // Paid: every provisioned system the plan names.
-    available = provisioned.filter((r) => entitled.includes(r));
+    /*
+      Paid: every system the plan names, whether or not it has been opened yet.
+
+      This used to be `provisioned.filter(...)` — the intersection with the
+      systems an account had already set up — and that was a deadlock that cost
+      a paying subscriber most of what they bought. `switchRole` is what creates
+      a role's profile row, so a system becomes "provisioned" only by being
+      entered; and the switcher only offers what is in `available`. Entering
+      required provisioning, provisioning required entering. A Touchline
+      subscriber, entitled to player, coach and trainer, could reach player and
+      nothing else, with no error and no way out — the failure looked exactly
+      like the product having no coach system at all.
+
+      Widening this does not widen the hole the comment above describes.
+      Provisioning was never the security boundary: `switchRole` re-checks
+      `canUseRole(membership.planId, role)` server-side before it writes
+      anything, so a client calling it directly with an unentitled role is
+      refused there. `entitled` comes from the plan, never from a stored value,
+      which is the property that actually matters.
+    */
+    available = entitled;
   } else {
     /*
       Free: exactly one system, and it must be one free may have. A stored role
