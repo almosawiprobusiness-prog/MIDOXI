@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
 import { demoStore } from "@/lib/data/store";
 import { player } from "@/lib/seed";
+import { notify } from "@/lib/notifications/notify";
 
 export type Result = { ok: true; id?: string; demo?: boolean } | { ok: false; error: string };
 
@@ -41,6 +42,24 @@ export async function addComment(postId: string, body: string): Promise<Result> 
     body: body.trim(),
   });
   if (error) return { ok: false, error: error.message };
+
+  const { data: post } = await supabase
+    .from("community_posts")
+    .select("user_id, caption, title")
+    .eq("id", postId)
+    .maybeSingle();
+  if (post?.user_id) {
+    const name = String(prof?.known_as || prof?.full_name || "Someone").trim();
+    await notify({
+      userId: String(post.user_id),
+      actorId: userId,
+      kind: "comment",
+      title: `${name} commented on your post`,
+      body: body.trim(),
+      href: `/app/community/posts/${postId}`,
+    });
+  }
+
   revalidate(postId);
   return { ok: true };
 }

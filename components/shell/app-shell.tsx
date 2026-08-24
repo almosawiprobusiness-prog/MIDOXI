@@ -6,17 +6,22 @@ import { Topbar } from "./topbar";
 import { CommandPalette } from "./command-palette";
 import type { ShellIdentity } from "@/lib/roles/roles";
 import type { SearchEntry } from "@/lib/search";
+import type { Notification } from "@/lib/data/notification-types";
 
 export function AppShell({
   identity,
   dateLabel,
   searchIndex,
+  notifications,
+  notifUnread,
   children,
 }: {
   identity: ShellIdentity;
   dateLabel: string;
   /** The user's own football memory, resolved on the server. */
   searchIndex: SearchEntry[];
+  notifications: Notification[];
+  notifUnread: number;
   children: React.ReactNode;
 }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -63,7 +68,7 @@ export function AppShell({
       </a>
       <Sidebar identity={identity} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar onOpenPalette={openPalette} identity={identity} dateLabel={dateLabel} />
+        <Topbar onOpenPalette={openPalette} identity={identity} dateLabel={dateLabel} notifications={notifications} notifUnread={notifUnread} />
         <main id="main" tabIndex={-1} className="pitch-grid flex-1">
           <div className="field-glow min-h-full">{children}</div>
         </main>

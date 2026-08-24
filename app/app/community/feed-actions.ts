@@ -5,6 +5,7 @@ import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
 import { getProfileSettings } from "@/lib/data/profile";
 import { postIssue, mediaIssue, youtubeId, type Visibility } from "@/lib/data/feed-types";
+import { notify } from "@/lib/notifications/notify";
 
 /*
   Everything a person can do in the feed.
@@ -35,6 +36,21 @@ async function me() {
 function refresh() {
   revalidatePath("/app/community");
   revalidatePath("/app/community", "layout");
+}
+
+/** My own name and handle, for the notifications this file sends on my behalf. */
+async function myIdentity(
+  supabase: NonNullable<Awaited<ReturnType<typeof createClient>>>,
+  userId: string,
+): Promise<{ name: string; handle: string | null }> {
+  const [{ data: profile }, { data: pp }] = await Promise.all([
+    supabase.from("profiles").select("known_as, full_name").eq("id", userId).maybeSingle(),
+    supabase.from("player_profiles").select("handle").eq("user_id", userId).maybeSingle(),
+  ]);
+  return {
+    name: String(profile?.known_as || profile?.full_name || "Someone").trim(),
+    handle: (pp?.handle as string) ?? null,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -203,6 +219,16 @@ export async function toggleFollow(targetId: string): Promise<{ ok: boolean; fol
     .from("follows")
     .insert({ follower_id: userId, following_id: targetId });
   if (error) return { ok: false, error: error.message };
+
+  const { name, handle } = await myIdentity(supabase, userId);
+  await notify({
+    userId: targetId,
+    actorId: userId,
+    kind: "follow",
+    title: `${name} started following you`,
+    href: handle ? `/app/community/${handle}` : `/app/community/players/${userId}`,
+  });
+
   refresh();
   return { ok: true, following: true };
 }
@@ -232,6 +258,24 @@ export async function toggleLike(postId: string): Promise<{ ok: boolean; liked?:
 
   const { error } = await supabase.from("post_reactions").insert({ post_id: postId, user_id: userId });
   if (error) return { ok: false, error: error.message };
+
+  const { data: post } = await supabase
+    .from("community_posts")
+    .select("user_id, caption, title")
+    .eq("id", postId)
+    .maybeSingle();
+  if (post?.user_id) {
+    const { name } = await myIdentity(supabase, userId);
+    await notify({
+      userId: String(post.user_id),
+      actorId: userId,
+      kind: "like",
+      title: `${name} liked your post`,
+      body: (post.caption as string) || (post.title as string) || null,
+      href: `/app/community/posts/${postId}`,
+    });
+  }
+
   refresh();
   return { ok: true, liked: true };
 }

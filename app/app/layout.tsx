@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell/app-shell";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getSearchIndex } from "@/lib/data/search-index";
+import { listNotifications, unreadCount } from "@/lib/data/notifications";
 import type { ShellIdentity } from "@/lib/roles/roles";
 
 export default async function AppLayout({ children }: LayoutProps<"/app">) {
@@ -32,12 +33,20 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
   */
   const searchIndex = await getSearchIndex().catch(() => []);
 
+  // Same reasoning as the search index: resolved here so the bell never
+  // flashes empty on first paint, and a failure here must not take the
+  // workspace down with it.
+  const [notifications, notifUnread] = await Promise.all([
+    listNotifications(30).catch(() => []),
+    unreadCount().catch(() => 0),
+  ]);
+
   const dateLabel = new Date()
     .toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })
     .toUpperCase();
 
   return (
-    <AppShell identity={identity} dateLabel={dateLabel} searchIndex={searchIndex}>
+    <AppShell identity={identity} dateLabel={dateLabel} searchIndex={searchIndex} notifications={notifications} notifUnread={notifUnread}>
       {children}
     </AppShell>
   );

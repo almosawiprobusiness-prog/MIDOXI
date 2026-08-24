@@ -12,6 +12,7 @@ import {
   type AgendaKind,
   type MeetingKind,
 } from "@/lib/data/meeting-types";
+import { notify } from "@/lib/notifications/notify";
 
 /*
   Everything two people can do to a meeting they share.
@@ -60,6 +61,15 @@ async function record(
   detail: Record<string, unknown> = {},
 ) {
   await supabase.from("meeting_events").insert({ meeting_id: meetingId, action, detail });
+}
+
+/** My own display name, for the notifications this file sends on my behalf. */
+async function myName(
+  supabase: NonNullable<Awaited<ReturnType<typeof createClient>>>,
+  userId: string,
+): Promise<string> {
+  const { data } = await supabase.from("profiles").select("known_as, full_name").eq("id", userId).maybeSingle();
+  return String(data?.known_as || data?.full_name || "Someone").trim();
 }
 
 /** Is this person connected to me? The same set `bookableWith` offers. */
@@ -121,6 +131,17 @@ export async function createMeeting(input: {
   if (error || !data) return { ok: false, error: error?.message ?? "That could not be saved." };
 
   await record(supabase, data.id, "created", { kind: input.kind });
+
+  const name = await myName(supabase, userId);
+  await notify({
+    userId: input.withUser,
+    actorId: userId,
+    kind: "meeting_proposed",
+    title: `${name} wants to book a session with you`,
+    body: input.title.trim(),
+    href: `/app/meetings/${data.id}`,
+  });
+
   refresh(data.id);
   return { ok: true, id: data.id };
 }
@@ -131,7 +152,7 @@ export async function respondToMeeting(id: string, accept: boolean): Promise<Mee
   const { supabase, userId } = await me();
   if (!supabase || !userId) return { ok: false, error: "Sign in first." };
 
-  const { data: m } = await supabase.from("meetings").select("created_by, with_user, status").eq("id", id).maybeSingle();
+  const { data: m } = await supabase.from("meetings").select("created_by, with_user, status, title").eq("id", id).maybeSingle();
   if (!m) return { ok: false, error: "That meeting is not there." };
   if (m.created_by === userId) return { ok: false, error: "You called this one — the other side accepts it." };
   if (m.status !== "proposed") return { ok: false, error: "This has already been answered." };
@@ -143,6 +164,17 @@ export async function respondToMeeting(id: string, accept: boolean): Promise<Mee
   if (error) return { ok: false, error: error.message };
 
   await record(supabase, id, accept ? "accepted" : "declined");
+
+  const name = await myName(supabase, userId);
+  await notify({
+    userId: m.created_by,
+    actorId: userId,
+    kind: accept ? "meeting_accepted" : "meeting_declined",
+    title: accept ? `${name} accepted your session` : `${name} declined your session`,
+    body: m.title,
+    href: `/app/meetings/${id}`,
+  });
+
   refresh(id);
   return { ok: true };
 }
@@ -159,6 +191,8 @@ export async function cancelMeeting(id: string): Promise<MeetingResult> {
   const { supabase, userId } = await me();
   if (!supabase || !userId) return { ok: false, error: "Sign in first." };
 
+  const { data: m } = await supabase.from("meetings").select("created_by, with_user, title").eq("id", id).maybeSingle();
+
   const { error } = await supabase
     .from("meetings")
     .update({ status: "cancelled", updated_at: new Date().toISOString() })
@@ -166,6 +200,20 @@ export async function cancelMeeting(id: string): Promise<MeetingResult> {
   if (error) return { ok: false, error: error.message };
 
   await record(supabase, id, "cancelled");
+
+  if (m) {
+    const otherParty = m.created_by === userId ? m.with_user : m.created_by;
+    const name = await myName(supabase, userId);
+    await notify({
+      userId: otherParty,
+      actorId: userId,
+      kind: "meeting_cancelled",
+      title: `${name} cancelled a session`,
+      body: m.title,
+      href: `/app/meetings/${id}`,
+    });
+  }
+
   refresh(id);
   return { ok: true };
 }
@@ -186,6 +234,8 @@ export async function proposeTime(
 
   const bad = rangeIssue(startsAt, endsAt);
   if (bad) return { ok: false, error: bad };
+
+  const { data: m } = await supabase.from("meetings").select("created_by, with_user, title").eq("id", meetingId).maybeSingle();
 
   /*
     Supersede any open offer first. The unique index allows one pending
@@ -209,6 +259,20 @@ export async function proposeTime(
   if (error) return { ok: false, error: error.message };
 
   await record(supabase, meetingId, "proposed_time", { startsAt, endsAt });
+
+  if (m) {
+    const otherParty = m.created_by === userId ? m.with_user : m.created_by;
+    const name = await myName(supabase, userId);
+    await notify({
+      userId: otherParty,
+      actorId: userId,
+      kind: "meeting_time_proposed",
+      title: `${name} suggested a new time`,
+      body: m.title,
+      href: `/app/meetings/${meetingId}`,
+    });
+  }
+
   refresh(meetingId);
   return { ok: true };
 }
@@ -252,6 +316,18 @@ export async function respondToProposal(proposalId: string, accept: boolean): Pr
     startsAt: p.starts_at,
     endsAt: p.ends_at,
   });
+
+  const { data: m } = await supabase.from("meetings").select("title").eq("id", p.meeting_id).maybeSingle();
+  const name = await myName(supabase, userId);
+  await notify({
+    userId: p.proposed_by,
+    actorId: userId,
+    kind: accept ? "meeting_time_accepted" : "meeting_time_declined",
+    title: accept ? `${name} agreed to the new time` : `${name} kept the original time`,
+    body: m?.title,
+    href: `/app/meetings/${p.meeting_id}`,
+  });
+
   refresh(String(p.meeting_id));
   return { ok: true };
 }

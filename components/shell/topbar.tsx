@@ -6,16 +6,22 @@ import { usePathname } from "next/navigation";
 import { Search, Menu, Sparkles } from "lucide-react";
 import { roleDef, sectionTitleFor, type ShellIdentity } from "@/lib/roles/roles";
 import { MobileNav } from "./mobile-nav";
+import { NotificationBell } from "./notification-bell";
+import type { Notification } from "@/lib/data/notification-types";
 
 export function Topbar({
   onOpenPalette,
   identity,
   dateLabel,
+  notifications,
+  notifUnread,
 }: {
   onOpenPalette: () => void;
   identity: ShellIdentity;
   /** Rendered on the server so client and server never disagree about today. */
   dateLabel: string;
+  notifications: Notification[];
+  notifUnread: number;
 }) {
   const pathname = usePathname();
   const [navOpen, setNavOpen] = useState(false);
@@ -57,6 +63,8 @@ export function Topbar({
         <span className="flex-1 truncate">Ask MIDO, search, or command…</span>
         <kbd className="chip hidden sm:inline-flex">⌘K</kbd>
       </button>
+
+      <NotificationBell initial={notifications} initialUnread={notifUnread} />
 
       {primary && (
         <Link
