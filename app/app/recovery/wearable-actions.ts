@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
-import { syncWhoop } from "@/lib/health/whoop";
+import { revokeWhoopAccess, syncWhoop } from "@/lib/health/whoop";
 
 export type WearableResult = { ok: true; message: string } | { ok: false; error: string };
 
@@ -42,10 +42,18 @@ export async function syncWearable(): Promise<WearableResult> {
 /**
  * Disconnect.
  *
- * The connection row goes, and `provider_tokens` follows it by cascade —
- * so the refresh token is genuinely gone rather than merely marked
- * inactive. Anything else would mean a player who disconnected still had
- * a live key to their physiology sitting in the database.
+ * Ends the connection on BOTH sides. WHOOP is told first, via the
+ * account's own revoke endpoint, while the token needed to authenticate
+ * that request still exists — otherwise the player's WHOOP account would
+ * go on listing MIDO XI as a connected app until the token happened to
+ * expire on its own, which is not what "Disconnect" promised. Then the
+ * connection row goes, and `provider_tokens` follows it by cascade, so
+ * the refresh token is genuinely gone from our side too rather than
+ * merely marked inactive.
+ *
+ * The remote revoke is best-effort and never blocks the local one — a
+ * player's own security here does not depend on WHOOP's API being
+ * reachable at the moment they click Disconnect.
  *
  * The readings STAY. They are a record of what happened, the player owns
  * them, and silently deleting a season of recovery history because
@@ -56,6 +64,14 @@ export async function disconnectWearable(): Promise<WearableResult> {
   if (isDemoMode) return { ok: false, error: "This is the demo." };
   const { supabase, userId } = await me();
   if (!supabase || !userId) return { ok: false, error: "Sign in first." };
+
+  const { data: conn } = await supabase
+    .from("provider_connections")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("provider", "whoop")
+    .maybeSingle();
+  if (conn) await revokeWhoopAccess(String(conn.id));
 
   const { error } = await supabase
     .from("provider_connections")

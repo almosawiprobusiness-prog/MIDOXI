@@ -34,7 +34,14 @@ export const WHOOP_SCOPES = [
   "read:profile",
 ].join(" ");
 
-export const WHOOP_REDIRECT_PATH = "/api/health/whoop/callback";
+/*
+  Must match the actual route file — app/api/wearables/whoop/callback —
+  and the redirect URI registered in the WHOOP developer dashboard. A
+  mismatch here fails before the callback route ever runs: WHOOP refuses
+  the authorize request itself with redirect_uri_mismatch, so this is
+  invisible until somebody actually attempts the OAuth handshake.
+*/
+export const WHOOP_REDIRECT_PATH = "/api/wearables/whoop/callback";
 
 export function whoopRedirectUri(): string {
   return `${env.appUrl.replace(/\/$/, "")}${WHOOP_REDIRECT_PATH}`;
@@ -183,6 +190,36 @@ async function markExpired(connectionId: string, message: string) {
     .from("provider_connections")
     .update({ status: "expired", last_error: message })
     .eq("id", connectionId);
+}
+
+/**
+ * Tell WHOOP itself the connection is over, not just our own database.
+ *
+ * `DELETE /v2/user/access` — WHOOP's own docs are direct about this:
+ * "When a user revokes your integration, it is important to revoke
+ * their access token from your application to respect their privacy."
+ * Deleting our local row stops MIDO from using the token, but the
+ * player's WHOOP account would otherwise go on listing MIDO XI as a
+ * connected app until the token happened to expire on its own — an
+ * honest "Disconnect" button has to end the connection on both sides,
+ * not just the one this database can see.
+ *
+ * Called before the local rows are deleted, since it needs a token that
+ * is about to stop existing. Best-effort: if WHOOP is unreachable or the
+ * token is already dead, the local disconnect still proceeds — the
+ * player's own security does not depend on WHOOP's API being up.
+ */
+export async function revokeWhoopAccess(connectionId: string): Promise<void> {
+  try {
+    const token = await freshAccessToken(connectionId);
+    if (!token) return;
+    await fetch(`${API}/user/access`, {
+      method: "DELETE",
+      headers: { authorization: `Bearer ${token}` },
+    });
+  } catch {
+    // Best-effort; see above.
+  }
 }
 
 // ---------------------------------------------------------------------------
