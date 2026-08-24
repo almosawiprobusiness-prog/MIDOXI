@@ -21,6 +21,7 @@
     "verify:timeline": "node scripts/verify-timeline.mjs && node scripts/verify-migrations.mjs",
     "verify:access": "node scripts/verify-access.mjs",
     "verify:deletion": "node scripts/verify-account-deletion.mjs",
+    "verify:billing": "node scripts/verify-billing.mjs",
     "verify:email": "node scripts/verify-email.mjs",
     "verify:notifications": "node scripts/verify-notifications.mjs",
     "verify:wearables": "node scripts/verify-wearables.mjs",

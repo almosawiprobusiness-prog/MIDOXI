@@ -14,7 +14,23 @@ import { TIER_CARDS, tierOf, type PlanId } from "./plans";
 let _stripe: Stripe | null = null;
 export function getStripe(): Stripe | null {
   if (!features.billing) return null;
-  if (!_stripe) _stripe = new Stripe(env.stripeSecret);
+  if (!_stripe) {
+    /*
+      Pinned, not left to the SDK's own default.
+
+      stripe-node ships pinned to whatever API version was current when
+      that package version was published — currently 2026-07-29 — and
+      silently moves to a newer one the next time `stripe` gets bumped
+      by a routine `npm update`, with no code change to flag it. That is
+      exactly the shape of bug the comment in `upsertSubscription` below
+      already describes once: Stripe moved `current_period_end` from the
+      subscription to the subscription item, and everything reading the
+      old field silently started reading undefined. Pinning here means
+      an SDK upgrade can only break loudly, in a diff, not quietly in
+      production the next time Stripe ships a version bump.
+    */
+    _stripe = new Stripe(env.stripeSecret, { apiVersion: "2026-07-29.dahlia" });
+  }
   return _stripe;
 }
 
