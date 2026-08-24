@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { getVideoWithClips } from "@/lib/data/film";
 import { listAnalyses } from "@/lib/data/analyses";
+import { listAnnotations } from "@/lib/data/annotations";
 import { listGoals } from "@/lib/data/development";
 import { FilmStudio } from "@/components/film/film-studio";
 import { DeleteVideoButton } from "@/components/film/delete-video-button";
@@ -10,11 +11,18 @@ import { StartStudyButton } from "@/components/film/start-study-button";
 
 export default async function StudyPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const detail = await getVideoWithClips(id);
+
+  // None of the four depend on each other — only on the id — so they go
+  // together rather than one after another.
+  const [detail, analyses, annotations, allGoals] = await Promise.all([
+    getVideoWithClips(id),
+    listAnalyses(id),
+    listAnnotations(id),
+    listGoals(),
+  ]);
   if (!detail) notFound();
 
-  const analyses = await listAnalyses(id);
-  const goals = (await listGoals())
+  const goals = allGoals
     .filter((g) => g.status !== "achieved")
     .map((g) => ({ id: g.id, title: g.title }));
 
@@ -35,7 +43,13 @@ export default async function StudyPage({ params }: { params: Promise<{ id: stri
         </div>
       </div>
 
-      <FilmStudio video={detail.video} clips={detail.clips} goals={goals} analyses={analyses} />
+      <FilmStudio
+        video={detail.video}
+        clips={detail.clips}
+        goals={goals}
+        analyses={analyses}
+        annotations={annotations}
+      />
     </div>
   );
 }

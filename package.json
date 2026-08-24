@@ -29,6 +29,7 @@
     "verify:meetings": "node scripts/verify-meetings.mjs",
     "verify:migrations": "node scripts/verify-migrations.mjs",
     "verify:feed": "node scripts/verify-feed.mjs",
+    "verify:annotations": "node scripts/verify-annotations.mjs",
     "verify:gemini": "node scripts/verify-gemini.mjs",
     "try:film": "node scripts/try-film-read.mjs"
   },

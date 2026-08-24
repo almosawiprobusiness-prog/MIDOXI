@@ -4,17 +4,25 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Play, Pause, Rewind, FastForward, ChevronLeft, ChevronRight,
-  Scissors, Star, Trash2, Loader2, Flag, Film, TriangleAlert,
+  Scissors, Star, Trash2, Loader2, Flag, Film, TriangleAlert, PenLine, X,
 } from "lucide-react";
 import {
   createClip, deleteClip, toggleClipFavorite,
 } from "@/app/app/film-room/actions";
 import {
+  createAnnotation, removeAnnotation,
+} from "@/app/app/film-room/annotation-actions";
+import {
   SENTIMENTS, CLIP_TAGS, sentimentMeta, fmtTime, LONG_FOOTAGE_ADVICE, isHlsUrl,
   type Video, type FilmClip, type ClipSentiment, type ClipInput,
 } from "@/lib/data/film-types";
+import {
+  NOTE_MAX, atLabel,
+  type Annotation, type AnnotationColor, type Shape, type ToolKind,
+} from "@/lib/data/annotation-types";
 import { AddToCollection } from "./add-to-collection";
 import { FilmReading } from "./film-reading";
+import { Telestration, TelestrationTools } from "./telestration";
 import type { ClipAnalysis } from "@/lib/data/analyses";
 
 const SPEEDS = [0.5, 1, 1.5, 2];
@@ -24,11 +32,13 @@ export function FilmStudio({
   clips,
   goals,
   analyses = [],
+  annotations = [],
 }: {
   video: Video;
   clips: FilmClip[];
   goals: { id: string; title: string }[];
   analyses?: ClipAnalysis[];
+  annotations?: Annotation[];
 }) {
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -63,6 +73,24 @@ export function FilmStudio({
   const [goalId, setGoalId] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  /*
+    Drawing on the frame.
+
+    Two modes, never both: `drawing` puts a live canvas over a paused
+    picture, `viewing` puts a saved one back over the frame it was made
+    on. Keeping them as separate pieces of state rather than one
+    "annotation mode" is what stops a saved drawing being edited by
+    accident — the read-only overlay cannot receive a pointer at all.
+  */
+  const [drawing, setDrawing] = useState(false);
+  const [shapes, setShapes] = useState<Shape[]>([]);
+  const [tool, setTool] = useState<ToolKind>("arrow");
+  const [penColor, setPenColor] = useState<AnnotationColor>("correction");
+  const [drawNote, setDrawNote] = useState("");
+  const [drawBusy, setDrawBusy] = useState(false);
+  const [drawError, setDrawError] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<Annotation | null>(null);
 
   const isYouTube = video.source === "youtube";
   const isHls = !isYouTube && isHlsUrl(video.url);
@@ -201,6 +229,65 @@ export function FilmStudio({
     router.refresh();
   };
 
+  // ── drawing ──
+
+  const startDrawing = () => {
+    // The freeze-frame. Nothing more elaborate is needed: a paused
+    // <video> is already holding exactly the frame being drawn on.
+    videoRef.current?.pause();
+    setViewing(null);
+    setShapes([]);
+    setDrawNote("");
+    setDrawError(null);
+    setDrawing(true);
+  };
+
+  const stopDrawing = () => {
+    setDrawing(false);
+    setShapes([]);
+    setDrawNote("");
+    setDrawError(null);
+  };
+
+  const saveDrawing = async () => {
+    if (shapes.length === 0) return;
+    setDrawBusy(true);
+    setDrawError(null);
+    // `current` rather than a time captured when drawing began: the frame
+    // showing underneath is the frame this belongs to, including after a
+    // nudge to find the exact one.
+    const res = await createAnnotation({
+      videoId: video.id,
+      atSeconds: current,
+      shapes,
+      note: drawNote,
+    });
+    setDrawBusy(false);
+    if (!res.ok) {
+      setDrawError(res.error);
+      return;
+    }
+    stopDrawing();
+    router.refresh();
+  };
+
+  const showAnnotation = (a: Annotation) => {
+    if (viewing?.id === a.id) {
+      setViewing(null);
+      return;
+    }
+    setDrawing(false);
+    seek(a.atSeconds);
+    videoRef.current?.pause();
+    setViewing(a);
+  };
+
+  const dropAnnotation = async (a: Annotation) => {
+    if (viewing?.id === a.id) setViewing(null);
+    await removeAnnotation(a.id, video.id);
+    router.refresh();
+  };
+
   return (
     <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr]">
       {/* ── Player + composer ── */}
@@ -246,20 +333,53 @@ export function FilmStudio({
               </button>
             </div>
           ) : (
-            <video
-              ref={videoRef}
-              // Withheld for HLS: hls.js attaches the stream itself, and a
-              // playlist set as `src` would fail to decode before it could.
-              src={isHls ? undefined : video.url}
-              className="aspect-video w-full bg-black"
-              playsInline
-              preload="metadata"
-              onError={() => setUnplayable(true)}
-              onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
-              onTimeUpdate={(e) => setCurrent(e.currentTarget.currentTime)}
-              onPlay={() => setPlaying(true)}
-              onPause={() => setPlaying(false)}
-            />
+            <div className="relative">
+              <video
+                ref={videoRef}
+                // Withheld for HLS: hls.js attaches the stream itself, and a
+                // playlist set as `src` would fail to decode before it could.
+                src={isHls ? undefined : video.url}
+                className="aspect-video w-full bg-black"
+                playsInline
+                preload="metadata"
+                onError={() => setUnplayable(true)}
+                onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
+                onTimeUpdate={(e) => setCurrent(e.currentTarget.currentTime)}
+                onPlay={() => {
+                  setPlaying(true);
+                  // A drawing belongs to one frame. Once the footage is
+                  // moving again it is over the wrong one, so it goes.
+                  setViewing(null);
+                }}
+                onPause={() => setPlaying(false)}
+              />
+
+              {(drawing || viewing) && (
+                <Telestration
+                  shapes={drawing ? shapes : viewing!.shapes}
+                  onChange={drawing ? setShapes : undefined}
+                  tool={tool}
+                  color={penColor}
+                  readOnly={!drawing}
+                />
+              )}
+
+              {viewing && (
+                <div className="absolute left-3 top-3 flex max-w-[80%] items-start gap-2 rounded-lg border border-line bg-ink-900/90 px-3 py-2 backdrop-blur">
+                  <div className="min-w-0">
+                    <span className="data-mono text-[11px] text-signal-bright">{atLabel(viewing.atSeconds)}</span>
+                    {viewing.note && <p className="mt-0.5 text-xs leading-relaxed text-text">{viewing.note}</p>}
+                  </div>
+                  <button
+                    onClick={() => setViewing(null)}
+                    aria-label="Close drawing"
+                    className="shrink-0 text-text-faint transition-colors hover:text-text-hi"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
           )}
         </div>
 
@@ -285,7 +405,13 @@ export function FilmStudio({
                 <div className="flex items-center gap-1">
                   <Ctrl onClick={() => nudge(-5)} label="Back 5s"><Rewind className="size-4" /></Ctrl>
                   <Ctrl onClick={() => nudge(-0.1)} label="Frame back"><ChevronLeft className="size-4" /></Ctrl>
-                  <button onClick={togglePlay} aria-label={playing ? "Pause" : "Play"} className="grid size-10 place-items-center rounded-lg bg-signal text-white transition-colors hover:bg-signal-deep">
+                  <button
+                    onClick={togglePlay}
+                    disabled={drawing}
+                    aria-label={playing ? "Pause" : "Play"}
+                    title={drawing ? "Held still while you draw" : playing ? "Pause" : "Play"}
+                    className="grid size-10 place-items-center rounded-lg bg-signal text-white transition-colors hover:bg-signal-deep disabled:opacity-40"
+                  >
                     {playing ? <Pause className="size-5" /> : <Play className="size-5" />}
                   </button>
                   <Ctrl onClick={() => nudge(0.1)} label="Frame forward"><ChevronRight className="size-4" /></Ctrl>
@@ -297,9 +423,69 @@ export function FilmStudio({
                       {s}×
                     </button>
                   ))}
+                  <button
+                    onClick={drawing ? stopDrawing : startDrawing}
+                    disabled={unplayable}
+                    title="Freeze the frame and draw on it"
+                    className={`ml-1 flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs transition-colors disabled:opacity-40 ${
+                      drawing
+                        ? "border-signal-line bg-signal/10 text-signal-bright"
+                        : "border-line text-text-dim hover:border-signal-line hover:text-text"
+                    }`}
+                  >
+                    <PenLine className="size-3.5" /> {drawing ? "Done" : "Draw"}
+                  </button>
                 </div>
               </div>
             </div>
+
+            {/* Drawing bar — only while drawing, so it is never in the way */}
+            {drawing && (
+              <div className="mt-3 rounded-lg border border-signal-line bg-ink-900 p-3">
+                <div className="mb-3 flex items-center gap-2">
+                  <PenLine className="size-4 text-signal-bright" />
+                  <span className="label-tech !text-text">Drawing on</span>
+                  <span className="data-mono text-xs text-signal-bright">{atLabel(current)}</span>
+                  <span className="text-xs text-text-faint">— the frame is held while you draw</span>
+                </div>
+
+                <TelestrationTools
+                  tool={tool}
+                  setTool={setTool}
+                  color={penColor}
+                  setColor={setPenColor}
+                  onUndo={() => setShapes((s) => s.slice(0, -1))}
+                  onClear={() => setShapes([])}
+                  count={shapes.length}
+                />
+
+                <input
+                  value={drawNote}
+                  onChange={(e) => setDrawNote(e.target.value.slice(0, NOTE_MAX))}
+                  placeholder="What is this showing? — e.g. Step in earlier, the space is behind him"
+                  className={`${inp} mt-3`}
+                />
+
+                {drawError && <p className="mt-2 text-sm text-correction">{drawError}</p>}
+
+                <div className="mt-3 flex items-center gap-3">
+                  <button
+                    onClick={saveDrawing}
+                    disabled={drawBusy || shapes.length === 0}
+                    className="flex h-10 items-center gap-2 rounded-lg bg-signal px-4 text-sm font-medium text-white transition-colors hover:bg-signal-deep disabled:opacity-50"
+                  >
+                    {drawBusy ? <Loader2 className="size-4 animate-spin" /> : <PenLine className="size-4" />}
+                    Save drawing
+                  </button>
+                  <button
+                    onClick={stopDrawing}
+                    className="h-10 rounded-lg border border-line px-3 text-sm text-text-dim transition-colors hover:border-line-strong hover:text-text"
+                  >
+                    Discard
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Clip composer */}
             <div className="mt-3 rounded-lg border border-line bg-ink-900 p-4">
@@ -444,6 +630,59 @@ export function FilmStudio({
           <p className="panel p-4 text-sm text-text-dim">
             No clips yet. Scrub the video, mark in/out, and save your first clip.
           </p>
+        )}
+
+        {/*
+          Saved drawings. Only shown once there is one — an empty
+          section teaching a feature nobody asked for is the kind of
+          thing that makes a tool tiring to use.
+        */}
+        {annotations.length > 0 && (
+          <div className="mt-5">
+            <div className="mb-3 flex items-center gap-2">
+              <PenLine className="size-4 text-text-dim" />
+              <span className="label-tech">Drawings · {annotations.length}</span>
+            </div>
+            <div className="space-y-2">
+              {annotations.map((a) => {
+                const open = viewing?.id === a.id;
+                return (
+                  <div key={a.id} className={`group panel p-3 ${open ? "border-signal-line" : ""}`}>
+                    <div className="flex items-start gap-2">
+                      <button
+                        onClick={() => showAnnotation(a)}
+                        className={`data-mono shrink-0 rounded-md border px-2 py-1 text-xs transition-colors ${
+                          open
+                            ? "border-signal-line bg-signal/10 text-signal-bright"
+                            : "border-line text-signal-bright hover:border-signal-line"
+                        }`}
+                        title={open ? "Hide" : "Show on the frame"}
+                      >
+                        {atLabel(a.atSeconds)}
+                      </button>
+                      <div className="min-w-0 flex-1">
+                        {a.note ? (
+                          <p className="text-sm leading-relaxed text-text">{a.note}</p>
+                        ) : (
+                          <p className="text-sm text-text-faint">No note</p>
+                        )}
+                        <span className="data-mono mt-1 block text-[10px] text-text-faint">
+                          {a.shapes.length} {a.shapes.length === 1 ? "mark" : "marks"}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => dropAnnotation(a)}
+                        aria-label="Delete drawing"
+                        className="shrink-0 text-text-faint opacity-0 transition-opacity hover:text-correction group-hover:opacity-100"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         )}
       </div>
     </div>
