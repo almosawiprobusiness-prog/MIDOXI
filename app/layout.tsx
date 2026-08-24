@@ -25,7 +25,15 @@ export const metadata: Metadata = {
     "A private football intelligence and performance environment. Study, prepare, train, review, and build your career.",
   manifest: "/manifest.webmanifest",
   icons: {
+    /*
+      16 and 32 are their own render, not a downscale of the 512
+      design — the thin circle and centerline that read as a design
+      at app-icon size turn to noise below ~64px, so the tab favicon
+      is just the bold letters, bigger, with nothing else in the frame.
+    */
     icon: [
+      { url: "/icons/favicon-16.png", sizes: "16x16", type: "image/png" },
+      { url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" },
       { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
       { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
     ],
