@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { X, Loader2, Plus, Link2, Upload, FileVideo } from "lucide-react";
 import { addVideo, createUploadedVideo } from "@/app/app/film-room/actions";
-import { youtubeId } from "@/lib/data/film-types";
+import { videoUrlKind, LONG_FOOTAGE_ADVICE } from "@/lib/data/film-types";
 import { createClient } from "@/lib/supabase/client";
 import { env, isDemoMode } from "@/lib/env";
 
@@ -49,7 +49,15 @@ export function AddVideoDialog() {
   };
   const close = () => { setOpen(false); reset(); };
 
-  const detected = url.trim() ? (youtubeId(url) ? "YouTube" : "Direct video") : null;
+  /*
+    Honest about what the link is. This said "Direct video" for anything
+    that was not YouTube — including a page on a streaming site, which is
+    the single most likely thing a footballer pastes here. It sounded
+    like confirmation, and the result was a black player with a 0:00
+    timeline and nothing explaining why.
+  */
+  const detected = url.trim() ? videoUrlKind(url) : null;
+  const urlUsable = detected !== null && detected.kind !== "unsupported";
 
   const submitUrl = async () => {
     setBusy(true); setError(null);
@@ -61,7 +69,13 @@ export function AddVideoDialog() {
   const onPick = (f: File | null) => {
     setError(null);
     if (!f) return;
-    if (f.size > MAX_BYTES) { setError(`That file is ${(f.size / 1048576).toFixed(0)} MB — over the 50 MB limit. Paste a URL for larger footage.`); return; }
+    /*
+      The old wording here — "Paste a URL for larger footage" — sent
+      people straight to the failure this dialog now prevents: they went
+      and pasted the page their match was streaming on. Name the thing
+      that actually works instead.
+    */
+    if (f.size > MAX_BYTES) { setError(`That file is ${(f.size / 1048576).toFixed(0)} MB — over the 50 MB limit. ${LONG_FOOTAGE_ADVICE}`); return; }
     setFile(f);
     if (!upTitle) setUpTitle(f.name.replace(/\.[^.]+$/, ""));
   };
@@ -192,14 +206,24 @@ export function AddVideoDialog() {
                   <label className="mt-3 block">
                     <span className="label-tech mb-1 flex items-center gap-1.5"><Link2 className="size-3.5" /> Video URL</span>
                     <input value={url} onChange={(e) => setUrl(e.target.value)} className={inp} placeholder="YouTube link or direct .mp4 URL" />
-                    {detected && <span className="mt-1 block text-xs text-signal-bright">Detected: {detected}</span>}
+                    {detected?.kind === "youtube" && (
+                      <span className="mt-1 block text-xs text-signal-bright">Detected: YouTube</span>
+                    )}
+                    {detected?.kind === "direct" && (
+                      <span className="mt-1 block text-xs text-signal-bright">Detected: direct video file</span>
+                    )}
+                    {detected?.kind === "unsupported" && (
+                      <span className="mt-1 block text-xs leading-relaxed text-review">
+                        {detected.reason} {LONG_FOOTAGE_ADVICE}
+                      </span>
+                    )}
                   </label>
 
                   {error && <p className="mt-3 rounded-lg border border-correction/30 bg-correction/10 px-3 py-2 text-sm text-correction">{error}</p>}
 
                   <div className="mt-5 flex items-center gap-3">
                     <button onClick={close} className="h-11 rounded-lg border border-line px-4 text-sm text-text-dim transition-colors hover:text-text-hi">Cancel</button>
-                    <button onClick={submitUrl} disabled={busy || !urlTitle.trim() || !url.trim()} className="flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-signal font-medium text-white transition-colors hover:bg-signal-deep disabled:opacity-50">
+                    <button onClick={submitUrl} disabled={busy || !urlTitle.trim() || !urlUsable} className="flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-signal font-medium text-white transition-colors hover:bg-signal-deep disabled:opacity-50">
                       {busy ? <Loader2 className="size-4 animate-spin" /> : <><Plus className="size-4" /> Add video</>}
                     </button>
                   </div>

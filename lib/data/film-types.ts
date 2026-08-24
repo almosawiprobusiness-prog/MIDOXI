@@ -99,3 +99,63 @@ export function youtubeId(url: string): string | null {
   const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/);
   return m ? m[1] : null;
 }
+
+/*
+  What a pasted link actually is.
+
+  This exists because the film room used to treat every non-YouTube URL
+  as a "Direct video", say so on screen, save it with status "ready", and
+  then render a black player with a 0:00 timeline when it turned out to
+  be a web page. A link to a match on a streaming site is the single most
+  likely thing a footballer pastes here, and it is the one case that
+  answered "Direct video" with complete confidence.
+
+  A `<video>` element can only play a file it can fetch. Extensions the
+  browser will actually decode, matching the upload picker's own accept
+  list — anything else is a page, a player, or a stream this cannot open.
+*/
+const PLAYABLE_EXT = /\.(mp4|webm|mov|m4v|ogv)$/i;
+
+export type VideoUrlKind =
+  | { kind: "youtube"; id: string }
+  | { kind: "direct" }
+  | { kind: "unsupported"; reason: string };
+
+export function videoUrlKind(raw: string): VideoUrlKind {
+  const url = raw.trim();
+  if (!url) return { kind: "unsupported", reason: "Paste a link first." };
+
+  const yt = youtubeId(url);
+  if (yt) return { kind: "youtube", id: yt };
+
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return { kind: "unsupported", reason: "That is not a valid web address." };
+  }
+
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    return { kind: "unsupported", reason: "Only http and https links work here." };
+  }
+
+  if (PLAYABLE_EXT.test(parsed.pathname)) return { kind: "direct" };
+
+  /*
+    Named rather than lumped into "invalid", because the difference
+    matters to the person pasting: their link is not broken, it is a page
+    about a video rather than the video. Telling them that is what points
+    them at the fix instead of leaving them retrying the same paste.
+  */
+  return {
+    kind: "unsupported",
+    reason: `${parsed.hostname} gives a page to watch on, not a video file MIDO can open.`,
+  };
+}
+
+/**
+ * What to do instead — said once, in one place, so the dialog and the
+ * player cannot drift into giving different advice about the same link.
+ */
+export const LONG_FOOTAGE_ADVICE =
+  "For a full match, upload it to YouTube as unlisted and paste that link. It stays private to anyone without the link, there is no length limit, and MIDO can play and analyse it.";

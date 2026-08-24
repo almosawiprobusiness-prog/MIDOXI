@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
 import { demoStore } from "@/lib/data/store";
-import { youtubeId } from "@/lib/data/film-types";
+import { videoUrlKind, LONG_FOOTAGE_ADVICE } from "@/lib/data/film-types";
 import type { ClipInput } from "@/lib/data/film-types";
 
 export type Result = { ok: true; id?: string; demo?: boolean } | { ok: false; error: string };
@@ -29,7 +29,18 @@ export async function addVideo(input: { title: string; url: string; matchId?: st
   if (!input.title?.trim()) return { ok: false, error: "Give the video a title." };
   if (!url) return { ok: false, error: "Paste a video URL." };
 
-  const yt = youtubeId(url);
+  /*
+    Checked here as well as in the dialog. A form that only hides a bad
+    option is not enforcing anything — and this one saved a web page as
+    `status: "ready"`, which is the app asserting something it had never
+    verified.
+  */
+  const detected = videoUrlKind(url);
+  if (detected.kind === "unsupported") {
+    return { ok: false, error: `${detected.reason} ${LONG_FOOTAGE_ADVICE}` };
+  }
+
+  const yt = detected.kind === "youtube" ? detected.id : null;
   const source = yt ? "youtube" : "url";
 
   if (isDemoMode) {

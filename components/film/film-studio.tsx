@@ -1,16 +1,16 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Play, Pause, Rewind, FastForward, ChevronLeft, ChevronRight,
-  Scissors, Star, Trash2, Loader2, Flag, Film,
+  Scissors, Star, Trash2, Loader2, Flag, Film, TriangleAlert,
 } from "lucide-react";
 import {
   createClip, deleteClip, toggleClipFavorite,
 } from "@/app/app/film-room/actions";
 import {
-  SENTIMENTS, CLIP_TAGS, sentimentMeta, fmtTime,
+  SENTIMENTS, CLIP_TAGS, sentimentMeta, fmtTime, LONG_FOOTAGE_ADVICE,
   type Video, type FilmClip, type ClipSentiment, type ClipInput,
 } from "@/lib/data/film-types";
 import { AddToCollection } from "./add-to-collection";
@@ -35,6 +35,21 @@ export function FilmStudio({
 
   const [current, setCurrent] = useState(0);
   const [duration, setDuration] = useState(video.durationSeconds ?? 0);
+  /*
+    Whether the player has given up on this source.
+
+    An `error` handler alone is not enough, which was worth finding out
+    by measurement rather than assuming: pointed at a page URL, Chrome
+    sat at `networkState=2, readyState=0` for twenty seconds and never
+    fired `error` at all. The request simply hangs. So the whole failure
+    was a black rectangle and a 0:00 timeline — indistinguishable from
+    footage that has not started, which is why somebody waits for it
+    instead of fixing the link.
+
+    Set by either route: the error event when it comes, or the timeout
+    when nothing arrives at all.
+  */
+  const [unplayable, setUnplayable] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [rate, setRate] = useState(1);
 
@@ -50,6 +65,24 @@ export function FilmStudio({
   const [error, setError] = useState<string | null>(null);
 
   const isYouTube = video.source === "youtube";
+
+  /*
+    Give up waiting after this long with nothing at all.
+
+    Fifteen seconds is past any reasonable wait for METADATA — which is
+    a header read, not the footage — while still leaving room for a large
+    file on a poor connection. `readyState === 0` is the guard that keeps
+    it honest: if even one frame's worth of information has arrived the
+    source is real and this never fires, however slow the rest of it is.
+    And a retry is offered rather than the decision being final.
+  */
+  useEffect(() => {
+    if (isYouTube || unplayable) return;
+    const timer = setTimeout(() => {
+      if (videoRef.current?.readyState === 0) setUnplayable(true);
+    }, 15_000);
+    return () => clearTimeout(timer);
+  }, [isYouTube, unplayable, video.url]);
 
   const seek = (t: number) => {
     const v = videoRef.current;
@@ -128,12 +161,43 @@ export function FilmStudio({
                 allowFullScreen
               />
             </div>
+          ) : unplayable ? (
+            /*
+              Says what happened and what to do about it. The link is
+              shown because the usual cause is that it points at a page
+              rather than a file, and seeing it back is what makes that
+              obvious.
+            */
+            <div className="flex aspect-video w-full flex-col items-center justify-center gap-3 bg-ink-900 px-6 text-center">
+              <span className="grid size-11 place-items-center rounded-lg border border-correction/40 bg-correction/10 text-correction">
+                <TriangleAlert className="size-5" />
+              </span>
+              <p className="text-sm font-medium text-text-hi">This video would not load.</p>
+              <p className="max-w-md text-sm leading-relaxed text-text-dim">
+                MIDO could not open the link saved for this video. That usually means it points at
+                a page to watch on rather than at a video file.
+              </p>
+              {video.url && (
+                <code className="max-w-full truncate rounded border border-line bg-ink-850 px-2 py-1 text-[11px] text-text-faint">
+                  {video.url}
+                </code>
+              )}
+              <p className="max-w-md text-xs leading-relaxed text-text-faint">{LONG_FOOTAGE_ADVICE}</p>
+              <button
+                onClick={() => setUnplayable(false)}
+                className="mt-1 h-9 rounded-lg border border-line px-4 text-sm text-text-dim transition-colors hover:border-signal-line hover:text-text"
+              >
+                Try again
+              </button>
+            </div>
           ) : (
             <video
               ref={videoRef}
               src={video.url}
               className="aspect-video w-full bg-black"
               playsInline
+              preload="metadata"
+              onError={() => setUnplayable(true)}
               onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
               onTimeUpdate={(e) => setCurrent(e.currentTarget.currentTime)}
               onPlay={() => setPlaying(true)}
