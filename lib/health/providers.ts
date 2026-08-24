@@ -169,6 +169,44 @@ export const BAND_LABEL: Record<"high" | "moderate" | "low", string> = {
 };
 
 /**
+ * The one line WHOOP cannot write.
+ *
+ * WHOOP and Oura both already say "your recovery is 38%" better than a
+ * third-party dashboard will, and re-explaining it here would just be a
+ * worse copy of their own app. What neither of them knows is that this
+ * player has a match on Saturday.
+ *
+ * So this states two measured facts next to each other and stops. No
+ * "you should rest", no "reduce load" — nothing measured that, and a
+ * recovery page that invents prescriptions is the same invented
+ * physiology this module was built to remove. Putting the two facts in
+ * one sentence is the entire contribution; the player and their coach
+ * draw the conclusion.
+ *
+ * Returns null when there is no fixture to relate the score to, in which
+ * case the band label alone already says everything true.
+ */
+export function recoveryContext(
+  score: number | null,
+  fixture: { opponent: string; daysAway: number } | null,
+): string | null {
+  const band = recoveryBand(score);
+  if (!band || !fixture) return null;
+
+  const when =
+    fixture.daysAway === 0
+      ? "today"
+      : fixture.daysAway === 1
+        ? "tomorrow"
+        : `in ${fixture.daysAway} days`;
+
+  const state =
+    band === "high" ? "Recovered" : band === "moderate" ? "Moderate recovery" : "Low recovery";
+
+  return `${state}, and you play ${fixture.opponent} ${when}.`;
+}
+
+/**
  * Sleep against what the device says was needed.
  *
  * Returned as a ratio rather than a verdict — the page says "6h 10m of

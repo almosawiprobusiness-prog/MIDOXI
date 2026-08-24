@@ -8,6 +8,7 @@ import {
   formatSleep,
   hasAnyMetric,
   recoveryBand,
+  recoveryContext,
   sleepDebtMin,
   type Connection,
   type RecoverySample,
@@ -30,6 +31,23 @@ import { cn } from "@/lib/utils";
   decide whether to train is worse than a blank.
 */
 
+/*
+  WHOOP's own banding, so a score that is green in their app is green
+  here. A player seeing the same number called two different things in
+  two places stops trusting both.
+*/
+const BAND_TEXT = {
+  high: "text-positive",
+  moderate: "text-review",
+  low: "text-correction",
+} as const;
+
+const BAND_CHIP = {
+  high: "border-positive/40 bg-positive/10 text-positive",
+  moderate: "border-review/40 bg-review/10 text-review",
+  low: "border-correction/40 bg-correction/10 text-correction",
+} as const;
+
 const MESSAGES: Record<string, { tone: "ok" | "bad"; text: string }> = {
   connected: { tone: "ok", text: "WHOOP connected. Your last 30 days have been pulled in." },
   syncfailed: { tone: "bad", text: "WHOOP connected, but the first sync failed. Try Sync now." },
@@ -46,11 +64,14 @@ export function WearablePanel({
   samples,
   configured,
   notice,
+  fixture = null,
 }: {
   connection: Connection | null;
   samples: RecoverySample[];
   configured: boolean;
   notice?: string;
+  /** The next match, so the score can be said in football terms. */
+  fixture?: { opponent: string; daysAway: number } | null;
 }) {
   const router = useRouter();
   const [msg, setMsg] = useState<{ tone: "ok" | "bad"; text: string } | null>(
@@ -66,6 +87,8 @@ export function WearablePanel({
     });
 
   const latest = samples.find(hasAnyMetric) ?? null;
+  const band = latest ? recoveryBand(latest.recoveryScore) : null;
+  const context = latest ? recoveryContext(latest.recoveryScore, fixture) : null;
 
   return (
     <div className="min-w-0 panel p-5">
@@ -166,17 +189,50 @@ export function WearablePanel({
               <p className="label-tech mt-5 mb-2 text-text-faint">
                 Measured — {new Date(latest.day).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "short" })}
               </p>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <Metric
-                  label="Recovery"
-                  value={latest.recoveryScore}
-                  suffix="%"
-                  note={
-                    recoveryBand(latest.recoveryScore)
-                      ? BAND_LABEL[recoveryBand(latest.recoveryScore)!]
-                      : null
-                  }
-                />
+
+              {/*
+                One number, one colour, one sentence — then everything
+                else, quieter, underneath.
+
+                This was six equal-weight tiles, which is the pattern
+                wearable apps get criticised for: a player opening this
+                before training had to read and rank six numbers to
+                answer one question. WHOOP and Oura both lead with a
+                single banded score because it answers that question
+                without being read twice.
+              */}
+              {band ? (
+                <div className="flex flex-wrap items-end gap-x-5 gap-y-2">
+                  <div className="flex items-baseline gap-2">
+                    <span className={cn("font-display text-5xl font-bold leading-none", BAND_TEXT[band])}>
+                      {latest.recoveryScore}
+                    </span>
+                    <span className="text-lg text-text-dim">%</span>
+                  </div>
+                  <span
+                    className={cn(
+                      "mb-1 rounded-full border px-2.5 py-1 text-xs font-medium",
+                      BAND_CHIP[band],
+                    )}
+                  >
+                    {BAND_LABEL[band]}
+                  </span>
+                </div>
+              ) : (
+                <p className="text-sm text-text-dim">
+                  No recovery score for this night — WHOOP did not score it.
+                </p>
+              )}
+
+              {context && (
+                <p className="mt-2.5 max-w-prose text-sm leading-relaxed text-text">{context}</p>
+              )}
+
+              {/*
+                The raw numbers still matter to anyone who wants them —
+                demoted, not deleted.
+              */}
+              <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <Metric label="HRV" value={latest.hrvMs} suffix="ms" round={0} />
                 <Metric label="Resting HR" value={latest.restingHr} suffix="bpm" />
                 <Metric

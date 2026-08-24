@@ -1,12 +1,28 @@
 import { CalendarDays } from "lucide-react";
 import { listEvents } from "@/lib/data/calendar";
+import { listMeetings } from "@/lib/data/meetings";
 import { isDemoMode } from "@/lib/env";
 import { CalendarWeek } from "@/components/calendar/calendar-week";
 
 export const metadata = { title: "Calendar — MIDO XI" };
 
 export default async function CalendarPage() {
-  const events = await listEvents();
+  /*
+    Meetings belong here, not only on their own page.
+
+    These shipped as two disconnected destinations: a film session booked
+    with a coach appeared under Meetings and nowhere on the calendar, so
+    knowing what was happening on Thursday meant checking two places and
+    remembering that you had to. One of them was always going to be
+    wrong.
+
+    `scope: "all"` because the calendar walks backwards as well as
+    forwards — an upcoming-only read would empty every past week.
+  */
+  const [events, meetings] = await Promise.all([
+    listEvents(),
+    listMeetings({ scope: "all", limit: 200 }),
+  ]);
 
   return (
     <div className="mx-auto max-w-[1200px] px-4 py-8 md:px-6">
@@ -20,7 +36,7 @@ export default async function CalendarPage() {
         </div>
       </div>
 
-      <CalendarWeek events={events} />
+      <CalendarWeek events={events} meetings={meetings} />
 
       {isDemoMode && (
         <p className="mt-6 flex items-center justify-center gap-2 text-[11px] text-text-faint">

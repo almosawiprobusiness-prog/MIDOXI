@@ -4,7 +4,7 @@ import { bookableWith, listMeetings } from "@/lib/data/meetings";
 import { MeetingRow } from "@/components/meetings/meeting-row";
 import { ScheduleDialog } from "@/components/meetings/schedule-dialog";
 
-export const metadata = { title: "Sessions — MIDO XI" };
+export const metadata = { title: "Meetings — MIDO XI" };
 
 /*
   Time with the people you actually work with.
@@ -31,7 +31,7 @@ export default async function MeetingsPage({ searchParams }: PageProps<"/app/mee
     <div className="mx-auto max-w-[860px] px-4 py-8">
       <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight text-text-hi">Sessions</h1>
+          <h1 className="font-display text-2xl font-bold tracking-tight text-text-hi">Meetings</h1>
           <p className="mt-1 text-sm text-text-dim">
             Film sessions, check-ins and calls with your coach or your players.
           </p>
@@ -99,7 +99,7 @@ function Empty({ showPast, hasPeople }: { showPast: boolean; hasPeople: boolean 
         <>
           <p className="mt-3 text-sm text-text">You are not connected to anybody yet.</p>
           <p className="mt-1 text-sm text-text-dim">
-            Sessions are with your coach, your trainer or your players — so a connection comes first.
+            Meetings are with your coach, your trainer or your players — so a connection comes first.
           </p>
           <Link
             href="/app/connections"

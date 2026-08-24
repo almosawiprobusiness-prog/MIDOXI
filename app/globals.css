@@ -79,6 +79,14 @@
   --color-signal: var(--signal);
   --color-signal-bright: var(--signal-bright);
   --color-signal-deep: var(--signal-deep);
+  /*
+    `border-signal-line` is used 261 times across 110 files — it is the
+    accent border on every primary button and highlighted card in the
+    product — and it was never registered here, so Tailwind generated no
+    rule for it and all 261 fell through to the default grey hairline.
+    The variable existed the whole time; nothing exposed it.
+  */
+  --color-signal-line: var(--signal-line);
 
   --color-positive: var(--positive);
   --color-review: var(--review);
@@ -95,8 +103,26 @@
   --radius-xl: var(--r-xl);
 }
 
-* {
-  border-color: var(--line);
+/*
+  The default hairline, in `base` so utilities can beat it.
+
+  This was unlayered, and unlayered CSS wins against everything inside
+  `@layer` — including all of Tailwind's utilities. A universal selector
+  in that position silently overrode every border-colour utility in the
+  product: `border-signal-line` on the primary buttons, `border-review`
+  on a waiting badge, `border-correction` on an error, the accent border
+  on every meeting card. All of them computed to this grey instead, and
+  nothing looked broken enough to notice — the borders were simply always
+  the wrong colour.
+
+  Found by reading a computed style rather than the source: the rule
+  `.border-signal-line { border-color: var(--signal-line) }` existed and
+  was being generated correctly all along; it just never won.
+*/
+@layer base {
+  * {
+    border-color: var(--line);
+  }
 }
 
 html {

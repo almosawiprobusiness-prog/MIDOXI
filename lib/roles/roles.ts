@@ -123,11 +123,21 @@ const calendar: NavItem = {
   status: "live",
   group: "more",
 };
+/*
+  "Meetings", not "Sessions".
+
+  This shipped as "Sessions" and collided head-on: a Coach's nav already
+  has a "Sessions" entry pointing at /app/sessions, the training-session
+  planner. Two items, same label, unrelated features, no way to tell them
+  apart without clicking. Everything underneath this one already says
+  meeting — the route, the table, `Meeting`, `MeetingKind`, every
+  function — so the label was the only place using the other word.
+*/
 const meetings: NavItem = {
-  label: "Sessions",
+  label: "Meetings",
   href: "/app/meetings",
   icon: CalendarClock,
-  hint: "Time with your people",
+  hint: "Time booked with a coach or player",
   status: "live",
   group: "more",
 };

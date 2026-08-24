@@ -1,6 +1,6 @@
 import { HeartPulse, Activity, Info, MessageSquare } from "lucide-react";
 import { getRecovery } from "@/lib/data/recovery";
-import { listConnections, listRecoverySamples } from "@/lib/data/wearables";
+import { listConnections, listRecoverySamples, nextFixture } from "@/lib/data/wearables";
 import { hasWhoop } from "@/lib/env";
 import { WearablePanel } from "@/components/recovery/wearable-panel";
 import {
@@ -41,10 +41,11 @@ function fieldColor(value: number, inverted: boolean) {
 
 export default async function RecoveryPage({ searchParams }: PageProps<"/app/recovery">) {
   const { whoop } = await searchParams;
-  const [{ source, days, today, streak }, connections, samples] = await Promise.all([
+  const [{ source, days, today, streak }, connections, samples, fixture] = await Promise.all([
     getRecovery(),
     listConnections(),
     listRecoverySamples(14),
+    nextFixture(),
   ]);
   const whoopConnection = connections.find((c) => c.provider === "whoop") ?? null;
   /*
@@ -199,6 +200,7 @@ export default async function RecoveryPage({ searchParams }: PageProps<"/app/rec
           samples={samples}
           configured={hasWhoop}
           notice={typeof whoop === "string" ? whoop : undefined}
+          fixture={fixture}
         />
       </section>
 

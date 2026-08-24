@@ -32,7 +32,7 @@ export default async function MeetingPage({ params }: PageProps<"/app/meetings/[
         className="mb-6 inline-flex items-center gap-1.5 text-sm text-text-dim transition-colors hover:text-text"
       >
         <ArrowLeft className="size-4" />
-        Sessions
+        Meetings
       </Link>
 
       <header>

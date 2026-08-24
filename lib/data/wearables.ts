@@ -76,6 +76,40 @@ interface SampleRow {
   strain: string | number | null;
 }
 
+/**
+ * The next fixture, if there is one — opponent and how many days away.
+ *
+ * Deliberately its own small query rather than pulling `getLockerData()`
+ * in for one fact: that returns goals, focus areas, study state and a
+ * week of events, none of which the Recovery page has any use for.
+ */
+export async function nextFixture(): Promise<{ opponent: string; daysAway: number } | null> {
+  if (isDemoMode) return null;
+
+  const supabase = await createClient();
+  if (!supabase) return null;
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data } = await supabase
+    .from("matches")
+    .select("opponent, played_at")
+    .eq("user_id", user.id)
+    .gt("played_at", new Date().toISOString())
+    .order("played_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (!data?.played_at) return null;
+
+  // Whole days, rounded up: a match 30 hours out is "in 2 days", not "in 1".
+  const ms = Date.parse(String(data.played_at)) - Date.now();
+  return {
+    opponent: String(data.opponent ?? "your next match"),
+    daysAway: Math.max(0, Math.ceil(ms / 864e5)),
+  };
+}
+
 export async function listRecoverySamples(days = 14): Promise<RecoverySample[]> {
   if (isDemoMode) return [];
 
