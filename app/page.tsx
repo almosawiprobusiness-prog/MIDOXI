@@ -360,6 +360,7 @@ export default function LandingPage() {
           </div>
           <nav className="flex items-center gap-5 text-sm text-text-dim">
             <Link href="/blog" className="transition-colors hover:text-text-hi">Blog</Link>
+            <Link href="/community-guidelines" className="transition-colors hover:text-text-hi">Guidelines</Link>
             <Link href="/privacy" className="transition-colors hover:text-text-hi">Privacy</Link>
             <Link href="/terms" className="transition-colors hover:text-text-hi">Terms</Link>
             <Link href="/login" className="transition-colors hover:text-text-hi">Log in</Link>
