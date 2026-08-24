@@ -13,6 +13,9 @@ import {
 import { isDemoMode } from "@/lib/env";
 import { ROLES, ROLE_IDS } from "@/lib/roles/roles";
 import { HeroMotion, ScrollZoomReveal } from "@/components/marketing/scroll-motion";
+import { FaqAccordion } from "@/components/marketing/faq-accordion";
+import { FAQ } from "@/lib/marketing/faq";
+import { latestPosts } from "@/lib/blog/posts";
 
 export const metadata = {
   title: "MIDO XI — Your entire football career. One system.",
@@ -280,6 +283,53 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Blog */}
+      <section className="relative z-10 mx-auto max-w-6xl px-5 py-14">
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <div className="label-tech mb-2">From the blog</div>
+            <h2 className="font-display text-2xl font-bold tracking-tight text-text-hi md:text-3xl">
+              How it&rsquo;s actually built, and why
+            </h2>
+          </div>
+          <Link
+            href="/blog"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-signal-bright transition-colors hover:text-signal"
+          >
+            All posts
+            <ArrowRight className="size-3.5" />
+          </Link>
+        </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          {latestPosts(3).map((p) => (
+            <Link
+              key={p.slug}
+              href={`/blog/${p.slug}`}
+              className="group flex min-w-0 flex-col rounded-xl border border-line bg-ink-900/40 p-5 transition-colors hover:border-signal-line"
+            >
+              <p className="label-tech text-text-faint">{p.readMinutes} min read</p>
+              <h3 className="mt-2 font-display text-base font-semibold leading-snug text-text-hi">
+                {p.title}
+              </h3>
+              <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-text-dim">{p.excerpt}</p>
+              <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-signal-bright">
+                Read
+                <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-1" />
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="relative z-10 mx-auto max-w-3xl px-5 py-14">
+        <div className="label-tech mb-2">Questions</div>
+        <h2 className="mb-6 font-display text-2xl font-bold tracking-tight text-text-hi md:text-3xl">
+          Before you ask
+        </h2>
+        <FaqAccordion items={FAQ} />
+      </section>
+
       {/* CTA */}
       <section className="relative z-10 mx-auto max-w-6xl px-5 py-20 text-center">
         <h2 className="mx-auto max-w-2xl font-display text-4xl font-bold tracking-tight text-text-hi md:text-5xl">
@@ -309,6 +359,7 @@ export default function LandingPage() {
             </span>
           </div>
           <nav className="flex items-center gap-5 text-sm text-text-dim">
+            <Link href="/blog" className="transition-colors hover:text-text-hi">Blog</Link>
             <Link href="/privacy" className="transition-colors hover:text-text-hi">Privacy</Link>
             <Link href="/terms" className="transition-colors hover:text-text-hi">Terms</Link>
             <Link href="/login" className="transition-colors hover:text-text-hi">Log in</Link>
