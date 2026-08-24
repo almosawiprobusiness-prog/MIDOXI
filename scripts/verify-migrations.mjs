@@ -80,33 +80,80 @@ for (const file of files) {
 }
 
 const missing = new Map();
+const unknown = [];
 let present = 0;
 
-await Promise.all(
-  [...declaredBy].map(async ([name, { file, kind }]) => {
+/*
+  ONLY a 404 means the table is not there.
+
+  The first version treated every non-ok response as missing and fired all
+  eighty requests at once. One of them got throttled, and the script
+  reported `training_logs` — declared in 0001 and present since the first
+  day — as a migration that had never been run. A checker that invents a
+  failure is worse than one that misses a real one: it sends somebody to
+  re-run a migration against a database that already has it.
+
+  So the states are kept apart. 404 with PGRST205 is absent. Anything
+  else is "could not determine", retried once, and then reported as
+  UNKNOWN rather than folded into the answer.
+*/
+async function probe(name) {
+  for (let attempt = 0; attempt < 3; attempt++) {
     const res = await fetch(`${url}/rest/v1/${name}?select=*&limit=0`, {
       headers: { apikey: key, authorization: `Bearer ${key}` },
     });
-    if (res.ok) {
-      present++;
-      return;
+    if (res.ok) return { state: "present" };
+
+    const body = await res.text();
+    // PGRST205: "Could not find the table ... in the schema cache".
+    if (res.status === 404 && body.includes("PGRST205")) return { state: "absent" };
+
+    // Anything else — throttling, a gateway blip, an auth problem — is not
+    // evidence of absence. Back off and ask again.
+    if (attempt < 2) await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+    else return { state: "unknown", detail: `HTTP ${res.status} ${body.slice(0, 120)}` };
+  }
+  return { state: "unknown", detail: "exhausted retries" };
+}
+
+// Serial, in small batches. Eighty parallel requests is what caused the
+// throttling in the first place, and this script is never in a hurry.
+const entries = [...declaredBy];
+for (let i = 0; i < entries.length; i += 6) {
+  const batch = entries.slice(i, i + 6);
+  const results = await Promise.all(batch.map(([name]) => probe(name)));
+  batch.forEach(([name, { file, kind }], j) => {
+    const r = results[j];
+    if (r.state === "present") present++;
+    else if (r.state === "absent") {
+      if (!missing.has(file)) missing.set(file, []);
+      missing.get(file).push(`${name} (${kind})`);
+    } else {
+      unknown.push(`${name} (${file}) — ${r.detail}`);
     }
-    if (!missing.has(file)) missing.set(file, []);
-    missing.get(file).push(`${name} (${kind})`);
-  }),
-);
+  });
+}
 
 console.log(`\n${declaredBy.size} relations declared across ${files.length} migrations.`);
 
+if (unknown.length > 0) {
+  console.log(`\n${unknown.length} could NOT be determined — treat this run as inconclusive:\n`);
+  for (const u of unknown) console.log(`  ? ${u}`);
+  console.log("");
+}
+
 if (missing.size === 0) {
-  console.log(`All ${present} are present.\n`);
+  console.log(`All ${present} that could be checked are present.\n`);
   console.log("Note: this proves the tables EXIST, not that their columns are right,");
   console.log("and it says nothing about column-only or grant-only migrations.");
   console.log("Run `npm run verify:db` for those.\n");
-  process.exit(0);
+  // An inconclusive run is not a pass. Exiting 0 here would let CI go green
+  // on a check that never actually answered the question.
+  process.exit(unknown.length === 0 ? 0 : 2);
 }
 
-console.log(`${present} present, ${declaredBy.size - present} MISSING.\n`);
+const absent = [...missing.values()].reduce((n, v) => n + v.length, 0);
+console.log(`${present} present, ${absent} MISSING.\n`);
 console.log("These migrations look like they were never run:\n");
 for (const [file, names] of [...missing].sort()) {
   console.log(`  ${file}`);
