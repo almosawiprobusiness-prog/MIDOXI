@@ -1,5 +1,5 @@
 import "server-only";
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient, getAuthUser } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
 import type { MediaKind, Post, ProfileSummary, Visibility } from "./feed-types";
 
@@ -121,9 +121,7 @@ export async function listFeed(q: FeedQuery = {}): Promise<Post[]> {
 
   const supabase = await createClient();
   if (!supabase) return [];
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return [];
   const me = user.id;
 
@@ -229,9 +227,7 @@ export async function getProfileSummary(handleOrId: string): Promise<ProfileSumm
 
   const supabase = await createClient();
   if (!supabase) return null;
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   const me = user?.id ?? null;
 
   const isUuid = /^[0-9a-f-]{36}$/i.test(handleOrId);
@@ -366,9 +362,7 @@ export async function getPost(
 
   const supabase = await createClient();
   if (!supabase) return null;
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return null;
   const me = user.id;
 

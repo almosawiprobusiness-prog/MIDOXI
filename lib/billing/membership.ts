@@ -1,5 +1,5 @@
 import "server-only";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
 import {
   PLANS,
@@ -44,18 +44,29 @@ export async function getMembership(): Promise<Membership> {
 
   const supabase = await createClient();
   if (!supabase) return FREE;
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return FREE;
 
-  const { data } = await supabase
-    .from("subscriptions")
-    .select("plan_id, status, current_period_end, cancel_at_period_end")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  /*
+    Both reads at once. Months earned by referring people, and founder
+    grants, are real access — read alongside the subscription rather than
+    only when there isn't one.
 
-  // Months earned by referring people, and founder grants, are real access —
-  // read alongside the subscription rather than only when there isn't one.
-  const comped = await compedMembership(supabase);
+    "Alongside" was meant literally and was not: the comped read waited
+    for the subscription read to come back before it started, for no
+    reason — neither depends on the other, and the comparison that picks
+    a winner happens after both. Two sequential round trips to the same
+    database, roughly 125ms each from here, to answer two independent
+    questions.
+  */
+  const [{ data }, comped] = await Promise.all([
+    supabase
+      .from("subscriptions")
+      .select("plan_id, status, current_period_end, cancel_at_period_end")
+      .eq("user_id", user.id)
+      .maybeSingle(),
+    compedMembership(supabase),
+  ]);
 
   if (!data || !activeStatus(String(data.status))) return comped ?? FREE;
 
@@ -154,7 +165,7 @@ export async function getUsage(): Promise<UsageMap> {
   if (isDemoMode) return demoUsage();
   const supabase = await createClient();
   if (!supabase) return {};
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return {};
   const { data } = await supabase
     .from("usage_periods")

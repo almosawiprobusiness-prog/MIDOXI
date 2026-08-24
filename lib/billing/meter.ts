@@ -1,5 +1,5 @@
 import "server-only";
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient, getAuthUser } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
 import { checkFeature, currentPeriodStart, bumpDemoUsage, dropDemoUsage } from "./membership";
 import { invalidateAiSpend } from "./budget";
@@ -15,7 +15,7 @@ import type { MeteredFeature } from "./plans";
 async function currentUserId(): Promise<string | null> {
   const supabase = await createClient();
   if (!supabase) return null;
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   return user?.id ?? null;
 }
 

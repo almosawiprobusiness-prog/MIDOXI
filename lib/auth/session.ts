@@ -1,6 +1,6 @@
 import "server-only";
 import { cookies } from "next/headers";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { env, isDemoMode } from "@/lib/env";
 import { isRoleId, type RoleId } from "@/lib/roles/roles";
 import { getMembership } from "@/lib/billing/membership";
@@ -85,18 +85,29 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   const supabase = await createClient();
   if (!supabase) return demoUser();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return null;
 
-  const [{ data: profile }, { data: pp }, { data: cp }, { data: tp }, { data: clp }] = await Promise.all([
-    supabase.from("profiles").select("role, onboarding_complete, full_name, known_as").eq("id", user.id).maybeSingle(),
-    supabase.from("player_profiles").select("primary_position, club, squad_number").eq("user_id", user.id).maybeSingle(),
-    supabase.from("coach_profiles").select("team, coaching_role, club").eq("user_id", user.id).maybeSingle(),
-    supabase.from("trainer_profiles").select("practice, specialism").eq("user_id", user.id).maybeSingle(),
-    supabase.from("club_profiles").select("club_name, level").eq("user_id", user.id).maybeSingle(),
-  ]);
+  /*
+    The profile rows and the membership together, not one after the other.
+
+    These five were already parallel with each other, and then the whole
+    group waited for `getMembership()` to run afterwards — which is two
+    more reads of its own. Nothing in the membership lookup needs a
+    profile row, and nothing in the profile rows needs the plan; they
+    were sequential only because they were written on separate lines.
+  */
+  const [[{ data: profile }, { data: pp }, { data: cp }, { data: tp }, { data: clp }], membership] =
+    await Promise.all([
+      Promise.all([
+        supabase.from("profiles").select("role, onboarding_complete, full_name, known_as").eq("id", user.id).maybeSingle(),
+        supabase.from("player_profiles").select("primary_position, club, squad_number").eq("user_id", user.id).maybeSingle(),
+        supabase.from("coach_profiles").select("team, coaching_role, club").eq("user_id", user.id).maybeSingle(),
+        supabase.from("trainer_profiles").select("practice, specialism").eq("user_id", user.id).maybeSingle(),
+        supabase.from("club_profiles").select("club_name, level").eq("user_id", user.id).maybeSingle(),
+      ]),
+      getMembership(),
+    ]);
 
   // Systems this account has actually set up.
   const provisioned: RoleId[] = [];
@@ -119,7 +130,6 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     system. Verified by forcing role='club' on a free account and being served
     the Club OS. Nothing here may take a stored value on trust.
   */
-  const membership = await getMembership();
   const entitled = rolesFor(membership.planId);
 
   let available: RoleId[];

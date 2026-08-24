@@ -1,5 +1,5 @@
 import "server-only";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
 import type {
   AgendaItem,
@@ -118,7 +118,7 @@ export async function listMeetings(q: MeetingQuery = {}): Promise<Meeting[]> {
 
   const supabase = await createClient();
   if (!supabase) return [];
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return [];
   const me = user.id;
 
@@ -153,7 +153,7 @@ export async function getMeeting(id: string): Promise<MeetingDetail | null> {
 
   const supabase = await createClient();
   if (!supabase) return null;
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return null;
   const me = user.id;
 
@@ -251,7 +251,7 @@ export async function bookableWith(): Promise<MeetingPerson[]> {
 
   const supabase = await createClient();
   if (!supabase) return [];
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return [];
   const me = user.id;
 

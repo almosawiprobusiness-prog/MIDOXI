@@ -1,5 +1,5 @@
 import "server-only";
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient, getAuthUser } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
 import { player } from "@/lib/seed";
 
@@ -115,7 +115,7 @@ export async function getProfileSettings(forUser?: string): Promise<ProfileSetti
   let userId = forUser;
   let email = "";
   if (!userId) {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return empty;
     userId = user.id;
     email = user.email ?? "";

@@ -1,5 +1,5 @@
 import "server-only";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
 import { concept } from "@/lib/knowledge/concepts";
 import { listGoals } from "./development";
@@ -97,9 +97,7 @@ export async function addMemory(input: MemoryInput): Promise<Memory | null> {
 
   const supabase = await createClient();
   if (!supabase) return null;
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return null;
 
   /*

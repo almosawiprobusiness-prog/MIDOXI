@@ -1,5 +1,5 @@
 import "server-only";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
 import {
   PER90_SOURCES,
@@ -33,9 +33,7 @@ export async function getPerformance(): Promise<PerformanceView> {
 
   const supabase = await createClient();
   if (!supabase) return empty();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return empty();
 
   const since = new Date(Date.now() - 120 * 864e5).toISOString();

@@ -1,5 +1,5 @@
 import "server-only";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
 import { trainerStore } from "./trainer-store";
 import { TESTS, test as testMeta } from "@/lib/knowledge/physical";
@@ -34,9 +34,7 @@ async function client() {
 async function userId(): Promise<string | null> {
   const supabase = await client();
   if (!supabase) return null;
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   return user?.id ?? null;
 }
 

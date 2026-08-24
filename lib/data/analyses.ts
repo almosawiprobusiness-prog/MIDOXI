@@ -1,5 +1,5 @@
 import "server-only";
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient, getAuthUser } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
 import type { AnalysisKind, AnalysisObservation } from "@/lib/video/provider";
 
@@ -102,9 +102,7 @@ export async function saveAnalysis(input: SaveAnalysisInput): Promise<ClipAnalys
 
   const supabase = await createClient();
   if (!supabase) return null;
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return null;
 
   const { data } = await supabase
@@ -185,9 +183,7 @@ export async function priorObservations(input: {
   } else {
     const supabase = await createClient();
     if (!supabase) return [];
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return [];
 
     // Bounded by recency: what matters is what MIDO said lately, and reading a

@@ -1,5 +1,5 @@
 import "server-only";
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient, getAuthUser } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
 import { demoStore } from "./store";
 import { getRecovery } from "./recovery";
@@ -68,9 +68,7 @@ export async function getTimeline(q: TimelineQuery = {}): Promise<TimelineView> 
 
   let userId = owner;
   if (!userId) {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) return empty(from, to);
     userId = user.id;
   }

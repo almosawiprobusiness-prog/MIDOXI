@@ -1,5 +1,5 @@
 import "server-only";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
 import type { Connection, ProviderId, RecoverySample } from "@/lib/health/providers";
 
@@ -34,7 +34,7 @@ export async function listConnections(): Promise<Connection[]> {
 
   const supabase = await createClient();
   if (!supabase) return [];
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return [];
 
   const { data } = await supabase
@@ -88,7 +88,7 @@ export async function nextFixture(): Promise<{ opponent: string; daysAway: numbe
 
   const supabase = await createClient();
   if (!supabase) return null;
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return null;
 
   const { data } = await supabase
@@ -115,7 +115,7 @@ export async function listRecoverySamples(days = 14): Promise<RecoverySample[]> 
 
   const supabase = await createClient();
   if (!supabase) return [];
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return [];
 
   const since = new Date(Date.now() - days * 864e5).toISOString().slice(0, 10);

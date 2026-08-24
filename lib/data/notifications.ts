@@ -1,5 +1,5 @@
 import "server-only";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
 import type { Notification, NotificationKind } from "./notification-types";
 
@@ -40,7 +40,7 @@ export async function listNotifications(limit = 30): Promise<Notification[]> {
 
   const supabase = await createClient();
   if (!supabase) return [];
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return [];
 
   const { data } = await supabase
@@ -78,7 +78,7 @@ export async function getEmailOptIn(): Promise<boolean> {
 
   const supabase = await createClient();
   if (!supabase) return true;
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return true;
 
   const { data } = await supabase
@@ -95,7 +95,7 @@ export async function unreadCount(): Promise<number> {
 
   const supabase = await createClient();
   if (!supabase) return 0;
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return 0;
 
   const { count } = await supabase

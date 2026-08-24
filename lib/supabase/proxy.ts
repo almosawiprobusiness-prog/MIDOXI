@@ -27,7 +27,16 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  // Do not run code between createServerClient and getUser().
+  /*
+    Do not run code between createServerClient and getUser().
+
+    Deliberately NOT the cached `getAuthUser()` used everywhere else.
+    This runs in the proxy, before rendering begins and in its own
+    context, so React's per-request cache does not reach it — and it
+    needs THIS client, the one wired to write refreshed cookies back
+    onto the response. One verification here, one shared by the whole
+    render: two in total, which is the floor.
+  */
   const {
     data: { user },
   } = await supabase.auth.getUser();
