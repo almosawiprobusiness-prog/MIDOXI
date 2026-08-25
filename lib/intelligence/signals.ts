@@ -1,4 +1,4 @@
-import type { PlayerSignals } from "./next-best-action";
+import type { PlayerSignals, ActionKind } from "./next-best-action";
 
 /*
   Turning what a player has done into what the scorer can read.
@@ -77,6 +77,8 @@ export interface RawSignalInputs {
     occurredAt: string;
     payload: Record<string, unknown>;
   }[];
+  /** Kinds waved away inside the cooldown window. */
+  dismissedKinds?: ActionKind[];
 }
 
 /**
@@ -162,8 +164,12 @@ export function toPlayerSignals(raw: RawSignalInputs, now: Date): PlayerSignals 
     daysSinceTraining: pastTraining[0] ? daysBetween(pastTraining[0].scheduledAt, nowIso) : null,
     completedStudies,
     filmObservations,
-    // Dismissals live in the recommendation store, which does not exist
-    // yet. Empty rather than invented.
-    recentlyDismissed: [],
+    /*
+      Passed in rather than derived here: dismissals live in the
+      recommendation store, which is a server concern, and this function
+      is pure so its date arithmetic stays testable. The caller reads
+      them and hands them over.
+    */
+    recentlyDismissed: raw.dismissedKinds ?? [],
   };
 }

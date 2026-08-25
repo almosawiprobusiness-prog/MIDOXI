@@ -4,6 +4,7 @@ import { listGoals } from "@/lib/data/development";
 import { listTraining } from "@/lib/data/training";
 import { getRecovery } from "@/lib/data/recovery";
 import { listMidoEvents } from "@/lib/events/emit";
+import { recentlyDismissedKinds } from "@/lib/data/recommendations";
 import { toPlayerSignals, EVENT_WINDOW_DAYS } from "./signals";
 import type { PlayerSignals } from "./next-best-action";
 
@@ -28,7 +29,7 @@ import type { PlayerSignals } from "./next-best-action";
 export async function buildPlayerSignals(now: Date = new Date()): Promise<PlayerSignals> {
   const since = new Date(now.getTime() - EVENT_WINDOW_DAYS * 86_400_000).toISOString();
 
-  const [matches, goals, training, recovery, events] = await Promise.all([
+  const [matches, goals, training, recovery, events, dismissedKinds] = await Promise.all([
     listMatches().catch(() => []),
     listGoals().catch(() => []),
     listTraining().catch(() => []),
@@ -38,6 +39,8 @@ export async function buildPlayerSignals(now: Date = new Date()): Promise<Player
       since,
       limit: 100,
     }).catch(() => []),
+    // Closes the dismissal loop: the scorer halves what was waved away.
+    recentlyDismissedKinds(now).catch(() => []),
   ]);
 
   return toPlayerSignals(
@@ -51,6 +54,7 @@ export async function buildPlayerSignals(now: Date = new Date()): Promise<Player
         occurredAt: e.occurredAt,
         payload: e.payload,
       })),
+      dismissedKinds,
     },
     now,
   );
