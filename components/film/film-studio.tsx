@@ -1165,9 +1165,60 @@ export function FilmStudio({
             })}
           </div>
         ) : (
-          <p className="panel p-4 text-sm text-text-dim">
-            No clips yet. Scrub the video, mark in/out, and save your first clip.
-          </p>
+          /*
+            What this room is for, said once, to somebody who has never
+            used it.
+
+            The film room grew a clip composer, a pen, a reel and two AI
+            readers, and none of them announce themselves — a player
+            opening their first match saw a video and a wall of controls
+            and had no reason to believe any of it was for them.
+
+            SELF-DISMISSING BY CONSTRUCTION. It shows only while this
+            video has nothing on it at all — no clips AND no drawings —
+            so the moment you make anything it is gone for good. No "got
+            it" button, no stored flag, and nothing to nag somebody on
+            their fiftieth match. Somebody who has drawn but not clipped
+            plainly knows where they are, and gets one line instead.
+          */
+          annotations.length > 0 ? (
+            <p className="panel p-4 text-sm text-text-dim">
+              No clips yet. Mark in and out with I and O to cut your first one.
+            </p>
+          ) : (
+          <div className="panel p-4">
+            <p className="text-sm font-medium text-text-hi">Three things to do here</p>
+            <ol className="mt-3 space-y-3">
+              {[
+                {
+                  n: "1",
+                  title: "Cut a clip",
+                  body: "Find the moment, press I to mark in and O to mark out, then name it. That is the unit everything else is built on.",
+                },
+                {
+                  n: "2",
+                  title: "Draw on it",
+                  body: "Press D to freeze the frame and point at what you mean — an arrow, a circle, the space nobody covered. Save it as an image to send on.",
+                },
+                {
+                  n: "3",
+                  title: "Have MIDO read it",
+                  body: "Pick a passage below and MIDO watches it, marking what it saw against what it worked out. It never invents a number.",
+                },
+              ].map((s) => (
+                <li key={s.n} className="flex gap-3">
+                  <span className="data-mono grid size-6 shrink-0 place-items-center rounded-md border border-signal-line bg-signal/10 text-[11px] text-signal-bright">
+                    {s.n}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm text-text-hi">{s.title}</span>
+                    <span className="mt-0.5 block text-xs leading-relaxed text-text-dim">{s.body}</span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </div>
+          )
         )}
 
         {/*

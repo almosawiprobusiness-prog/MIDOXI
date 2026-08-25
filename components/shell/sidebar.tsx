@@ -111,36 +111,62 @@ export function Sidebar({ identity }: { identity: ShellIdentity }) {
         <RoleSwitcher identity={identity} />
       </div>
 
-      {/* The work */}
+      {/*
+        The work, in two tabs rather than a list with a drawer under it.
+
+        The old shape was every primary destination, then a "More"
+        disclosure that started CLOSED. For a coach that hid Film Room,
+        Matches and Calendar behind a click with no indication they
+        existed — a destination nobody can see is a destination nobody
+        uses.
+
+        Tabs put both sets one click away and, unlike a disclosure,
+        never push the rest of the sidebar down: the panel is the same
+        height whichever is showing, so the menu does not jump under
+        the cursor. Whichever tab holds the current route opens
+        selected, so arriving from a link never lands you on the wrong
+        one.
+      */}
       <nav aria-label="Main" className="flex-1 overflow-y-auto px-3 py-1">
+        {more.length > 0 && (
+          <div
+            role="tablist"
+            aria-label="Navigation groups"
+            className="mb-2 grid grid-cols-2 gap-1 rounded-lg border border-line bg-ink-850 p-1"
+          >
+            {([
+              { key: "work" as const, label: "Work", count: primary.length },
+              { key: "more" as const, label: "More", count: more.length },
+            ]).map((t) => {
+              const selected = (t.key === "more") === showMore;
+              return (
+                <button
+                  key={t.key}
+                  role="tab"
+                  aria-selected={selected}
+                  onClick={() => setShowMore(t.key === "more")}
+                  className={cn(
+                    "flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs transition-colors",
+                    selected
+                      ? "bg-signal/15 text-signal-bright"
+                      : "text-text-faint hover:text-text-dim",
+                  )}
+                >
+                  {t.label}
+                  <span className="data-mono text-[10px] opacity-60">{t.count}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         <ul className="space-y-0.5">
-          {primary.map((item) => (
+          {(showMore && more.length > 0 ? more : primary).map((item) => (
             <li key={item.href}>
               <NavLink item={item} pathname={pathname} />
             </li>
           ))}
         </ul>
-
-        {more.length > 0 && (
-          <>
-            <button
-              onClick={() => setShowMore((v) => !v)}
-              className="mt-2 flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-text-faint transition-colors hover:text-text-dim"
-            >
-              <ChevronDown className={cn("size-3.5 transition-transform", showMore && "rotate-180")} />
-              <span className="label-tech !text-[10px]">More</span>
-            </button>
-            {showMore && (
-              <ul className="space-y-0.5">
-                {more.map((item) => (
-                  <li key={item.href}>
-                    <NavLink item={item} pathname={pathname} />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </>
-        )}
       </nav>
 
       <div className="border-t border-line px-4 py-3">
@@ -176,9 +202,23 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
           active ? "text-signal-bright" : "text-text-faint group-hover:text-text-dim",
         )}
       />
-      <span className="flex-1">{item.label}</span>
+      {/*
+        Every nav item has carried a written `hint` — "The week", "Video
+        study", "Share & discuss" — and the sidebar has never shown one.
+        Surfaced on the ACTIVE item only: it tells you what you are
+        looking at without turning a ten-item menu into a wall of
+        subtitles.
+      */}
+      <span className="min-w-0 flex-1">
+        <span className="block truncate">{item.label}</span>
+        {active && item.hint && (
+          <span className="label-tech mt-0.5 block truncate !text-[9px] !text-text-faint">
+            {item.hint}
+          </span>
+        )}
+      </span>
       {item.status === "scaffold" && (
-        <span className="size-1.5 rounded-full bg-ink-600" title="Scaffolded — building" />
+        <span className="size-1.5 shrink-0 rounded-full bg-ink-600" title="Scaffolded — building" />
       )}
     </Link>
   );
