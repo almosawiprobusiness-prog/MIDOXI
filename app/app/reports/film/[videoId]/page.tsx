@@ -3,9 +3,10 @@ import { notFound } from "next/navigation";
 import { Clapperboard, History } from "lucide-react";
 import { getVideoWithClips } from "@/lib/data/film";
 import { listAnalyses } from "@/lib/data/analyses";
+import { listAnnotations } from "@/lib/data/annotations";
 import { getProfileSettings } from "@/lib/data/profile";
 import { CONFIDENCE_META } from "@/lib/video/provider";
-import { fmtTime } from "@/lib/data/film-types";
+import { fmtTime, sentimentMeta } from "@/lib/data/film-types";
 import { plural } from "@/lib/data/timeline-types";
 import { ReportShell, ReportSection, Stat } from "@/components/reports/report-shell";
 import { PrintButton } from "@/components/reports/print-button";
@@ -39,9 +40,10 @@ function fmtDate(iso: string): string {
 export default async function FilmReportPage({ params }: PageProps<"/app/reports/film/[videoId]">) {
   const { videoId } = await params;
 
-  const [detail, analyses, profile] = await Promise.all([
+  const [detail, analyses, annotations, profile] = await Promise.all([
     getVideoWithClips(videoId),
     listAnalyses(videoId),
+    listAnnotations(videoId),
     getProfileSettings(),
   ]);
   if (!detail?.video) notFound();
@@ -55,6 +57,18 @@ export default async function FilmReportPage({ params }: PageProps<"/app/reports
     return acc;
   }, {});
   const usedLevels = (["observed", "inferred", "uncertain"] as const).filter((l) => counts[l]);
+
+  /*
+    A film analysis is not only what MIDO said about the film.
+
+    This report used to print the readings and nothing else — so a coach
+    who had spent an hour cutting clips and drawing on frames got a
+    document with none of their own work in it, and one that claimed to
+    be empty whenever the AI had not been run. The person's marks are
+    the part they trust most.
+  */
+  const firstRead = analyses.length ? analyses[analyses.length - 1].createdAt : null;
+  const isEmpty = analyses.length === 0 && detail.clips.length === 0 && annotations.length === 0;
 
   return (
     <div className="mx-auto max-w-[820px] px-4 py-8 md:px-6">
@@ -95,10 +109,27 @@ export default async function FilmReportPage({ params }: PageProps<"/app/reports
         }}
         footnote="MIDO cannot identify a specific player from amateur footage on its own. Anything said about this player specifically is marked Inferred at best."
       >
-        {analyses.length === 0 ? (
-          <p className="py-8 text-sm leading-relaxed text-text-dim">
-            Nothing has been read on this film yet. Open it in the film room and analyse a passage.
-          </p>
+        {isEmpty ? (
+          /*
+            Says what to go and do, not just that there is nothing. The
+            two routes to filling this page are different jobs and the
+            reader may not know either exists.
+          */
+          <div className="py-8">
+            <p className="text-sm leading-relaxed text-text">
+              There is nothing on this film yet.
+            </p>
+            <ul className="mt-3 space-y-2 text-sm leading-relaxed text-text-dim">
+              <li>
+                <span className="text-text-hi">Mark it up yourself.</span> Open it in the film room,
+                cut clips with I and O, and draw on a frame with D. Both appear here.
+              </li>
+              <li>
+                <span className="text-text-hi">Have MIDO read a passage.</span> Pick ten seconds or
+                more and it reports what it saw, marked with how sure it is.
+              </li>
+            </ul>
+          </div>
         ) : (
           <>
             <ReportSection label="This film">
@@ -106,14 +137,30 @@ export default async function FilmReportPage({ params }: PageProps<"/app/reports
                 <Stat value={analyses.length} label={plural(analyses.length, "read")} />
                 <Stat value={observations.length} label={plural(observations.length, "observation")} />
                 <Stat value={detail.clips.length} label={plural(detail.clips.length, "clip")} />
-                <Stat value={fmtDate(analyses[analyses.length - 1].createdAt)} label="first read" />
+                {/*
+                  Guarded. This read `analyses[analyses.length - 1]`
+                  unconditionally, which was safe only because the whole
+                  block was behind `analyses.length === 0`. Now that
+                  clips and drawings can carry the page on their own, an
+                  empty `analyses` reaches here.
+                */}
+                {firstRead ? (
+                  <Stat value={fmtDate(firstRead)} label="first read" />
+                ) : (
+                  <Stat value={annotations.length} label={plural(annotations.length, "drawing")} />
+                )}
               </div>
             </ReportSection>
 
             {/*
               The legend is printed, not hidden in a tooltip. Once this leaves
               the app, nothing else explains what the words mean.
+
+              Guarded now: a film with clips and drawings but no AI read
+              has no confidence levels to explain, and a heading over an
+              empty list is the report explaining nothing at length.
             */}
+            {usedLevels.length > 0 && (
             <ReportSection label="How to read this">
               <dl className="space-y-1.5">
                 {usedLevels.map((level) => (
@@ -131,6 +178,90 @@ export default async function FilmReportPage({ params }: PageProps<"/app/reports
                 ))}
               </dl>
             </ReportSection>
+            )}
+
+            {/*
+              The person's own marks, before MIDO's. A coach reading this
+              wants their own read first and the machine's second — and
+              on a film nobody has run the AI over, this is the whole
+              document rather than a missing one.
+            */}
+            {detail.clips.length > 0 && (
+              <ReportSection
+                label="Clips you cut"
+                // `plural` returns the WORD, not the count — the count
+                // has to be said alongside it or the note reads
+                // "Clips you cut · clips".
+                note={`${detail.clips.length} ${plural(detail.clips.length, "clip")}`}
+              >
+                <ul className="space-y-3">
+                  {[...detail.clips]
+                    .sort((a, b) => a.startSeconds - b.startSeconds)
+                    .map((c) => {
+                      const sm = sentimentMeta(c.sentiment);
+                      return (
+                        <li key={c.id} className="border-l border-line pl-3">
+                          <div className="flex flex-wrap items-baseline gap-2">
+                            <span className="data-mono text-[11px] text-text-dim">
+                              {fmtTime(c.startSeconds)}
+                            </span>
+                            <span className="text-sm font-medium text-text-hi">{c.title}</span>
+                            {sm && (
+                              <span className="chip" style={{ color: sm.color }}>
+                                {sm.label}
+                              </span>
+                            )}
+                            {c.tags.map((t) => (
+                              <span key={t} className="chip">
+                                {t}
+                              </span>
+                            ))}
+                          </div>
+                          {c.note && (
+                            <p className="mt-1 text-sm leading-relaxed text-text-dim">{c.note}</p>
+                          )}
+                        </li>
+                      );
+                    })}
+                </ul>
+              </ReportSection>
+            )}
+
+            {/*
+              Drawings are recorded as what they SAID, not as pictures.
+
+              The marks are vector shapes over a video frame, and neither
+              travels into a printed page: the frame is a moment of
+              footage this document does not carry, and shapes without it
+              are arrows pointing at nothing. So the note and the moment
+              print, and the drawing itself stays where it can be seen
+              properly. Claiming otherwise would be the one thing a
+              report must not do.
+            */}
+            {annotations.length > 0 && (
+              <ReportSection
+                label="Drawings you made"
+                note={`${annotations.length} ${plural(annotations.length, "drawing")} · open the film to see them on the frame`}
+              >
+                <ul className="space-y-3">
+                  {annotations.map((a) => (
+                    <li key={a.id} className="border-l border-line pl-3">
+                      <div className="flex flex-wrap items-baseline gap-2">
+                        <span className="data-mono text-[11px] text-text-dim">
+                          {fmtTime(a.atSeconds)}
+                        </span>
+                        <span className="text-sm font-medium text-text-hi">
+                          {a.note || "Marked, without a note"}
+                        </span>
+                        <span className="chip">
+                          {a.shapes.length} {a.shapes.length === 1 ? "mark" : "marks"}
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </ReportSection>
+            )}
 
             {analyses.map((a) => (
               <ReportSection
