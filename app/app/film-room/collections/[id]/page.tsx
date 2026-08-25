@@ -36,16 +36,34 @@ export default async function CollectionPage({ params }: { params: Promise<{ id:
         <ArrowLeft className="size-4" /> Film Room
       </Link>
 
-      <div className="mb-6 flex flex-wrap items-center gap-3">
-        <span className="grid size-11 place-items-center rounded-lg border border-line bg-ink-850 text-signal-bright">
-          <FolderOpen className="size-5" />
-        </span>
-        <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight text-text-hi">{collection.name}</h1>
-          <p className="text-sm text-text-dim">{clips.length} {clips.length === 1 ? "clip" : "clips"}</p>
-        </div>
-        <div className="ml-auto">
-          <DeleteCollectionButton id={collection.id} />
+      {/*
+        The same floodlit pitch as the film room, deliberately.
+
+        A third photograph would have been a third thing to look at; the
+        rooms that hold match footage sharing one image reads as the same
+        place rather than a gallery. The clip cards below carry the
+        variety — each paints its own frame.
+      */}
+      <div className="relative -mx-4 mb-6 overflow-hidden md:-mx-6">
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-[url('/img/floodlights.jpg')] bg-cover bg-[center_60%] opacity-60"
+        />
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-gradient-to-b from-ink-950/50 via-ink-950/80 to-ink-950"
+        />
+        <div className="relative flex flex-wrap items-center gap-3 px-4 pb-9 pt-10 md:px-6">
+          <span className="grid size-11 place-items-center rounded-lg border border-line bg-ink-850/80 text-signal-bright backdrop-blur">
+            <FolderOpen className="size-5" />
+          </span>
+          <div>
+            <h1 className="font-display text-2xl font-bold tracking-tight text-text-hi">{collection.name}</h1>
+            <p className="text-sm text-text-dim">{clips.length} {clips.length === 1 ? "clip" : "clips"}</p>
+          </div>
+          <div className="ml-auto">
+            <DeleteCollectionButton id={collection.id} />
+          </div>
         </div>
       </div>
 

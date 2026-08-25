@@ -29,9 +29,32 @@ export default async function StudyModePage({ params }: { params: Promise<{ id: 
         <ArrowLeft className="size-4" /> Film Room
       </Link>
 
-      <div className="mb-5">
-        <div className="label-tech">Study session · distraction-free</div>
-        <h1 className="mt-1 font-display text-2xl font-bold tracking-tight text-text-hi md:text-3xl">{session.title}</h1>
+      {/*
+        A photograph behind the title only, and nowhere near the work.
+
+        This page calls itself distraction-free, which is a real
+        constraint rather than a slogan: below this strip are the film,
+        the note composer and the timeline, and none of them should have
+        anything moving behind them. So the image warms the way IN and
+        stops at the header's edge.
+
+        One player working alone on a small-sided pitch — chosen for the
+        subject as much as the look, because that is what a study
+        session is.
+      */}
+      <div className="relative -mx-4 mb-5 overflow-hidden md:-mx-6">
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-[url('/img/solo-strike.jpg')] bg-cover bg-[center_42%] opacity-40"
+        />
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-gradient-to-b from-ink-950/55 via-ink-950/80 to-ink-950"
+        />
+        <div className="relative px-4 pb-8 pt-10 md:px-6">
+          <div className="label-tech">Study session · distraction-free</div>
+          <h1 className="mt-1 font-display text-2xl font-bold tracking-tight text-text-hi md:text-3xl">{session.title}</h1>
+        </div>
       </div>
 
       <StudySessionView session={session} notes={notes} video={video} goalTitle={goalTitle} />
