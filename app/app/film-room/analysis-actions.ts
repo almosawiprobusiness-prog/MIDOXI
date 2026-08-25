@@ -10,6 +10,7 @@ import {
   CLIP_MAX_SECONDS,
   clipLengthIssue,
   type AnalysisFrame,
+  type AnalysisObservation,
 } from "@/lib/video/provider";
 import { saveAnalysis, deleteAnalysis, priorObservations, type ClipAnalysis } from "@/lib/data/analyses";
 import { getVideoWithClips } from "@/lib/data/film";
@@ -21,6 +22,8 @@ import { currentViewer } from "@/lib/data/studies";
 import { conceptsForPosition } from "@/lib/knowledge/graph";
 import { conceptsForGoals } from "@/lib/knowledge/mapping";
 import { createClip } from "@/app/app/film-room/actions";
+import { emitMidoEvent } from "@/lib/events/emit";
+import { idempotencyKey } from "@/lib/events/types";
 
 /*
   Running an analysis.
@@ -189,7 +192,15 @@ async function save(
       model?: string;
       kind: "frames" | "video" | "tracking" | "events";
       summary: string;
-      observations: { atSeconds: number; title: string; body: string; concept?: string }[];
+      /*
+        The real type, not a structural copy of part of it. This was
+        written out inline as { atSeconds, title, body, concept? } and
+        silently dropped `confidence` and `aboutViewer` — which are
+        exactly the fields that decide whether a reading may be
+        presented as fact. A hand-copied subset of a type is a place for
+        that kind of thing to go missing.
+      */
+      observations: AnalysisObservation[];
       framesUsed: number;
     };
   },
@@ -209,6 +220,62 @@ async function save(
   });
 
   if (!saved) return { ok: false, error: "The analysis ran but could not be saved." };
+
+  /*
+    The film reader assembled goals, position, prior studies and the
+    knowledge graph to produce this — and until now all of it evaporated
+    when the action returned. These two events are what let the next
+    recommendation know the footage said something.
+
+    NOTHING THE MODEL WROTE IS COPIED HERE. Not the summary, not an
+    observation's body. Those are in `clip_analyses`, reachable by
+    `subjectId`, and they are the most sensitive text the film room
+    produces — a machine's reading of somebody's own game. Duplicating
+    it would double the places it must be protected and deleted.
+
+    What travels is the CONCEPT: which named piece of football each
+    observation was about, and how sure the reader was. That is all the
+    scorer needs to connect footage to a goal, and it is a curated slug
+    rather than free text.
+  */
+  await emitMidoEvent({
+    type: "VIDEO_ANALYZED",
+    subjectType: "video",
+    subjectId: videoId,
+    source: "ai",
+    payload: {
+      kind: input.outcome.kind,
+      fromSeconds: input.fromSeconds,
+      toSeconds: input.toSeconds,
+      observationCount: input.outcome.observations.length,
+    },
+    idempotencyKey: idempotencyKey(["video", "analyzed", saved.id]),
+  });
+
+  /*
+    One event per observation that names a concept.
+
+    Observations without one are skipped rather than recorded as
+    unlabelled: an event the scorer cannot match to anything is a row it
+    has to read and discard on every query.
+  */
+  for (const [i, o] of input.outcome.observations.entries()) {
+    if (!o.concept) continue;
+    await emitMidoEvent({
+      type: "FILM_OBSERVATION_CREATED",
+      subjectType: "video",
+      subjectId: videoId,
+      source: "ai",
+      payload: {
+        concept: o.concept,
+        atSeconds: o.atSeconds,
+        // Never presented as fact later — see CONFIDENCE_META.
+        confidence: o.confidence ?? "observed",
+      },
+      idempotencyKey: idempotencyKey(["observation", saved.id, String(i)]),
+    });
+  }
+
   revalidatePath(`/app/film-room/${videoId}`);
   revalidatePath("/app/timeline");
   return { ok: true, analysis: saved };

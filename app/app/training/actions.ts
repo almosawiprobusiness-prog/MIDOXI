@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
 import { demoStore } from "@/lib/data/store";
 import type { TrainingInput } from "@/lib/data/training-types";
+import { emitMidoEvent } from "@/lib/events/emit";
+import { idempotencyKey } from "@/lib/events/types";
 
 export type Result = { ok: true; id?: string; demo?: boolean } | { ok: false; error: string };
 
@@ -38,12 +40,40 @@ async function writeLog(supabase: NonNullable<Awaited<ReturnType<typeof createCl
   });
 }
 
+/*
+  A session was logged.
+
+  `occurredAt` is the session's own scheduled time, not now — the same
+  reason a match is dated by when it was played. "Days since training" is
+  a signal the scorer leans on, and it has to mean days since the work,
+  not days since the typing.
+
+  The payload carries the shape of the session, never its contents: kind,
+  minutes, and whether an objective was written. The session itself is in
+  `training_sessions` and is reachable by subjectId.
+*/
+async function recordTraining(id: string, input: TrainingInput) {
+  await emitMidoEvent({
+    type: "TRAINING_LOGGED",
+    subjectType: "training",
+    subjectId: id,
+    occurredAt: input.scheduledAt,
+    payload: {
+      kind: input.kind,
+      durationMin: input.durationMin ?? null,
+      hasObjective: Boolean(input.objective?.trim()),
+    },
+    idempotencyKey: idempotencyKey(["training", "logged", id]),
+  });
+}
+
 export async function createTraining(input: TrainingInput): Promise<Result> {
   if (!input.title?.trim()) return { ok: false, error: "Give the session a title." };
   if (!input.scheduledAt) return { ok: false, error: "Session date is required." };
 
   if (isDemoMode) {
     const id = demoStore.createTraining(input);
+    await recordTraining(id, input);
     revalidate();
     return { ok: true, id, demo: true };
   }
@@ -65,6 +95,7 @@ export async function createTraining(input: TrainingInput): Promise<Result> {
   if (error) return { ok: false, error: error.message };
 
   await writeLog(supabase, data.id, input);
+  await recordTraining(data.id, input);
   revalidate();
   return { ok: true, id: data.id };
 }

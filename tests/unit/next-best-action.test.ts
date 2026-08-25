@@ -216,3 +216,123 @@ describe("the ranking itself", () => {
     expect(new Set(k).size).toBe(k.length);
   });
 });
+
+describe("not repeating what you just did", () => {
+  /*
+    The success criterion from the spec, and the single most trust-losing
+    failure a recommender has: suggesting the thing somebody finished
+    yesterday. One obvious repeat costs more than ten good suggestions
+    earn.
+  */
+  const scanning: PlayerSignals = {
+    ...base,
+    activeGoals: [{ id: "g1", title: "Improve pre-reception scanning" }],
+    daysSinceStudy: 1,
+  };
+
+  it("stops recommending a study that covers the active goal", () => {
+    const s = {
+      ...scanning,
+      completedStudies: [{ subject: "Rodri — scanning before receiving", daysAgo: 1 }],
+    };
+    expect(kinds(s)).not.toContain("study");
+  });
+
+  it("keeps recommending study when the completed one was about something else", () => {
+    // Studying finishing must not suppress a scanning recommendation.
+    const s = {
+      ...scanning,
+      completedStudies: [{ subject: "Haaland — finishing across the keeper", daysAgo: 1 }],
+    };
+    expect(kinds(s)).toContain("study");
+  });
+
+  it("lets the same study return once it has gone stale", () => {
+    const s = {
+      ...scanning,
+      completedStudies: [{ subject: "Rodri — scanning before receiving", daysAgo: 60 }],
+    };
+    expect(kinds(s)).toContain("study");
+  });
+});
+
+describe("the full continuity scenario", () => {
+  /*
+    Goal, then film that points at it, then a study completed on it. The
+    spec's proof that MIDO has continuity: the next step is not more
+    watching, it is doing it on grass — and MIDO can say why from the
+    player's own history.
+  */
+  const s: PlayerSignals = {
+    ...base,
+    readiness: 75,
+    daysSinceTraining: 4,
+    activeGoals: [{ id: "g1", title: "Improve pre-reception scanning" }],
+    completedStudies: [{ subject: "Rodri — scanning before receiving", daysAgo: 1 }],
+    filmObservations: [{ concept: "Late scan before receiving", daysAgo: 2, goalId: "g1" }],
+  };
+
+  it("recommends training rather than the study again", () => {
+    expect(top(s).kind).toBe("training");
+    expect(kinds(s)).not.toContain("study");
+  });
+
+  it("names the goal in the action itself", () => {
+    expect(top(s).title).toContain("pre-reception scanning");
+  });
+
+  it("explains itself from goal, film and the completed study", () => {
+    const reason = top(s).reason.toLowerCase();
+    expect(reason).toContain("pre-reception scanning");
+    expect(reason).toContain("film");
+    expect(reason).toContain("already completed the related study");
+  });
+
+  it("cites all three as sources", () => {
+    const sources = top(s).sources.join(" ");
+    expect(sources).toContain("goal:g1");
+    expect(sources).toContain("study:completed");
+    expect(sources).toContain("observation:");
+  });
+
+  it("still refuses to apply it on grass when readiness is low", () => {
+    // Continuity never overrides the safety rule.
+    expect(kinds({ ...s, readiness: 25 })).not.toContain("training");
+  });
+});
+
+describe("film evidence", () => {
+  it("raises study when the footage points at the goal", () => {
+    const withFilm = find(
+      { ...base, filmObservations: [{ concept: "Late scan before receiving", daysAgo: 2, goalId: "g1" }],
+        activeGoals: [{ id: "g1", title: "Improve pre-reception scanning" }] },
+      "study",
+    )!;
+    const without = find(
+      { ...base, activeGoals: [{ id: "g1", title: "Improve pre-reception scanning" }] },
+      "study",
+    )!;
+    expect(withFilm.score).toBeGreaterThan(without.score);
+  });
+
+  it("is ignored once it is old", () => {
+    const stale = find(
+      { ...base, filmObservations: [{ concept: "Late scan before receiving", daysAgo: 120, goalId: "g1" }],
+        activeGoals: [{ id: "g1", title: "Improve pre-reception scanning" }] },
+      "study",
+    )!;
+    const without = find(
+      { ...base, activeGoals: [{ id: "g1", title: "Improve pre-reception scanning" }] },
+      "study",
+    )!;
+    expect(stale.score).toBe(without.score);
+  });
+});
+
+describe("recent training", () => {
+  it("is not recommended again the day after", () => {
+    const yesterday = find({ ...base, readiness: 80, daysSinceTraining: 1 }, "training")!;
+    const older = find({ ...base, readiness: 80, daysSinceTraining: 5 }, "training")!;
+    expect(yesterday.score).toBeLessThan(older.score);
+  });
+});

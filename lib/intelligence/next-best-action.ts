@@ -77,7 +77,87 @@ export interface PlayerSignals {
    * a helpful product becomes a nagging one.
    */
   recentlyDismissed?: ActionKind[];
+
+  /**
+   * Studies already finished, newest first.
+   *
+   * The signal that stops MIDO recommending the thing somebody just did.
+   * A product that says "study Rodri's scanning" the day after you
+   * studied Rodri's scanning is not reading its own record, and one
+   * obvious repeat costs more trust than ten good suggestions earn.
+   */
+  completedStudies?: { subject: string; daysAgo: number }[];
+
+  /**
+   * What the film reader has recently observed, and which goal it bears
+   * on when that could be established.
+   *
+   * This is the signal that makes a recommendation feel earned rather
+   * than generic: not "you have a scanning goal" but "your own footage
+   * showed late scanning".
+   */
+  filmObservations?: { concept: string; daysAgo: number; goalId: string | null }[];
 }
+
+/** How long a completed study keeps suppressing its own repeat. */
+const STUDY_REPEAT_DAYS = 14;
+/** How long film evidence stays relevant to what to do next. */
+const OBSERVATION_FRESH_DAYS = 21;
+
+/**
+ * Does this completed study cover this goal?
+ *
+ * Deliberately a loose word overlap rather than an id join. Studies are
+ * chosen from a curated library and goals are written by the player in
+ * their own words, so there is no shared key to join on — "Improve
+ * pre-reception scanning" and "Rodri — scanning before receiving" are
+ * the same subject to a human and unrelated to a database.
+ *
+ * ONE shared significant word is the threshold, and it was two until a
+ * real pair proved that wrong: "Rodri — scanning before receiving" and
+ * "Improve pre-reception scanning" are plainly the same subject and
+ * share exactly one — "scanning". "pre" is too short to count and
+ * "reception" is not "receiving".
+ *
+ * One works because these are domain phrases built around a concept
+ * noun: scanning, finishing, pressing. The stopword list carries the
+ * weight — it removes the filler ("improve", "better", "under") that
+ * would otherwise make unrelated phrases look related.
+ *
+ * The trade is deliberate. A false positive suppresses a useful
+ * suggestion for two weeks; a false negative repeats one the player just
+ * finished. The repeat is the more damaging of the two, because it is
+ * visible: it tells the player MIDO is not reading its own record.
+ */
+export function coversSameGround(a: string, b: string): boolean {
+  const significant = (s: string) =>
+    new Set(
+      s
+        .toLowerCase()
+        .split(/[^a-z]+/)
+        .filter((w) => w.length > 3 && !STOPWORDS.has(w)),
+    );
+  const left = significant(a);
+  const right = significant(b);
+  for (const w of left) if (right.has(w)) return true;
+  return false;
+}
+
+const STOPWORDS = new Set([
+  "improve",
+  "better",
+  "under",
+  "with",
+  "more",
+  "your",
+  "this",
+  "that",
+  "from",
+  "into",
+  "when",
+  "before",
+  "after",
+]);
 
 export interface RankedAction {
   kind: ActionKind;
@@ -212,17 +292,47 @@ export function rankActions(s: PlayerSignals): RankedAction[] {
     low readiness — you can watch football with tired legs. That is why
     it scores well on exactly the days training should not.
   */
-  if (s.activeGoals.length > 0) {
-    const goal = s.activeGoals[0];
+  const goal = s.activeGoals[0] ?? null;
+
+  /*
+    Has this ground already been covered?
+
+    Not "have you studied anything recently" — that would suppress a
+    scanning study because you watched something about finishing. It is
+    specifically: is there a completed study that covers THIS goal.
+  */
+  const coveringStudy =
+    goal &&
+    (s.completedStudies ?? []).find(
+      (c) => c.daysAgo <= STUDY_REPEAT_DAYS && coversSameGround(c.subject, goal.title),
+    );
+
+  /*
+    Film evidence bearing on this goal. The difference between MIDO
+    saying "you have a scanning goal" and "your own footage showed late
+    scanning" — the second is the one a player believes.
+  */
+  const evidence =
+    goal &&
+    (s.filmObservations ?? []).find(
+      (o) =>
+        o.daysAgo <= OBSERVATION_FRESH_DAYS &&
+        (o.goalId === goal.id || coversSameGround(o.concept, goal.title)),
+    );
+
+  if (goal && !coveringStudy) {
     const stale = s.daysSinceStudy === null ? 26 : s.daysSinceStudy >= 7 ? 20 : s.daysSinceStudy >= 3 ? 10 : 0;
     // Rewarded when hard work is off the table anyway.
     const restBonus = lowReadiness ? 12 : 0;
+    // Film that points at this goal makes studying it the obvious answer.
+    const evidenceBonus = evidence ? 14 : 0;
     out.push({
       kind: "study",
       title: `Study: ${goal.title}`,
-      score: 46 + stale + restBonus,
+      score: 46 + stale + restBonus + evidenceBonus,
       reasons: [
         `your current focus is ${goal.title.toLowerCase()}`,
+        evidence ? `and your film showed ${evidence.concept.toLowerCase()}` : "",
         s.daysSinceStudy === null
           ? "and you have not studied yet"
           : s.daysSinceStudy >= 7
@@ -230,7 +340,11 @@ export function rankActions(s: PlayerSignals): RankedAction[] {
             : "",
         restBonus ? "— and it asks nothing of your legs" : "",
       ].filter(Boolean),
-      sources: [`goal:${goal.id}`, "study:recency"],
+      sources: [
+        `goal:${goal.id}`,
+        "study:recency",
+        evidence ? `observation:${evidence.concept}` : "",
+      ].filter(Boolean),
       minutes: 12,
     });
   }
@@ -248,14 +362,48 @@ export function rankActions(s: PlayerSignals): RankedAction[] {
     const suppressed = lowReadiness || matchTomorrow;
     const base = goodReadiness ? 58 : 44;
     const stale = s.daysSinceTraining === null ? 10 : s.daysSinceTraining >= 3 ? 8 : 0;
+
+    /*
+      THE CONTINUITY RULE.
+
+      A goal, film that points at it, and a study already completed on
+      it. At that point the next step is not more watching — it is doing
+      the thing on grass, and MIDO can say exactly why in the player's
+      own history rather than in general terms.
+
+      This is the whole point of the event log: none of these three
+      facts is available from the training page, and all three are
+      available from what the player has actually done.
+    */
+    const readyToApply = Boolean(goal && coveringStudy);
+    const applyBonus = readyToApply ? 20 : 0;
+    // Something recently trained does not need recommending again.
+    const justTrained = s.daysSinceTraining !== null && s.daysSinceTraining <= 1;
+
+    const title = readyToApply && goal ? `Train: ${goal.title}` : "Train";
+
+    const reasons = suppressed
+      ? [lowReadiness ? "held back while your readiness is low" : "held back the day before a match"]
+      : readyToApply && goal
+        ? [
+            `your current focus is ${goal.title.toLowerCase()}`,
+            evidence ? `, your film showed ${evidence.concept.toLowerCase()}` : "",
+            ", and you have already completed the related study",
+          ].filter(Boolean)
+        : [goodReadiness ? "your readiness is good" : "you are clear to train"];
+
     out.push({
       kind: "training",
-      title: "Train",
-      score: suppressed ? 12 : base + stale,
-      reasons: suppressed
-        ? [lowReadiness ? "held back while your readiness is low" : "held back the day before a match"]
-        : [goodReadiness ? "your readiness is good" : "you are clear to train"],
-      sources: ["readiness", "training:recency"],
+      title,
+      score: suppressed ? 12 : base + stale + applyBonus - (justTrained ? 14 : 0),
+      reasons,
+      sources: [
+        "readiness",
+        "training:recency",
+        readyToApply && goal ? `goal:${goal.id}` : "",
+        readyToApply && coveringStudy ? `study:completed:${coveringStudy.subject}` : "",
+        evidence ? `observation:${evidence.concept}` : "",
+      ].filter(Boolean),
       minutes: 60,
     });
   }
@@ -334,6 +482,9 @@ function sentence(parts: string[]): string {
   const joined = parts
     .join(" ")
     .replace(/\s+/g, " ")
+    // Fragments may start with their own punctuation so a clause reads
+    // naturally; joining on a space would leave "scanning , your film".
+    .replace(/\s+([,;.])/g, "$1")
     .replace(/\s+—\s+/g, " — ")
     .trim();
   return joined.charAt(0).toUpperCase() + joined.slice(1) + (/[.!?]$/.test(joined) ? "" : ".");

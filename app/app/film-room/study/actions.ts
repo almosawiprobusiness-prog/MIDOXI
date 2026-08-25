@@ -6,6 +6,9 @@ import { isDemoMode } from "@/lib/env";
 import { demoStore } from "@/lib/data/store";
 import { youtubeId } from "@/lib/data/film-types";
 import type { StudySessionInput, StudyNoteKind } from "@/lib/data/study-types";
+import { getStudySessionDetail } from "@/lib/data/study";
+import { emitMidoEvent } from "@/lib/events/emit";
+import { idempotencyKey } from "@/lib/events/types";
 
 export type Result = { ok: true; id?: string; demo?: boolean } | { ok: false; error: string };
 
@@ -81,6 +84,33 @@ export async function deleteStudyNote(id: string, sessionId: string): Promise<Re
   return { ok: true };
 }
 
+/*
+  A study was finished.
+
+  The event the recommender leans on hardest: it is what stops MIDO
+  suggesting the study somebody just completed, and what turns "watch
+  this" into "now do it on grass".
+
+  `subject` is carried because the scorer matches a completed study
+  against the goal it covers by wording — there is no shared key between
+  a curated study and a goal the player wrote themselves. The summary,
+  which is the player's own reflection, stays in `study_sessions`; only
+  whether one was written is recorded here.
+*/
+async function recordStudyCompleted(sessionId: string, subject: string, summary: string, goalId: string | null) {
+  await emitMidoEvent({
+    type: "STUDY_COMPLETED",
+    subjectType: "study",
+    subjectId: sessionId,
+    payload: {
+      subject,
+      goalId,
+      wroteSummary: Boolean(summary.trim()),
+    },
+    idempotencyKey: idempotencyKey(["study", "completed", sessionId]),
+  });
+}
+
 /**
  * Complete a study session. Its summary + any Action notes become Insight
  * evidence on the linked development goal — study flows into the loop.
@@ -90,12 +120,21 @@ export async function completeStudySession(
   summary: string,
   goalId: string | null
 ): Promise<Result> {
+  /*
+    The session's own title is the subject the scorer matches against a
+    goal, so it is read once here rather than passed in — the callers
+    are UI components that do not have it, and threading it through
+    would put a value in a form that the database already knows.
+  */
+  const subject = (await getStudySessionDetail(sessionId))?.session.title ?? "";
+
   if (isDemoMode) {
     demoStore.completeStudySession(sessionId, summary);
     if (goalId && summary.trim()) {
       demoStore.addEvidence(goalId, { kind: "insight", note: summary.trim() });
       revalidatePath(`/app/development/${goalId}`);
     }
+    await recordStudyCompleted(sessionId, subject, summary, goalId);
     revalidatePath(`/app/film-room/study/${sessionId}`);
     revalidatePath("/app");
     return { ok: true, demo: true };
@@ -113,6 +152,7 @@ export async function completeStudySession(
     await supabase.from("development_evidence").insert({ goal_id: goalId, kind: "insight", note: summary.trim() });
     revalidatePath(`/app/development/${goalId}`);
   }
+  await recordStudyCompleted(sessionId, subject, summary, goalId);
   revalidatePath(`/app/film-room/study/${sessionId}`);
   revalidatePath("/app");
   return { ok: true };
