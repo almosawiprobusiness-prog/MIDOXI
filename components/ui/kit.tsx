@@ -4,20 +4,49 @@ import { cn } from "@/lib/utils";
 
 /* Shared page furniture + lightweight, dependency-free data viz. */
 
+/*
+  The photographs a page header may sit on.
+
+  A NAMED SET, not a URL parameter. Two reasons, and the second is the
+  one that bites: a curated list keeps the app from slowly acquiring a
+  stock-photo gallery, and Tailwind only generates classes it can see
+  written out — `bg-[url('/img/' + name)]` produces nothing at all.
+
+  Both are dark, both are the football this product is actually for.
+  Used as atmosphere behind a header and never as decoration in the
+  body, which is why there is no third one.
+*/
+const PHOTOS = {
+  floodlights: "bg-[url('/img/floodlights.jpg')] bg-[center_60%] opacity-60",
+  soloStrike: "bg-[url('/img/solo-strike.jpg')] bg-[center_42%] opacity-45",
+} as const;
+
+export type HeaderPhoto = keyof typeof PHOTOS;
+
 export function PageHeader({
   icon: Icon,
   title,
   tagline,
   actions,
+  photo,
+  kicker,
 }: {
   icon: LucideIcon;
   title: string;
   tagline?: string;
   actions?: React.ReactNode;
+  /** Sink a photograph behind this header. Omit for a plain one. */
+  photo?: HeaderPhoto;
+  /** A line above the title. Only shown with a photo, which gives it room. */
+  kicker?: string;
 }) {
-  return (
-    <div className="mb-6 flex flex-wrap items-center gap-3">
-      <span className="grid size-11 place-items-center rounded-lg border border-line bg-ink-850 text-signal-bright">
+  const head = (
+    <div className={`flex flex-wrap items-center gap-3 ${photo ? "" : "mb-6"}`}>
+      <span
+        className={`grid size-11 place-items-center rounded-lg border border-line text-signal-bright ${
+          photo ? "bg-ink-850/80 backdrop-blur" : "bg-ink-850"
+        }`}
+      >
         <Icon className="size-5" />
       </span>
       <div className="min-w-0">
@@ -25,6 +54,29 @@ export function PageHeader({
         {tagline && <p className="text-sm text-text-dim">{tagline}</p>}
       </div>
       {actions && <div className="ml-auto flex items-center gap-2">{actions}</div>}
+    </div>
+  );
+
+  if (!photo) return head;
+
+  return (
+    /*
+      Pulled out to the page edges and back over the container's own top
+      padding, so the band reaches the chrome rather than floating in a
+      gutter. The gradient FADES rather than covering: a flat wash made
+      the first attempt at this invisible, and an asset doing no work is
+      worse than no asset.
+    */
+    <div className="relative -mx-4 -mt-8 mb-6 overflow-hidden md:-mx-6">
+      <div aria-hidden className={`absolute inset-0 bg-cover ${PHOTOS[photo]}`} />
+      <div
+        aria-hidden
+        className="absolute inset-0 bg-gradient-to-b from-ink-950/45 via-ink-950/75 to-ink-950"
+      />
+      <div className="relative px-4 pb-9 pt-12 md:px-6">
+        {kicker && <span className="label-tech mb-3 block text-signal-bright">{kicker}</span>}
+        {head}
+      </div>
     </div>
   );
 }

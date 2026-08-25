@@ -68,6 +68,8 @@ export default async function MatchesPage() {
         title="Match Center"
         tagline="Your match record — stats, review and clips."
         actions={<MatchFormDialog mode="create" />}
+        photo="floodlights"
+        kicker="Every match, on the record"
       />
 
       {/*

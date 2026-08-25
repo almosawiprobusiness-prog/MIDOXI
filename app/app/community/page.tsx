@@ -35,7 +35,13 @@ export default async function CommunityPage({ searchParams }: PageProps<"/app/co
 
   return (
     <div className="mx-auto max-w-[560px] px-4 py-8">
-      <PageHeader icon={Users} title="Community" tagline="What other players are working on." />
+      <PageHeader
+        icon={Users}
+        title="Community"
+        tagline="What other players are working on."
+        photo="soloStrike"
+        kicker="You are not the only one at it"
+      />
 
       {isDemoMode && (
         <div className="mb-6">

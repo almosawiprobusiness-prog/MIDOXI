@@ -30,43 +30,20 @@ export default async function FilmRoomPage() {
   return (
     <div className="mx-auto max-w-[1100px] px-4 py-8 md:px-6">
       {/*
-        A photograph, used as atmosphere rather than decoration.
-
-        Sunday-league football under floodlights — which is what this
-        product is actually for — sunk behind a heavy gradient so it
-        reads as depth and never competes with the text on top of it.
-        A brighter, glossier stadium shot was the other candidate and
-        was rejected for looking like a template.
-
-        One image, in one place. The rest of the room earns its life
+        The band now comes from PageHeader itself — this page had a
+        hand-rolled copy, and a second one was about to be written for
+        every other section. The rest of the room still earns its life
         from real footage: every video card below paints a frame from
         the match itself.
       */}
-      <div className="relative -mx-4 -mt-8 mb-4 overflow-hidden md:-mx-6">
-        <div
-          aria-hidden
-          className="absolute inset-0 bg-[url('/img/floodlights.jpg')] bg-cover bg-[center_60%] opacity-70"
-        />
-        {/*
-          Dark at the bottom where the page continues, lighter at the
-          top where the floodlight is. A flat wash at 80% made the
-          photograph invisible — an asset doing no work is worse than
-          no asset — so this fades rather than covers.
-        */}
-        <div
-          aria-hidden
-          className="absolute inset-0 bg-gradient-to-b from-ink-950/45 via-ink-950/75 to-ink-950"
-        />
-        <div className="relative px-4 pb-10 pt-14 md:px-6">
-          <span className="label-tech mb-3 block text-signal-bright">Your film, read properly</span>
-          <PageHeader
-            icon={Clapperboard}
-            title="Film Room"
-            tagline="Upload, clip, tag and study — a true analysis room, not a video dump."
-            actions={<AddVideoDialog />}
-          />
-        </div>
-      </div>
+      <PageHeader
+        icon={Clapperboard}
+        title="Film Room"
+        tagline="Upload, clip, tag and study — a true analysis room, not a video dump."
+        actions={<AddVideoDialog />}
+        photo="floodlights"
+        kicker="Your film, read properly"
+      />
 
       <DiscoverPanel result={discover} />
 
@@ -164,7 +141,15 @@ export default async function FilmRoomPage() {
       {/* Study sessions */}
       {studySessions.length > 0 && (
         <section className="mb-8">
-          <SectionHeader label={`Study sessions · ${studySessions.length}`} action={{ label: "Intelligence", href: "/app/library" }} />
+          {/*
+            Was labelled "Intelligence" and pointed at /app/library,
+            which redirects to /app/study — so the link said one thing
+            and landed somewhere else, and there is a real
+            /app/intelligence page it was not going to. Named for where
+            it actually goes, and pointed straight there rather than
+            through a redirect.
+          */}
+          <SectionHeader label={`Study sessions · ${studySessions.length}`} action={{ label: "All studies", href: "/app/study" }} />
           <div className="space-y-2">
             {studySessions.map((s) => (
               <Link key={s.id} href={`/app/film-room/study/${s.id}`} className="group panel flex items-center gap-3 p-4 transition-colors hover:border-line-strong">

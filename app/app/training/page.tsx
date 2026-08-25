@@ -95,6 +95,8 @@ export default async function TrainingPage() {
         title="Training"
         tagline="Sessions, load and how you felt."
         actions={<TrainingFormDialog mode="create" />}
+        photo="soloStrike"
+        kicker="The work between matches"
       />
 
       {entries.length > 0 ? (

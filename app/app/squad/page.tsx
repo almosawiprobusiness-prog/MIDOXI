@@ -34,6 +34,8 @@ export default async function SquadPage() {
         title="Squad"
         tagline="Your players, their development, their history."
         actions={<SquadForm mode="create" />}
+        photo="floodlights"
+        kicker="The people you coach"
       />
 
       {squad.length === 0 ? (
