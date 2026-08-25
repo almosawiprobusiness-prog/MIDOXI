@@ -6,7 +6,8 @@ import {
 } from "lucide-react";
 import { clipEnd, sentimentMeta, fmtTime, type ReelItem } from "@/lib/data/film-types";
 import { atLabel, type Annotation } from "@/lib/data/annotation-types";
-import { videoElementPlayer, noopPlayer, type FilmPlayer } from "./film-player";
+import { videoElementPlayer, type FilmPlayer } from "./film-player";
+import { useFilmPlayer } from "./use-film-player";
 import { YouTubeStage } from "./youtube-stage";
 import { Telestration } from "./telestration";
 
@@ -50,8 +51,6 @@ export function CollectionReel({
   annotations: Annotation[];
   onExit: () => void;
 }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const ytPlayer = useRef<FilmPlayer | null>(null);
   const shownDrawings = useRef<Set<string>>(new Set());
   /**
    * Where to start once the newly-mounted source announces itself.
@@ -65,8 +64,6 @@ export function CollectionReel({
   const pendingStart = useRef<number | null>(items[0]?.clip.startSeconds ?? null);
 
   const [at, setAt] = useState(0);
-  const [current, setCurrent] = useState(0);
-  const [playing, setPlaying] = useState(false);
   const [viewing, setViewing] = useState<Annotation | null>(null);
   const [needsGesture, setNeedsGesture] = useState(false);
   const [sourceError, setSourceError] = useState<string | null>(null);
@@ -75,15 +72,34 @@ export function CollectionReel({
   const isYouTube = item?.video.source === "youtube";
 
   /*
-    Chosen from the CURRENT item rather than from whichever handle was
-    stored last. A collection reel holds a YouTube handle and a <video>
-    at different moments, and a stale one would quietly seek footage
-    that is no longer on screen.
+    The shared playhead, keyed to the CURRENT item.
+
+    `clampSeek` is off here and nowhere else: every other surface seeks
+    inside a video it already has, but this one seeks into a source that
+    has not loaded yet — at that moment the duration on hand still
+    belongs to the PREVIOUS clip's video, and clamping to it would drag
+    the start of a long clip back to the end of a short one.
   */
-  const player = (): FilmPlayer => {
-    if (!item) return noopPlayer;
-    return isYouTube ? (ytPlayer.current ?? noopPlayer) : videoElementPlayer(videoRef);
-  };
+  const {
+    videoRef,
+    player,
+    current,
+    setCurrent,
+    playing,
+    setPlaying,
+    videoHandlers,
+    youtubeHandlers,
+  } = useFilmPlayer({
+    isYouTube: Boolean(isYouTube),
+    sourceUrl: item?.video.url,
+    clampSeek: false,
+    onTime: (t) => reelTick(t),
+    onPlayingChange: (v) => {
+      // A drawing belongs to one frame; once the tape moves it is over
+      // the wrong one.
+      if (v) setViewing(null);
+    },
+  });
 
   const startPlayback = async () => {
     try {
@@ -136,16 +152,27 @@ export function CollectionReel({
       A different video: the element below is keyed on the video id, so
       React is about to unmount this source and mount another. Nothing
       can be driven until that happens, so the position waits here.
+
+      No handle to clear any more — the hook picks its player from the
+      CURRENT item, so a handle belonging to the outgoing source can
+      never be reached once `at` has moved.
     */
-    if (!isYouTube) ytPlayer.current = null;
     pendingStart.current = next.clip.startSeconds;
     setCurrent(next.clip.startSeconds);
+    // The incoming element fires no `pause`, so this is said explicitly.
     setPlaying(false);
   };
 
-  const handleTime = (t: number) => {
+  /*
+    What the reel does each time the playhead moves.
+
+    A hoisted `function`, not a `const`, purely so the hook above can
+    reference it: function declarations are initialised before any code
+    in the scope runs, so there is no dead zone to fall into. Recording
+    the playhead is the hook's job now; this is only the reel's part.
+  */
+  function reelTick(t: number) {
     if (!item) return;
-    setCurrent(t);
     const end = clipEnd(item.clip);
 
     /*
@@ -171,7 +198,7 @@ export function CollectionReel({
       if (at + 1 < items.length) goTo(at + 1, false);
       else onExit();
     }
-  };
+  }
 
   // Keyboard. Same verbs as the in-video reel, so one thing is learned.
   useEffect(() => {
@@ -243,15 +270,12 @@ export function CollectionReel({
               <YouTubeStage
                 key={`yt-${item.video.id}`}
                 externalId={item.video.externalId}
+                {...youtubeHandlers}
+                // Composed, not replaced: the hook stores the handle,
+                // then this claims the position waiting for it.
                 onReady={(p) => {
-                  ytPlayer.current = p;
+                  youtubeHandlers.onReady(p);
                   claimPendingStart(p);
-                }}
-                onTime={handleTime}
-                onDuration={() => {}}
-                onPlayingChange={(v) => {
-                  setPlaying(v);
-                  if (v) setViewing(null);
                 }}
                 onUnavailable={(reason) => setSourceError(reason)}
               />
@@ -263,14 +287,14 @@ export function CollectionReel({
                 className="aspect-video w-full bg-black"
                 playsInline
                 preload="auto"
+                {...videoHandlers}
                 onError={() => setSourceError("unplayable")}
-                onLoadedMetadata={() => claimPendingStart(videoElementPlayer(videoRef))}
-                onTimeUpdate={(e) => handleTime(e.currentTarget.currentTime)}
-                onPlay={() => {
-                  setPlaying(true);
-                  setViewing(null);
+                // Composed with the hook's: it records the length, then
+                // this claims the position waiting on this source.
+                onLoadedMetadata={(e) => {
+                  videoHandlers.onLoadedMetadata(e);
+                  claimPendingStart(videoElementPlayer(videoRef));
                 }}
-                onPause={() => setPlaying(false)}
               />
             )}
 

@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Play, Pause, Plus, Trash2, Loader2, CheckCircle2, Clock, Target } from "lucide-react";
 import { addStudyNote, deleteStudyNote, completeStudySession } from "@/app/app/film-room/study/actions";
 import { NOTE_KINDS, noteMeta, type StudySession, type StudyNote, type StudyNoteKind } from "@/lib/data/study-types";
 import { fmtTime, type Video } from "@/lib/data/film-types";
-import { videoElementPlayer, noopPlayer, type FilmPlayer } from "./film-player";
+import { useFilmPlayer } from "./use-film-player";
 import { YouTubeStage } from "./youtube-stage";
 
 export function StudySessionView({
@@ -21,11 +21,10 @@ export function StudySessionView({
   goalTitle: string | null;
 }) {
   const router = useRouter();
-  const videoRef = useRef<HTMLVideoElement>(null);
   const isYouTube = video?.source === "youtube";
 
   /*
-    Study Mode drives whichever player is here.
+    Study Mode drives whichever player is here, through the shared hook.
 
     It used to render a bare <iframe> for YouTube, which plays and
     nothing else — so on YouTube footage there was no playhead, and
@@ -33,40 +32,22 @@ export function StudySessionView({
     valuable thing a study note carries is WHERE it happened, and on
     the source most likely to hold a full match it could not be
     recorded at all. The stamp control was simply hidden.
-
-    The same four-verb player the film room uses fixes that without a
-    second implementation.
   */
-  const ytPlayer = useRef<FilmPlayer | null>(null);
-  const player = (): FilmPlayer =>
-    isYouTube ? (ytPlayer.current ?? noopPlayer) : videoElementPlayer(videoRef);
-
-  const [current, setCurrent] = useState(0);
-  const [duration, setDuration] = useState(video?.durationSeconds ?? 0);
-  const [playing, setPlaying] = useState(false);
-
-  /*
-    Adopt the duration the element already knows.
-
-    The same bug the film studio had, in its own copy of the player, and
-    it survived here because the fix was applied where it was found
-    rather than everywhere it lived. `loadedmetadata` can fire before
-    React hydrates, so the handler below never runs and the SEEDED
-    duration stands forever — and since the seek bar's max is that
-    value, everything past it is unreachable.
-
-    Measured on this page: a 60.1s video, fully loaded, with the bar
-    pinned at 15 and a seek to 0:45 landing on 0:15. Study Mode could
-    not reach the last three quarters of any film whose stored duration
-    was wrong.
-  */
-  useEffect(() => {
-    const el = videoRef.current;
-    if (!el) return;
-    if (el.readyState >= 1 && Number.isFinite(el.duration) && el.duration > 0) {
-      setDuration(el.duration);
-    }
-  }, [video?.url]);
+  const {
+    videoRef,
+    player,
+    current,
+    duration,
+    playing,
+    seek,
+    togglePlay,
+    videoHandlers,
+    youtubeHandlers,
+  } = useFilmPlayer({
+    isYouTube: Boolean(isYouTube),
+    sourceUrl: video?.url,
+    seededDuration: video?.durationSeconds,
+  });
 
   const [kind, setKind] = useState<StudyNoteKind>("observation");
   const [body, setBody] = useState("");
@@ -77,18 +58,6 @@ export function StudySessionView({
   const [summary, setSummary] = useState(session.summary ?? "");
   const [completing, setCompleting] = useState(false);
   const [completeBusy, setCompleteBusy] = useState(false);
-
-  const togglePlay = () => {
-    if (playing) player().pause();
-    else void player().play();
-  };
-
-  const seek = (t: number) => {
-    player().seek(t);
-    // Moved optimistically as well as actually: YouTube is polled every
-    // 100ms, long enough for a drag to feel like it had not registered.
-    setCurrent(t);
-  };
 
   const addNote = async () => {
     if (!body.trim()) return;
@@ -119,32 +88,15 @@ export function StudySessionView({
       <div className="min-w-0">
         <div className="overflow-hidden rounded-xl border border-line bg-black shadow-2xl shadow-black/40">
           {isYouTube && video?.externalId ? (
-            <YouTubeStage
-              externalId={video.externalId}
-              onReady={(p) => {
-                ytPlayer.current = p;
-              }}
-              onTime={setCurrent}
-              onDuration={setDuration}
-              onPlayingChange={setPlaying}
-              onUnavailable={() => {}}
-            />
+            <YouTubeStage externalId={video.externalId} {...youtubeHandlers} onUnavailable={() => {}} />
           ) : video ? (
             <video
               ref={videoRef}
               src={video.url}
               className="aspect-video w-full bg-black"
               playsInline
-              onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
-              // Catches a length that becomes known, or is revised, after
-              // the first metadata event.
-              onDurationChange={(e) => {
-                const d = e.currentTarget.duration;
-                if (Number.isFinite(d) && d > 0) setDuration(d);
-              }}
-              onTimeUpdate={(e) => setCurrent(e.currentTarget.currentTime)}
-              onPlay={() => setPlaying(true)}
-              onPause={() => setPlaying(false)}
+              preload="metadata"
+              {...videoHandlers}
             />
           ) : (
             <div className="grid aspect-video place-items-center text-text-faint">No video attached</div>

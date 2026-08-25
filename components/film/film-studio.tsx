@@ -24,7 +24,7 @@ import {
 import { AddToCollection } from "./add-to-collection";
 import { FilmReading } from "./film-reading";
 import { Telestration, TelestrationTools } from "./telestration";
-import { videoElementPlayer, type FilmPlayer } from "./film-player";
+import { useFilmPlayer } from "./use-film-player";
 import { YouTubeStage } from "./youtube-stage";
 import { exportBoard, boardFilename, saveBlob } from "./capture";
 import type { ClipAnalysis } from "@/lib/data/analyses";
@@ -45,32 +45,39 @@ export function FilmStudio({
   annotations?: Annotation[];
 }) {
   const router = useRouter();
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const isYouTube = video.source === "youtube";
 
   /*
-    Whichever player is behind the glass, addressed the same way.
+    Whichever player is behind the glass, addressed the same way — and
+    the playhead around it, owned in one place rather than three.
 
     For an upload or a direct link this wraps the <video> element. For
     YouTube it is handed over by the embed once its message channel is
-    open. Everything below — the transport, mark in/out, the pen —
-    speaks only to this, which is why one set of controls now drives
+    open. Everything below — the transport, mark in/out, the pen, the
+    reel — speaks only to this, which is why one set of controls drives
     both instead of YouTube getting a stripped-down page.
   */
-  const ytPlayer = useRef<FilmPlayer | null>(null);
-  /**
-   * Whoever is behind the glass right now.
-   *
-   * A function rather than a stored value for two reasons. The YouTube
-   * embed hands its player over asynchronously, so anything computed
-   * during render would be the <video> adapter forever and the
-   * transport would silently do nothing on YouTube footage. And it is
-   * only ever called from an event handler, which is what makes
-   * reading a ref here legitimate.
-   */
-  const player = (): FilmPlayer => ytPlayer.current ?? videoElementPlayer(videoRef);
-
-  const [current, setCurrent] = useState(0);
-  const [duration, setDuration] = useState(video.durationSeconds ?? 0);
+  const {
+    videoRef,
+    player,
+    current,
+    duration,
+    playing,
+    seek,
+    togglePlay,
+    videoHandlers,
+    youtubeHandlers,
+  } = useFilmPlayer({
+    isYouTube,
+    sourceUrl: video.url,
+    seededDuration: video.durationSeconds,
+    onTime: (t) => tick(t),
+    onPlayingChange: (v) => {
+      // A drawing belongs to one frame. Once the footage is moving
+      // again it is over the wrong one, so it goes.
+      if (v) setViewing(null);
+    },
+  });
   /*
     Whether the player has given up on this source.
 
@@ -93,7 +100,6 @@ export function FilmStudio({
     completely different things.
   */
   const [unplayableReason, setUnplayableReason] = useState<string | null>(null);
-  const [playing, setPlaying] = useState(false);
   const [rate, setRate] = useState(1);
 
   // clip composer
@@ -152,7 +158,6 @@ export function FilmStudio({
   */
   const shownDrawings = useRef<Set<string>>(new Set());
 
-  const isYouTube = video.source === "youtube";
   const isHls = !isYouTube && isHlsUrl(video.url);
 
   /*
@@ -207,33 +212,7 @@ export function FilmStudio({
       cancelled = true;
       instance?.destroy();
     };
-  }, [isYouTube, isHls, unplayable, video.url]);
-
-  /*
-    Adopt the duration the element already knows.
-
-    `onLoadedMetadata` is not enough on its own. With `preload
-    ="metadata"` the browser can finish reading the header BEFORE React
-    hydrates and attaches that handler, and the event is gone by the
-    time anyone is listening. The seeded value then stands forever.
-
-    That is not cosmetic. `seek` clamps to `duration`, so a stale one
-    walls off everything past it: measured here on a 60s video seeded
-    as 15s, the scrubber's max stayed 15 and the last three quarters of
-    the film could not be reached at all. On a match whose stored
-    duration is wrong or missing, most of the game is unreachable.
-
-    So the value is pulled rather than waited for, and `onDurationChange`
-    below catches the case where it is revised later.
-  */
-  useEffect(() => {
-    if (isYouTube) return;
-    const el = videoRef.current;
-    if (!el) return;
-    if (el.readyState >= 1 && Number.isFinite(el.duration) && el.duration > 0) {
-      setDuration(el.duration);
-    }
-  }, [isYouTube, video.url]);
+  }, [isYouTube, isHls, unplayable, video.url, videoRef]);
 
   /*
     Give up waiting after this long with nothing at all.
@@ -251,24 +230,10 @@ export function FilmStudio({
       if (videoRef.current?.readyState === 0) setUnplayable(true);
     }, 15_000);
     return () => clearTimeout(timer);
-  }, [isYouTube, unplayable, video.url]);
+  }, [isYouTube, unplayable, video.url, videoRef]);
 
-  const seek = (t: number) => {
-    player().seek(Math.max(0, Math.min(t, duration || t)));
-    /*
-      The playhead is moved optimistically as well as actually. A
-      <video> reports back within a frame, but YouTube is polled every
-      100ms — long enough that a frame nudge felt like it had not
-      registered, and long enough for a second click to compute its
-      step from a stale position.
-    */
-    setCurrent(Math.max(0, Math.min(t, duration || t)));
-  };
+  // `seek` and `togglePlay` come from the shared hook now.
   const nudge = (delta: number) => seek(current + delta);
-  const togglePlay = () => {
-    if (playing) player().pause();
-    else player().play();
-  };
   const setSpeed = (r: number) => {
     setRate(r);
     player().setRate(r);
@@ -338,15 +303,21 @@ export function FilmStudio({
     cascading render on every frame of playback. This is the event
     itself, handled once.
   */
-  const handleTime = (t: number) => {
+  /*
+    What the studio does each time the playhead moves — the loop and the
+    reel. Recording the position is the hook's job now.
+
+    A hoisted `function`, not a `const`, purely so the hook above can
+    reference it: function declarations are initialised before any code
+    in the scope runs, so there is no dead zone to fall into.
+  */
+  function tick(t: number) {
     if (looping && markIn != null && markOut != null && markOut > markIn && t >= markOut) {
-      player().seek(markIn);
-      setCurrent(markIn);
+      seek(markIn);
       return;
     }
 
     if (reelAt != null && reelClip) {
-      setCurrent(t);
       const end = clipEnd(reelClip);
 
       /*
@@ -379,9 +350,7 @@ export function FilmStudio({
       }
       return;
     }
-
-    setCurrent(t);
-  };
+  }
 
   const toggleTag = (t: string) =>
     setTags((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
@@ -676,17 +645,7 @@ export function FilmStudio({
               {isYouTube && video.externalId ? (
                 <YouTubeStage
                   externalId={video.externalId}
-                  onReady={(p) => {
-                    ytPlayer.current = p;
-                  }}
-                  onTime={handleTime}
-                  onDuration={setDuration}
-                  onPlayingChange={(p) => {
-                    setPlaying(p);
-                    // A drawing belongs to one frame. Once the footage
-                    // is moving again it is over the wrong one.
-                    if (p) setViewing(null);
-                  }}
+                  {...youtubeHandlers}
                   onUnavailable={(reason) => {
                     setUnplayableReason(reason);
                     setUnplayable(true);
@@ -701,22 +660,8 @@ export function FilmStudio({
                   className="aspect-video w-full bg-black"
                   playsInline
                   preload="metadata"
+                  {...videoHandlers}
                   onError={() => setUnplayable(true)}
-                  onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
-                  // Fires when the real length becomes known or is
-                  // revised — the case a single loadedmetadata misses.
-                  onDurationChange={(e) => {
-                    const d = e.currentTarget.duration;
-                    if (Number.isFinite(d) && d > 0) setDuration(d);
-                  }}
-                  onTimeUpdate={(e) => handleTime(e.currentTarget.currentTime)}
-                  onPlay={() => {
-                    setPlaying(true);
-                    // A drawing belongs to one frame. Once the footage is
-                    // moving again it is over the wrong one, so it goes.
-                    setViewing(null);
-                  }}
-                  onPause={() => setPlaying(false)}
                 />
               )}
 
