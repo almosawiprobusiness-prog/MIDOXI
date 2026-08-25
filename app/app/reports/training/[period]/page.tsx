@@ -9,7 +9,19 @@ import { ReportShell, ReportSection, Stat } from "@/components/reports/report-sh
 import { PrintButton } from "@/components/reports/print-button";
 import { DemoNote } from "@/components/dashboards/shared";
 
-export const metadata = { title: "Training report — MIDO XI" };
+/*
+  Named after the month, for the same reason as the development report:
+  this is saved as a PDF, and the tab title becomes the suggested
+  filename.
+*/
+export async function generateMetadata({ params }: PageProps<"/app/reports/training/[period]">) {
+  const { period } = await params;
+  return {
+    title: isPeriod(period)
+      ? `Training report — ${periodLabel(period)}`
+      : "Training report — MIDO XI",
+  };
+}
 
 /*
   A month of training, as a document.

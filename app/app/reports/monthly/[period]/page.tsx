@@ -11,7 +11,20 @@ import { evidenceMeta } from "@/lib/data/development-types";
 import { ReportControls } from "@/components/reports/report-controls";
 import { DemoNote } from "@/components/dashboards/shared";
 
-export const metadata = { title: "Development report — MIDO XI" };
+/*
+  Named after the month. This matters more here than on an ordinary
+  page: a report is saved as a PDF, and the tab title is what the
+  browser suggests as the filename. Static, every month you ever export
+  arrives in the same folder called the same thing.
+*/
+export async function generateMetadata({ params }: PageProps<"/app/reports/monthly/[period]">) {
+  const { period } = await params;
+  return {
+    title: isPeriod(period)
+      ? `Development report — ${periodLabel(period)}`
+      : "Development report — MIDO XI",
+  };
+}
 
 /*
   The monthly development report.
