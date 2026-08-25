@@ -227,6 +227,13 @@ export function YouTubeStage({
                 play: () => {
                   suppressPlayUntil = 0;
                   p.playVideo();
+                  /*
+                    YouTube's API gives no signal back — playVideo()
+                    returns nothing and there is no promise to fail. A
+                    refusal shows up as the state simply never becoming
+                    PLAYING, which callers see through onPlayingChange.
+                  */
+                  return Promise.resolve();
                 },
                 pause: () => {
                   suppressPlayUntil = 0;

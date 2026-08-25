@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { clipEnd, reelOrder, REEL_TAIL_SECONDS, type FilmClip } from "../../lib/data/film-types";
+import {
+  clipEnd,
+  reelOrder,
+  collectionReelOrder,
+  REEL_TAIL_SECONDS,
+  type FilmClip,
+} from "../../lib/data/film-types";
 
 /*
   The reel plays clips end to end. Two decisions define what that means,
@@ -82,5 +88,63 @@ describe("what order a reel runs in", () => {
   it("keeps both clips when two start at the same second", () => {
     const twin = clip({ id: "twin", startSeconds: 12 });
     expect(reelOrder([b, twin])).toHaveLength(2);
+  });
+});
+
+describe("what order a COLLECTION plays in", () => {
+  const item = (id: string, videoId: string, startSeconds: number) => ({
+    clip: clip({ id, videoId, startSeconds }),
+  });
+
+  /*
+    A collection is a theme — every pressing correction this month — so
+    its clips come from different matches. Sorting purely by timestamp,
+    which is right within one video, is meaningless across several:
+    12:30 in one match has nothing to do with 12:30 in another.
+  */
+  it("groups by video in the given order, then runs up each tape", () => {
+    const got = collectionReelOrder(
+      [item("c", "vB", 5), item("a", "vA", 90), item("d", "vB", 1), item("b", "vA", 12)],
+      ["vA", "vB"],
+    );
+    expect(got.map((i) => i.clip.id)).toEqual(["b", "a", "d", "c"]);
+  });
+
+  it("does not interleave two matches by the clock", () => {
+    // The failure this ordering exists to prevent: 0:10 of match two
+    // landing between 0:05 and 0:20 of match one.
+    const got = collectionReelOrder(
+      [item("one-early", "vA", 5), item("two", "vB", 10), item("one-late", "vA", 20)],
+      ["vA", "vB"],
+    );
+    expect(got.map((i) => i.clip.videoId)).toEqual(["vA", "vA", "vB"]);
+  });
+
+  it("keeps every clip from one video together, so sources swap once", () => {
+    // Each swap is a fresh load and a visible gap. Three swaps instead
+    // of twelve is the difference between a session and a slideshow.
+    const got = collectionReelOrder(
+      [item("a", "vA", 1), item("b", "vB", 1), item("c", "vA", 2), item("d", "vB", 2)],
+      ["vA", "vB"],
+    );
+    const swaps = got.filter((x, i) => i > 0 && got[i - 1].clip.videoId !== x.clip.videoId).length;
+    expect(swaps).toBe(1);
+  });
+
+  it("shows a clip whose video is unknown rather than dropping it", () => {
+    // Sorting it last is a judgement; losing it is a bug.
+    const got = collectionReelOrder([item("orphan", "gone", 3), item("a", "vA", 9)], ["vA"]);
+    expect(got.map((i) => i.clip.id)).toEqual(["a", "orphan"]);
+  });
+
+  it("does not mutate the list it was given", () => {
+    const input = [item("b", "vB", 1), item("a", "vA", 1)];
+    collectionReelOrder(input, ["vA", "vB"]);
+    expect(input.map((i) => i.clip.id)).toEqual(["b", "a"]);
+  });
+
+  it("handles an empty collection and an empty video order", () => {
+    expect(collectionReelOrder([], ["vA"])).toEqual([]);
+    expect(collectionReelOrder([item("a", "vA", 1)], [])).toHaveLength(1);
   });
 });

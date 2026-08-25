@@ -2,7 +2,11 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
 import { demoStore } from "./store";
-import type { Collection, CollectionDetail, FilmClip, ClipSentiment } from "./film-types";
+import { collectionReelOrder } from "./film-types";
+import type { Collection, CollectionDetail, FilmClip, ClipSentiment, ReelItem } from "./film-types";
+import { listVideos } from "./film";
+import { listAnnotationsForVideos } from "./annotations";
+import type { Annotation } from "./annotation-types";
 
 export async function listCollections(): Promise<Collection[]> {
   if (isDemoMode) return demoStore.listCollections();
@@ -61,6 +65,78 @@ export async function getCollectionDetail(id: string): Promise<CollectionDetail 
   return {
     collection: { id: col.id as string, name: col.name as string, createdAt: (col.created_at as string) ?? "", clipCount: clips.length },
     clips,
+  };
+}
+
+/**
+ * Everything needed to PLAY a collection, not just list it.
+ *
+ * A collection spans videos, so each clip has to arrive carrying its own
+ * source. Uploaded footage lives in a private bucket and needs a signed
+ * URL — signed once per video here rather than once per clip, since a
+ * collection of thirty clips routinely comes from a handful of matches.
+ *
+ * Those URLs expire, which is the reason this is built fresh on every
+ * request and never cached.
+ */
+export async function getCollectionReel(id: string): Promise<{
+  collection: Collection;
+  items: ReelItem[];
+  annotations: Annotation[];
+} | null> {
+  const detail = await getCollectionDetail(id);
+  if (!detail) return null;
+
+  const videoIds = [...new Set(detail.clips.map((c) => c.videoId).filter(Boolean))];
+  if (videoIds.length === 0) {
+    return { collection: detail.collection, items: [], annotations: [] };
+  }
+
+  /*
+    Videos oldest first. That is the order the reel plays them in —
+    match by match — so it is settled here, where the created dates
+    are, rather than guessed at in the browser.
+  */
+  const videos = (await listVideos())
+    .filter((v) => videoIds.includes(v.id))
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+
+  const supabase = isDemoMode ? null : await createClient();
+  const sources = new Map<string, ReelItem["video"]>();
+
+  for (const v of videos) {
+    let url = v.url;
+    /*
+      Signed per video, and only for uploads. `listVideos` returns the
+      storage path for those, which is not playable on its own.
+    */
+    if (v.source === "upload" && supabase && url && !url.startsWith("http")) {
+      const { data: signed } = await supabase.storage.from("videos").createSignedUrl(url, 3600);
+      if (signed?.signedUrl) url = signed.signedUrl;
+    }
+    sources.set(v.id, {
+      id: v.id,
+      title: v.title,
+      source: v.source,
+      url,
+      externalId: v.externalId,
+    });
+  }
+
+  const items: ReelItem[] = [];
+  for (const clip of detail.clips) {
+    const video = sources.get(clip.videoId);
+    // A clip whose video is gone is dropped rather than played as a
+    // black rectangle with no explanation.
+    if (video) items.push({ clip, video });
+  }
+
+  const annotations = await listAnnotationsForVideos(videoIds);
+
+  return {
+    collection: detail.collection,
+    items: collectionReelOrder(items, videos.map((v) => v.id)),
+    annotations,
   };
 }
 

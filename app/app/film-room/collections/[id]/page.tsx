@@ -1,17 +1,23 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, FolderOpen, Star } from "lucide-react";
-import { getCollectionDetail } from "@/lib/data/collections";
+import { getCollectionDetail, getCollectionReel } from "@/lib/data/collections";
 import { listVideos } from "@/lib/data/film";
 import { sentimentMeta, fmtTime } from "@/lib/data/film-types";
 import { DeleteCollectionButton } from "@/components/film/delete-collection-button";
+import { CollectionReelLauncher } from "@/components/film/collection-reel-launcher";
 
 export default async function CollectionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const detail = await getCollectionDetail(id);
+
+  // None of the three depend on each other, so they go together.
+  const [detail, reel, videos] = await Promise.all([
+    getCollectionDetail(id),
+    getCollectionReel(id),
+    listVideos(),
+  ]);
   if (!detail) notFound();
 
-  const videos = await listVideos();
   const videoMap = Object.fromEntries(videos.map((v) => [v.id, v.title]));
   const { collection, clips } = detail;
 
@@ -34,6 +40,11 @@ export default async function CollectionPage({ params }: { params: Promise<{ id:
         </div>
       </div>
 
+      <CollectionReelLauncher
+        name={collection.name}
+        items={reel?.items ?? []}
+        annotations={reel?.annotations ?? []}
+      >
       {clips.length > 0 ? (
         <div className="grid gap-2 sm:grid-cols-2">
           {clips.map((c) => {
@@ -58,6 +69,7 @@ export default async function CollectionPage({ params }: { params: Promise<{ id:
           This collection is empty. Add clips from the Film Room or a study session.
         </div>
       )}
+      </CollectionReelLauncher>
     </div>
   );
 }

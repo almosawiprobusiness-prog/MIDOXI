@@ -51,6 +51,35 @@ export async function listAnnotations(videoId: string): Promise<Annotation[]> {
   return (data ?? []).map(rowTo);
 }
 
+/**
+ * Drawings for several videos at once — a collection reel spans them.
+ *
+ * One query rather than one per video: a collection of thirty clips can
+ * easily touch a dozen matches, and thirty round trips before the first
+ * frame plays is the difference between a reel starting and a reel
+ * being abandoned.
+ */
+export async function listAnnotationsForVideos(videoIds: string[]): Promise<Annotation[]> {
+  const ids = [...new Set(videoIds)].filter(Boolean);
+  if (ids.length === 0) return [];
+
+  if (isDemoMode) {
+    const wanted = new Set(ids);
+    return demoDB.annotations
+      .filter((a) => wanted.has(a.videoId))
+      .sort((a, b) => a.atSeconds - b.atSeconds);
+  }
+  const supabase = await createClient();
+  if (!supabase) return [];
+  const { data } = await supabase
+    .from("video_annotations")
+    .select("*")
+    .in("video_id", ids)
+    .order("at_seconds", { ascending: true })
+    .limit(500);
+  return (data ?? []).map(rowTo);
+}
+
 export async function saveAnnotation(input: {
   videoId: string;
   atSeconds: number;

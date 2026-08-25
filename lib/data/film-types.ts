@@ -141,6 +141,67 @@ export function reelOrder(clips: FilmClip[]): FilmClip[] {
   return [...clips].sort((a, b) => a.startSeconds - b.startSeconds);
 }
 
+/**
+ * One item in a collection reel: a clip, plus what it takes to play it.
+ *
+ * A collection spans videos, so the source travels WITH the clip rather
+ * than being a property of the page. Uploaded footage carries a signed
+ * URL that expires, which is why this is built per request and never
+ * cached.
+ */
+export interface ReelItem {
+  clip: FilmClip;
+  video: {
+    id: string;
+    title: string;
+    source: VideoSource;
+    /** Playable URL: signed for uploads, the link for everything else. */
+    url: string;
+    /** YouTube id, when that is the source. */
+    externalId?: string;
+  };
+}
+
+/**
+ * The order a collection plays in: match by match, up each tape.
+ *
+ * Sorting purely by timestamp — what a single-video reel does — is
+ * meaningless here, because 12:30 in one match has nothing to do with
+ * 12:30 in another; it would interleave four games at random.
+ *
+ * So clips are GROUPED by video, oldest match first, and run in order
+ * within each. That reads as a narrative rather than a shuffle, and it
+ * also minimises source swaps: every clip from one video plays before
+ * the player has to load another. On a reel mixing an upload and a
+ * YouTube link, a swap is a fresh load and a visible gap, so having
+ * three instead of twelve is the difference between a session and a
+ * slideshow.
+ *
+ * @param videoOrder video ids, in the order their videos should play.
+ *                   Anything not listed sorts last, alphabetically, so
+ *                   a clip whose video has gone missing still appears
+ *                   rather than vanishing.
+ */
+export function collectionReelOrder<T extends { clip: FilmClip }>(
+  items: T[],
+  videoOrder: string[],
+): T[] {
+  const rank = new Map(videoOrder.map((id, i) => [id, i]));
+  const rankOf = (id: string) => rank.get(id) ?? Number.MAX_SAFE_INTEGER;
+
+  return [...items].sort((a, b) => {
+    const ra = rankOf(a.clip.videoId);
+    const rb = rankOf(b.clip.videoId);
+    if (ra !== rb) return ra - rb;
+    // Same video: up the tape.
+    if (a.clip.startSeconds !== b.clip.startSeconds) {
+      return a.clip.startSeconds - b.clip.startSeconds;
+    }
+    // Both unranked and at the same second — keep it deterministic.
+    return a.clip.videoId.localeCompare(b.clip.videoId);
+  });
+}
+
 /** Detect a YouTube id from a URL, else null. */
 export function youtubeId(url: string): string | null {
   const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/);

@@ -15,12 +15,37 @@
   the other way, as state, and is owned by the studio.
 */
 export interface FilmPlayer {
-  play(): void;
+  /**
+   * Start playing.
+   *
+   * Resolves when playback has actually begun and REJECTS when the
+   * browser refuses — which happens for real: a collection reel swaps
+   * to a new source mid-run, and a fresh element with sound is exactly
+   * what autoplay policy blocks. A caller that cannot tell the
+   * difference shows a reel that has silently stopped for no stated
+   * reason, which is the worst of the three outcomes.
+   */
+  play(): Promise<void>;
   pause(): void;
   /** Absolute position in seconds. */
   seek(seconds: number): void;
   setRate(rate: number): void;
 }
+
+/**
+ * A player that does nothing, for the moment before one exists.
+ *
+ * A collection reel swaps sources mid-run, and between the old one
+ * going and the new one announcing itself there is genuinely nothing to
+ * drive. Returning this beats returning the previous source's handle,
+ * which would seek a video that is no longer on screen.
+ */
+export const noopPlayer: FilmPlayer = {
+  play: () => Promise.resolve(),
+  pause: () => {},
+  seek: () => {},
+  setRate: () => {},
+};
 
 /**
  * The <video> element as a FilmPlayer.
@@ -33,7 +58,7 @@ export function videoElementPlayer(
   ref: { current: HTMLVideoElement | null },
 ): FilmPlayer {
   return {
-    play: () => void ref.current?.play(),
+    play: () => ref.current?.play() ?? Promise.resolve(),
     pause: () => ref.current?.pause(),
     seek: (seconds) => {
       const el = ref.current;
