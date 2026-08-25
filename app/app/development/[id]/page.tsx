@@ -14,6 +14,16 @@ const statusStyle: Record<DevelopmentGoal["status"], { label: string; color: str
   achieved: { label: "Achieved", color: "var(--signal-bright)" },
 };
 
+/*
+  Named after the goal. This page had no title of its own, so a browser
+  open on three different goals showed three identical tabs.
+*/
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const detail = await getGoalDetail(id);
+  return { title: detail ? `${detail.goal.title} — Development` : "Development — MIDO XI" };
+}
+
 export default async function GoalDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const detail = await getGoalDetail(id);

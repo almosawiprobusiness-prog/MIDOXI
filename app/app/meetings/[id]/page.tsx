@@ -14,7 +14,16 @@ import {
 import { Agenda } from "@/components/meetings/agenda";
 import { MeetingControls } from "@/components/meetings/meeting-controls";
 
-export const metadata = { title: "Session — MIDO XI" };
+/*
+  Named after the session rather than the word "Session". Static, this
+  read the same for every meeting — and the one moment somebody has
+  several open is exactly when they are trying to find the right call.
+*/
+export async function generateMetadata({ params }: PageProps<"/app/meetings/[id]">) {
+  const { id } = await params;
+  const m = await getMeeting(id);
+  return { title: m ? `${m.title} — Meetings` : "Session — MIDO XI" };
+}
 
 export default async function MeetingPage({ params }: PageProps<"/app/meetings/[id]">) {
   const { id } = await params;

@@ -8,7 +8,16 @@ import { plural } from "@/lib/data/timeline-types";
 import { Avatar } from "@/components/community/post-card";
 import { FollowButton } from "@/components/community/follow-button";
 
-export const metadata = { title: "Profile — MIDO XI" };
+/*
+  Named after the player. Static, every profile in the app shared one
+  tab title — and browsing a community is precisely when several are
+  open at once.
+*/
+export async function generateMetadata({ params }: PageProps<"/app/community/[handle]">) {
+  const { handle } = await params;
+  const profile = await getProfileSummary(handle);
+  return { title: profile ? `${profile.name} — Community` : "Profile — MIDO XI" };
+}
 
 /*
   A player's profile, as a grid.

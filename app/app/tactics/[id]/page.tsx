@@ -23,6 +23,16 @@ export default async function BoardPage({ params }: PageProps<"/app/tactics/[id]
       >
         <ArrowLeft className="size-3.5" /> Boards
       </Link>
+      {/*
+        The page's heading, for screen readers only.
+
+        This page had no <h1> at all: the board's name lives in an
+        editable input inside the editor, which is a CONTROL rather than
+        a heading — labelled "Title", and correctly so. A reader moving
+        by heading found nothing on the page. Stating it here leaves the
+        editor untouched and gives the document a name.
+      */}
+      <h1 className="sr-only">{board.title}</h1>
       <TacticalBoardEditor board={board} />
     </div>
   );
