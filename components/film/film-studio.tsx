@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Play, Pause, Rewind, FastForward, ChevronLeft, ChevronRight,
-  Scissors, Star, Trash2, Loader2, Flag, Film, TriangleAlert, PenLine, X, Repeat, Download,
+  Scissors, Star, Trash2, Loader2, Flag, Film, TriangleAlert, PenLine, X, Repeat, Download, ListVideo,
 } from "lucide-react";
 import {
   createClip, deleteClip, toggleClipFavorite,
@@ -14,6 +14,7 @@ import {
 } from "@/app/app/film-room/annotation-actions";
 import {
   SENTIMENTS, CLIP_TAGS, sentimentMeta, fmtTime, LONG_FOOTAGE_ADVICE, isHlsUrl,
+  reelOrder, clipEnd,
   type Video, type FilmClip, type ClipSentiment, type ClipInput,
 } from "@/lib/data/film-types";
 import {
@@ -134,6 +135,22 @@ export function FilmStudio({
   */
   const [saveError, setSaveError] = useState<string | null>(null);
   const [looping, setLooping] = useState(false);
+
+  /*
+    The reel: clips played end to end, the way a session is presented.
+
+    `reelAt` is an index rather than a clip, so the reel survives a
+    refresh that reorders or renames what is in it. Null means not in a
+    reel at all.
+  */
+  const [reelAt, setReelAt] = useState<number | null>(null);
+  /*
+    Which drawings this pass has already stopped on. A ref, not state:
+    it is read and written inside the playhead handler and must not
+    cause a render — a set that triggered one on every mark would
+    re-enter the handler mid-pause.
+  */
+  const shownDrawings = useRef<Set<string>>(new Set());
 
   const isYouTube = video.source === "youtube";
   const isHls = !isYouTube && isHlsUrl(video.url);
@@ -262,14 +279,64 @@ export function FilmStudio({
     player().play();
   };
 
+  // ── the reel ──
+
+  /*
+    Up the tape, earliest first — see `reelOrder`. Computed rather than
+    stored so adding a clip mid-session lands in the right place
+    without a reel needing to be rebuilt.
+  */
+  const reel = reelOrder(clips);
+  const reelClip = reelAt == null ? null : (reel[reelAt] ?? null);
+
+  /**
+   * Move the reel to a clip.
+   *
+   * `rearm` decides whether drawings already shown will stop the reel
+   * again, and the two callers want opposite things.
+   *
+   * A PERSON jumping — pressing next, or stepping back — is doing it to
+   * look at something again, so everything is re-armed. The reel
+   * ADVANCING on its own is not: clips routinely overlap (an unmarked
+   * clip runs eight seconds, and two cut ten seconds apart share half
+   * their length), so re-arming there would stop twice on the same
+   * drawing in one pass and read as a bug.
+   */
+  const jumpToReelClip = (index: number, rearm = true) => {
+    const clip = reel[index];
+    if (!clip) return;
+    if (rearm) shownDrawings.current.clear();
+    setReelAt(index);
+    setViewing(null);
+    seek(clip.startSeconds);
+    player().play();
+  };
+
+  const startReel = () => {
+    if (reel.length === 0) return;
+    // A loop and a reel both decide where playback goes next, and two
+    // things deciding that is one too many.
+    setLooping(false);
+    setDrawing(false);
+    jumpToReelClip(0);
+  };
+
+  const exitReel = () => {
+    setReelAt(null);
+    setViewing(null);
+    shownDrawings.current.clear();
+    player().pause();
+  };
+
   /*
     The playhead moved.
 
     Both sources funnel through here — a <video> firing timeupdate and a
-    YouTube embed polled every 100ms — which is also where the loop
-    lives. Deliberately NOT an effect watching `current`: that reacts to
-    the new position by setting state again, which is a cascading render
-    on every frame of playback. This is the event itself, handled once.
+    YouTube embed polled every 100ms — which is also where the loop and
+    the reel live. Deliberately NOT an effect watching `current`: that
+    reacts to the new position by setting state again, which is a
+    cascading render on every frame of playback. This is the event
+    itself, handled once.
   */
   const handleTime = (t: number) => {
     if (looping && markIn != null && markOut != null && markOut > markIn && t >= markOut) {
@@ -277,6 +344,42 @@ export function FilmStudio({
       setCurrent(markIn);
       return;
     }
+
+    if (reelAt != null && reelClip) {
+      setCurrent(t);
+      const end = clipEnd(reelClip);
+
+      /*
+        Stop on a drawing before checking the end, so a mark made in
+        the last second of a clip is not skipped over.
+
+        The reel PAUSES and waits rather than flashing the drawing past
+        — a drawing belongs to one frame, and this is the moment the
+        presenter is talking over. Nothing auto-resumes: being cut off
+        mid-sentence in front of a squad is worse than one more click.
+      */
+      const due = annotations.find(
+        (a) =>
+          !shownDrawings.current.has(a.id) &&
+          a.atSeconds >= reelClip.startSeconds &&
+          a.atSeconds <= Math.min(t, end),
+      );
+      if (due) {
+        shownDrawings.current.add(due.id);
+        player().pause();
+        setViewing(due);
+        return;
+      }
+
+      if (t >= end) {
+        // Advancing on its own — drawings already shown this pass stay
+        // shown. See the note on `jumpToReelClip`.
+        if (reelAt + 1 < reel.length) jumpToReelClip(reelAt + 1, false);
+        else exitReel();
+      }
+      return;
+    }
+
     setCurrent(t);
   };
 
@@ -444,7 +547,18 @@ export function FilmStudio({
           break;
         case "Escape":
           if (drawing) stopDrawing();
+          else if (reelAt != null) exitReel();
           else if (viewing) setViewing(null);
+          break;
+        // Reel navigation. Only bound while one is running, so N and P
+        // stay free everywhere else.
+        case "n":
+        case "N":
+          if (reelAt != null) jumpToReelClip(reelAt + 1);
+          break;
+        case "p":
+        case "P":
+          if (reelAt != null) jumpToReelClip(reelAt - 1);
           break;
         // Tools, while drawing. Free to add, and the order matches the bar.
         case "1":
@@ -462,7 +576,7 @@ export function FilmStudio({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [drawing, viewing, playing, current, duration, unplayable, markIn, markOut]);
+  }, [drawing, viewing, playing, current, duration, unplayable, markIn, markOut, reelAt]);
 
   /*
     Save the board.
@@ -636,6 +750,81 @@ export function FilmStudio({
         </div>
 
         {/*
+          The reel bar. Replaces nothing — it sits above the transport,
+          because a presenter still wants to scrub when somebody asks
+          "can you go back to the throw-in".
+        */}
+        {reelClip && reelAt != null && (
+          <div className="mt-3 rounded-lg border border-signal-line bg-ink-900 p-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <ListVideo className="size-4 text-signal-bright" />
+              <span className="label-tech !text-text">Reel</span>
+              <span className="data-mono text-xs text-text-dim">
+                {reelAt + 1} of {reel.length}
+              </span>
+              <span className="truncate text-sm font-medium text-text-hi">{reelClip.title}</span>
+              {(() => {
+                const sm = sentimentMeta(reelClip.sentiment);
+                return sm ? (
+                  <span className="chip" style={{ color: sm.color, borderColor: sm.color }}>
+                    {sm.label}
+                  </span>
+                ) : null;
+              })()}
+
+              <div className="ml-auto flex items-center gap-1">
+                <button
+                  onClick={() => jumpToReelClip(reelAt - 1)}
+                  disabled={reelAt === 0}
+                  title="Previous clip (P)"
+                  aria-label="Previous clip"
+                  className="grid size-8 place-items-center rounded-lg border border-line text-text-dim transition-colors hover:border-signal-line hover:text-text disabled:opacity-40"
+                >
+                  <ChevronLeft className="size-4" />
+                </button>
+                <button
+                  onClick={togglePlay}
+                  aria-label={playing ? "Pause reel" : "Continue reel"}
+                  className="grid size-8 place-items-center rounded-lg bg-signal text-white transition-colors hover:bg-signal-deep"
+                >
+                  {playing ? <Pause className="size-4" /> : <Play className="size-4" />}
+                </button>
+                <button
+                  onClick={() => jumpToReelClip(reelAt + 1)}
+                  disabled={reelAt + 1 >= reel.length}
+                  title="Next clip (N)"
+                  aria-label="Next clip"
+                  className="grid size-8 place-items-center rounded-lg border border-line text-text-dim transition-colors hover:border-signal-line hover:text-text disabled:opacity-40"
+                >
+                  <ChevronRight className="size-4" />
+                </button>
+                <button
+                  onClick={exitReel}
+                  className="ml-1 h-8 rounded-lg border border-line px-2.5 text-xs text-text-dim transition-colors hover:border-line-strong hover:text-text"
+                >
+                  Exit
+                </button>
+              </div>
+            </div>
+
+            {reelClip.note && (
+              <p className="mt-2 text-sm leading-relaxed text-text-dim">{reelClip.note}</p>
+            )}
+
+            {/*
+              Said out loud, because a reel that stops on its own looks
+              broken if you do not know it is meant to.
+            */}
+            {viewing && !playing && (
+              <p className="mt-2 flex items-center gap-2 text-xs text-signal-bright">
+                <PenLine className="size-3.5" />
+                Stopped on a drawing — press play or space to carry on.
+              </p>
+            )}
+          </div>
+        )}
+
+        {/*
           One set of tools, both sources. These used to be fenced off
           behind `!isYouTube`, because the transport could only drive a
           <video> element. Now that the embed answers the same four
@@ -749,7 +938,9 @@ export function FilmStudio({
                 nobody is told about has no shortcuts.
               */}
               <p className="data-mono mt-2.5 select-none text-[10px] leading-relaxed text-text-faint">
-                space play · ←→ frame · shift ←→ 5s · I/O mark · L loop · D draw · esc exit
+                {reelAt != null
+                  ? "space play · N/P next & previous clip · ←→ frame · esc leave reel"
+                  : "space play · ←→ frame · shift ←→ 5s · I/O mark · L loop · D draw · esc exit"}
               </p>
             </div>
 
@@ -922,6 +1113,20 @@ export function FilmStudio({
         <div className="mb-3 flex items-center gap-2">
           <Film className="size-4 text-text-dim" />
           <span className="label-tech">Clips · {clips.length}</span>
+          {/*
+            The reel. Offered only when there is something to play —
+            and hidden while one is running, because the bar above is
+            already the way to control it.
+          */}
+          {reel.length > 0 && reelAt == null && !unplayable && (
+            <button
+              onClick={startReel}
+              title="Play every clip end to end, stopping on each drawing"
+              className="ml-auto flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5 text-xs text-text-dim transition-colors hover:border-signal-line hover:text-signal-bright"
+            >
+              <ListVideo className="size-3.5" /> Play reel
+            </button>
+          )}
         </div>
         {clips.length > 0 ? (
           <div className="space-y-2">

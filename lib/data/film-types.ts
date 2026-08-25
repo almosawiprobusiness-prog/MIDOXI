@@ -94,6 +94,53 @@ export function fmtTime(seconds: number) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
+/*
+  The reel — clips played end to end, the way a session is presented.
+
+  These two live here rather than in the player because they decide what
+  a reel IS, and both have a wrong answer that looks fine until somebody
+  presents from it.
+*/
+
+/**
+ * How long a clip with no marked end runs for.
+ *
+ * "Mark out" is optional, and most clips are cut without it — you see
+ * the thing, you mark it, you move on. Played back that would run to
+ * the end of the match, so the reel gives it a tail instead. Eight
+ * seconds is about one phase of play: enough to see the pass land and
+ * what happened next, short enough that a reel of twenty stays
+ * watchable.
+ */
+export const REEL_TAIL_SECONDS = 8;
+
+/** Where a clip stops in a reel — its marked end, or a sensible tail. */
+export function clipEnd(clip: Pick<FilmClip, "startSeconds" | "endSeconds">): number {
+  const { startSeconds, endSeconds } = clip;
+  /*
+    A `null` end and an end at or before the start are the same
+    problem: there is no usable range. The second happens for real —
+    mark out, then scrub back and mark in later — and treating it as a
+    zero-length clip makes the reel skip straight past it.
+  */
+  if (endSeconds == null || !Number.isFinite(endSeconds) || endSeconds <= startSeconds) {
+    return startSeconds + REEL_TAIL_SECONDS;
+  }
+  return endSeconds;
+}
+
+/**
+ * Reel order: up the tape, earliest first.
+ *
+ * Clips are listed newest-first everywhere else, which is right for a
+ * library and wrong for a reel — presenting a match backwards is not a
+ * thing anybody wants. Sorted by where they happen, not when they were
+ * cut.
+ */
+export function reelOrder(clips: FilmClip[]): FilmClip[] {
+  return [...clips].sort((a, b) => a.startSeconds - b.startSeconds);
+}
+
 /** Detect a YouTube id from a URL, else null. */
 export function youtubeId(url: string): string | null {
   const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/);
