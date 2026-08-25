@@ -11,6 +11,19 @@ import { StatsForm } from "@/components/matches/stats-form";
 import { ReviewForm } from "@/components/matches/review-form";
 import { SectionHeader, sentimentStyle } from "@/components/ui/primitives";
 
+/*
+  Named after the fixture. This page had no title at all — a tab reading
+  "MIDO XI — Football Performance OS", which is what every tab said
+  before the rest of the app started naming itself.
+*/
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const detail = await getMatchDetail(id);
+  if (!detail) return { title: "Match — MIDO XI" };
+  const { match } = detail;
+  return { title: `${match.opponent} ${match.goalsFor}–${match.goalsAgainst} — Matches` };
+}
+
 export default async function MatchDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const [detail, allClips, profile] = await Promise.all([
@@ -56,6 +69,21 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
               <DeleteMatchButton id={match.id} opponent={match.opponent} />
             </div>
           </div>
+
+          {/*
+            The page's heading, carried for screen readers only.
+
+            This page had no <h1> at all — the fixture is spelled out
+            across three separate boxes of a scoreboard grid, which reads
+            perfectly to an eye and as nothing to a reader moving by
+            heading. Promoting one of those boxes would either make the
+            heading half the fixture or force the layout to bend around
+            it, so the whole fixture is stated once, invisibly, and the
+            scoreboard is left exactly as designed.
+          */}
+          <h1 className="sr-only">
+            {homeName} {homeScore}–{awayScore} {awayName}, {resultLabel}
+          </h1>
 
           <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-4">
             <div className="text-right">
