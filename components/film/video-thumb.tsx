@@ -38,7 +38,51 @@ export function posterTime(durationSeconds: number | null | undefined): number {
   return Math.min(30, Math.max(1, durationSeconds * 0.1));
 }
 
-export function VideoThumb({ video, className = "" }: { video: Video; className?: string }) {
+/**
+ * A clip's own frame.
+ *
+ * Same trick, different second: a clip card shows the moment the clip
+ * is ABOUT rather than a poster from the video it was cut from. On a
+ * collection of twelve clips from three matches, the difference is
+ * between twelve pictures of the same three kick-offs and twelve
+ * pictures of the twelve things somebody marked.
+ *
+ * YouTube cannot do this — its thumbnail API serves a handful of fixed
+ * frames, none of which is the one you want — so those fall back to the
+ * video's thumbnail and are honest about it.
+ */
+export function ClipThumb({
+  video,
+  atSeconds,
+  className = "",
+}: {
+  video: Video;
+  atSeconds: number;
+  className?: string;
+}) {
+  return (
+    <VideoThumb
+      video={{ ...video, durationSeconds: null }}
+      className={className}
+      atOverride={Math.max(0, atSeconds)}
+      compact
+    />
+  );
+}
+
+export function VideoThumb({
+  video,
+  className = "",
+  atOverride,
+  compact = false,
+}: {
+  video: Video;
+  className?: string;
+  /** Show this exact second instead of a computed poster frame. */
+  atOverride?: number;
+  /** Smaller chrome, for a card in a list rather than a library tile. */
+  compact?: boolean;
+}) {
   const isYouTube = video.source === "youtube" && Boolean(video.externalId);
   const ytThumb = isYouTube ? `https://img.youtube.com/vi/${video.externalId}/mqdefault.jpg` : null;
   // Only a real URL can be asked for a frame. An upload whose signed
@@ -59,7 +103,7 @@ export function VideoThumb({ video, className = "" }: { video: Video; className?
         />
       ) : framable ? (
         <video
-          src={`${video.url}#t=${posterTime(video.durationSeconds)}`}
+          src={`${video.url}#t=${atOverride ?? posterTime(video.durationSeconds)}`}
           preload="metadata"
           muted
           playsInline
@@ -74,11 +118,16 @@ export function VideoThumb({ video, className = "" }: { video: Video; className?
       {/* A wash, so white kit and floodlights never bleach the label. */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
 
-      <span className="relative grid size-12 place-items-center rounded-full bg-black/50 text-text-hi backdrop-blur-sm transition-colors group-hover:bg-signal group-hover:text-white">
-        <Play className="size-5" fill="currentColor" />
+      <span
+        className={`relative grid place-items-center rounded-full bg-black/50 text-text-hi backdrop-blur-sm transition-colors group-hover:bg-signal group-hover:text-white ${
+          compact ? "size-8" : "size-12"
+        }`}
+      >
+        <Play className={compact ? "size-3.5" : "size-5"} fill="currentColor" />
       </span>
 
-      <span className="absolute right-2 top-2">
+      {/* A list card is small; the source badge would crowd it. */}
+      <span className={compact ? "hidden" : "absolute right-2 top-2"}>
         {isYouTube ? (
           <span className="rounded bg-black/60 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-text-dim">
             YT

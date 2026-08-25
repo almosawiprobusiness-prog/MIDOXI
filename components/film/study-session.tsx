@@ -1,11 +1,13 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Play, Pause, Plus, Trash2, Loader2, CheckCircle2, Clock, Target } from "lucide-react";
 import { addStudyNote, deleteStudyNote, completeStudySession } from "@/app/app/film-room/study/actions";
 import { NOTE_KINDS, noteMeta, type StudySession, type StudyNote, type StudyNoteKind } from "@/lib/data/study-types";
 import { fmtTime, type Video } from "@/lib/data/film-types";
+import { videoElementPlayer, noopPlayer, type FilmPlayer } from "./film-player";
+import { YouTubeStage } from "./youtube-stage";
 
 export function StudySessionView({
   session,
@@ -22,9 +24,49 @@ export function StudySessionView({
   const videoRef = useRef<HTMLVideoElement>(null);
   const isYouTube = video?.source === "youtube";
 
+  /*
+    Study Mode drives whichever player is here.
+
+    It used to render a bare <iframe> for YouTube, which plays and
+    nothing else — so on YouTube footage there was no playhead, and
+    therefore no way to stamp a note to a moment. The single most
+    valuable thing a study note carries is WHERE it happened, and on
+    the source most likely to hold a full match it could not be
+    recorded at all. The stamp control was simply hidden.
+
+    The same four-verb player the film room uses fixes that without a
+    second implementation.
+  */
+  const ytPlayer = useRef<FilmPlayer | null>(null);
+  const player = (): FilmPlayer =>
+    isYouTube ? (ytPlayer.current ?? noopPlayer) : videoElementPlayer(videoRef);
+
   const [current, setCurrent] = useState(0);
   const [duration, setDuration] = useState(video?.durationSeconds ?? 0);
   const [playing, setPlaying] = useState(false);
+
+  /*
+    Adopt the duration the element already knows.
+
+    The same bug the film studio had, in its own copy of the player, and
+    it survived here because the fix was applied where it was found
+    rather than everywhere it lived. `loadedmetadata` can fire before
+    React hydrates, so the handler below never runs and the SEEDED
+    duration stands forever — and since the seek bar's max is that
+    value, everything past it is unreachable.
+
+    Measured on this page: a 60.1s video, fully loaded, with the bar
+    pinned at 15 and a seek to 0:45 landing on 0:15. Study Mode could
+    not reach the last three quarters of any film whose stored duration
+    was wrong.
+  */
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    if (el.readyState >= 1 && Number.isFinite(el.duration) && el.duration > 0) {
+      setDuration(el.duration);
+    }
+  }, [video?.url]);
 
   const [kind, setKind] = useState<StudyNoteKind>("observation");
   const [body, setBody] = useState("");
@@ -37,16 +79,22 @@ export function StudySessionView({
   const [completeBusy, setCompleteBusy] = useState(false);
 
   const togglePlay = () => {
-    const v = videoRef.current;
-    if (!v) return;
-    if (v.paused) v.play();
-    else v.pause();
+    if (playing) player().pause();
+    else void player().play();
+  };
+
+  const seek = (t: number) => {
+    player().seek(t);
+    // Moved optimistically as well as actually: YouTube is polled every
+    // 100ms, long enough for a drag to feel like it had not registered.
+    setCurrent(t);
   };
 
   const addNote = async () => {
     if (!body.trim()) return;
     setBusy(true);
-    await addStudyNote(session.id, kind, body, stamp && !isYouTube ? current : null);
+    // `stamp` alone now — a YouTube playhead is as real as any other.
+    await addStudyNote(session.id, kind, body, stamp ? current : null);
     setBusy(false);
     setBody("");
     router.refresh();
@@ -71,9 +119,16 @@ export function StudySessionView({
       <div className="min-w-0">
         <div className="overflow-hidden rounded-xl border border-line bg-black shadow-2xl shadow-black/40">
           {isYouTube && video?.externalId ? (
-            <div className="aspect-video">
-              <iframe className="size-full" src={`https://www.youtube.com/embed/${video.externalId}`} title={session.title} allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen />
-            </div>
+            <YouTubeStage
+              externalId={video.externalId}
+              onReady={(p) => {
+                ytPlayer.current = p;
+              }}
+              onTime={setCurrent}
+              onDuration={setDuration}
+              onPlayingChange={setPlaying}
+              onUnavailable={() => {}}
+            />
           ) : video ? (
             <video
               ref={videoRef}
@@ -81,6 +136,12 @@ export function StudySessionView({
               className="aspect-video w-full bg-black"
               playsInline
               onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
+              // Catches a length that becomes known, or is revised, after
+              // the first metadata event.
+              onDurationChange={(e) => {
+                const d = e.currentTarget.duration;
+                if (Number.isFinite(d) && d > 0) setDuration(d);
+              }}
               onTimeUpdate={(e) => setCurrent(e.currentTarget.currentTime)}
               onPlay={() => setPlaying(true)}
               onPause={() => setPlaying(false)}
@@ -90,13 +151,14 @@ export function StudySessionView({
           )}
         </div>
 
-        {!isYouTube && video && (
+        {/* Shown for both sources now that both have a playhead. */}
+        {video && (
           <div className="mt-3 flex items-center gap-3 rounded-lg border border-line bg-ink-900 p-3">
             <button onClick={togglePlay} aria-label={playing ? "Pause" : "Play"} className="grid size-9 place-items-center rounded-lg bg-signal text-white transition-colors hover:bg-signal-deep">
               {playing ? <Pause className="size-4" /> : <Play className="size-4" />}
             </button>
             <span className="data-mono text-sm text-signal-bright">{fmtTime(current)}</span>
-            <input type="range" min={0} max={duration || 0} step={0.05} value={current} onChange={(e) => { if (videoRef.current) videoRef.current.currentTime = Number(e.target.value); }} className="mido-range flex-1" aria-label="Seek" />
+            <input type="range" min={0} max={duration || 0} step={0.05} value={current} onChange={(e) => seek(Number(e.target.value))} className="mido-range flex-1" aria-label="Seek" />
             <span className="data-mono text-sm text-text-dim">{fmtTime(duration)}</span>
           </div>
         )}
@@ -127,7 +189,7 @@ export function StudySessionView({
             <p className="mb-2 text-xs text-text-faint">{noteMeta(kind).hint}</p>
             <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={3} placeholder="Type your note…" className="w-full resize-y rounded-lg border border-line bg-ink-850 px-3 py-2 text-sm text-text-hi placeholder:text-text-faint focus:border-signal-line focus:outline-none" />
             <div className="mt-2 flex items-center justify-between">
-              {!isYouTube && video ? (
+              {video ? (
                 <label className="flex items-center gap-1.5 text-xs text-text-dim">
                   <input type="checkbox" checked={stamp} onChange={(e) => setStamp(e.target.checked)} className="accent-[var(--signal)]" />
                   <Clock className="size-3.5" /> Stamp {fmtTime(current)}
@@ -152,7 +214,7 @@ export function StudySessionView({
                 <div className="flex items-center gap-2">
                   <span className="label-tech" style={{ color: meta.color }}>{meta.label}</span>
                   {n.atSeconds != null && (
-                    <button onClick={() => { if (videoRef.current) { videoRef.current.currentTime = n.atSeconds!; videoRef.current.play(); } }} className="data-mono text-[11px] text-text-faint hover:text-signal-bright">
+                    <button onClick={() => { seek(n.atSeconds!); void player().play(); }} className="data-mono text-[11px] text-text-faint hover:text-signal-bright">
                       {fmtTime(n.atSeconds)}
                     </button>
                   )}

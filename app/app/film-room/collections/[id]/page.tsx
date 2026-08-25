@@ -6,6 +6,7 @@ import { listVideos } from "@/lib/data/film";
 import { sentimentMeta, fmtTime } from "@/lib/data/film-types";
 import { DeleteCollectionButton } from "@/components/film/delete-collection-button";
 import { CollectionReelLauncher } from "@/components/film/collection-reel-launcher";
+import { ClipThumb } from "@/components/film/video-thumb";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -25,6 +26,8 @@ export default async function CollectionPage({ params }: { params: Promise<{ id:
   if (!detail) notFound();
 
   const videoMap = Object.fromEntries(videos.map((v) => [v.id, v.title]));
+  // The full video, for a clip card that wants a frame rather than a title.
+  const videoById = Object.fromEntries(videos.map((v) => [v.id, v]));
   const { collection, clips } = detail;
 
   return (
@@ -56,7 +59,18 @@ export default async function CollectionPage({ params }: { params: Promise<{ id:
           {clips.map((c) => {
             const sm = sentimentMeta(c.sentiment);
             return (
-              <Link key={c.id} href={`/app/film-room/${c.videoId}`} className="min-w-0 group panel flex items-start gap-3 p-3 transition-colors hover:border-line-strong">
+              <Link key={c.id} href={`/app/film-room/${c.videoId}`} className="min-w-0 group panel flex items-start gap-3 overflow-hidden p-3 transition-colors hover:border-line-strong">
+                {/*
+                  The moment itself, not a timestamp beside a name. A
+                  themed collection is the one place a list of titles
+                  tells you least — "Near-post arrival" from four
+                  different matches reads the same four times.
+                */}
+                {videoById[c.videoId] ? (
+                  <span className="w-24 shrink-0 overflow-hidden rounded-md">
+                    <ClipThumb video={videoById[c.videoId]} atSeconds={c.startSeconds} />
+                  </span>
+                ) : null}
                 <span className="data-mono shrink-0 rounded-md border border-line px-2 py-1 text-xs text-signal-bright">{fmtTime(c.startSeconds)}</span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
