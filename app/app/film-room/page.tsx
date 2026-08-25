@@ -1,15 +1,15 @@
 import Link from "next/link";
-import { Clapperboard, Play, Film, Plus, FolderOpen, BookOpen, CheckCircle2, Circle, Star } from "lucide-react";
+import { Clapperboard, Plus, FolderOpen, BookOpen, CheckCircle2, Circle, Star } from "lucide-react";
 import { listVideos, listClips } from "@/lib/data/film";
 import { listCollections } from "@/lib/data/collections";
 import { listStudySessions } from "@/lib/data/study";
 import { getDiscover } from "@/lib/data/discover";
 import { isDemoMode } from "@/lib/env";
-import { fmtTime } from "@/lib/data/film-types";
 import { AddVideoDialog } from "@/components/film/add-video-dialog";
 import { DiscoverPanel } from "@/components/film/discover-panel";
 import { ClipLibrary } from "@/components/film/clip-library";
 import { CreateCollectionDialog } from "@/components/film/create-collection-dialog";
+import { VideoThumb } from "@/components/film/video-thumb";
 import { SectionHeader, sentimentStyle } from "@/components/ui/primitives";
 import { PageHeader, StatBand } from "@/components/ui/kit";
 
@@ -29,12 +29,44 @@ export default async function FilmRoomPage() {
 
   return (
     <div className="mx-auto max-w-[1100px] px-4 py-8 md:px-6">
-      <PageHeader
-        icon={Clapperboard}
-        title="Film Room"
-        tagline="Upload, clip, tag and study — a true analysis room, not a video dump."
-        actions={<AddVideoDialog />}
-      />
+      {/*
+        A photograph, used as atmosphere rather than decoration.
+
+        Sunday-league football under floodlights — which is what this
+        product is actually for — sunk behind a heavy gradient so it
+        reads as depth and never competes with the text on top of it.
+        A brighter, glossier stadium shot was the other candidate and
+        was rejected for looking like a template.
+
+        One image, in one place. The rest of the room earns its life
+        from real footage: every video card below paints a frame from
+        the match itself.
+      */}
+      <div className="relative -mx-4 -mt-8 mb-4 overflow-hidden md:-mx-6">
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-[url('/img/floodlights.jpg')] bg-cover bg-[center_60%] opacity-70"
+        />
+        {/*
+          Dark at the bottom where the page continues, lighter at the
+          top where the floodlight is. A flat wash at 80% made the
+          photograph invisible — an asset doing no work is worse than
+          no asset — so this fades rather than covers.
+        */}
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-gradient-to-b from-ink-950/45 via-ink-950/75 to-ink-950"
+        />
+        <div className="relative px-4 pb-10 pt-14 md:px-6">
+          <span className="label-tech mb-3 block text-signal-bright">Your film, read properly</span>
+          <PageHeader
+            icon={Clapperboard}
+            title="Film Room"
+            tagline="Upload, clip, tag and study — a true analysis room, not a video dump."
+            actions={<AddVideoDialog />}
+          />
+        </div>
+      </div>
 
       <DiscoverPanel result={discover} />
 
@@ -75,31 +107,20 @@ export default async function FilmRoomPage() {
         {videos.length > 0 ? (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {videos.map((v) => {
-              const thumb = v.source === "youtube" && v.externalId ? `https://img.youtube.com/vi/${v.externalId}/mqdefault.jpg` : v.thumbnailUrl;
+              const n = clipCount(v.id);
               return (
                 <Link key={v.id} href={`/app/film-room/${v.id}`} className="min-w-0 group panel overflow-hidden transition-colors hover:border-line-strong">
-                  <div className="relative flex aspect-video items-center justify-center overflow-hidden bg-gradient-to-br from-ink-800 to-ink-925">
-                    {thumb && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={thumb} alt="" className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
-                    )}
-                    <span className="relative grid size-12 place-items-center rounded-full bg-black/50 text-text-hi backdrop-blur-sm transition-colors group-hover:bg-signal group-hover:text-white">
-                      <Play className="size-5" fill="currentColor" />
-                    </span>
-                    <span className="absolute right-2 top-2">
-                      {v.source === "youtube" ? (
-                        <span className="rounded bg-black/60 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-text-dim">YT</span>
-                      ) : (
-                        <Film className="size-4 text-text-dim" />
-                      )}
-                    </span>
-                    {v.durationSeconds ? (
-                      <span className="data-mono absolute bottom-2 right-2 rounded bg-black/70 px-1.5 py-0.5 text-[10px] text-text">{fmtTime(v.durationSeconds)}</span>
-                    ) : null}
-                  </div>
+                  <VideoThumb video={v} />
                   <div className="p-3">
                     <div className="truncate text-sm font-medium text-text-hi">{v.title}</div>
-                    <div className="label-tech mt-0.5">{clipCount(v.id)} clips</div>
+                    {/*
+                      Says what to do when there is nothing yet. "0 clips"
+                      is a fact; "Not clipped yet" is the same fact with a
+                      hint that clipping is the thing to go and do.
+                    */}
+                    <div className="label-tech mt-0.5">
+                      {n > 0 ? `${n} ${n === 1 ? "clip" : "clips"}` : "Not clipped yet"}
+                    </div>
                   </div>
                 </Link>
               );

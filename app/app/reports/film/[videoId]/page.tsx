@@ -11,7 +11,13 @@ import { ReportShell, ReportSection, Stat } from "@/components/reports/report-sh
 import { PrintButton } from "@/components/reports/print-button";
 import { DemoNote } from "@/components/dashboards/shared";
 
-export const metadata = { title: "Film analysis — MIDO XI" };
+export async function generateMetadata({ params }: { params: Promise<{ videoId: string }> }) {
+  const { videoId } = await params;
+  const detail = await getVideoWithClips(videoId);
+  // Named per match: this is a document people save as a PDF, and the
+  // tab title becomes the suggested filename.
+  return { title: detail ? `Film analysis — ${detail.video.title}` : "Film analysis — MIDO XI" };
+}
 
 /*
   One video's readings, as a document a coach can hold.

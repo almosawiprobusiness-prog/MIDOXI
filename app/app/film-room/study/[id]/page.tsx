@@ -6,6 +6,12 @@ import { getVideoWithClips } from "@/lib/data/film";
 import { listGoals } from "@/lib/data/development";
 import { StudySessionView } from "@/components/film/study-session";
 
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const detail = await getStudySessionDetail(id);
+  return { title: detail ? `${detail.session.title} — Study` : "Study — MIDO XI" };
+}
+
 export default async function StudyModePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const detail = await getStudySessionDetail(id);

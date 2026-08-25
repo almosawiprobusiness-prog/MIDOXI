@@ -7,6 +7,12 @@ import { sentimentMeta, fmtTime } from "@/lib/data/film-types";
 import { DeleteCollectionButton } from "@/components/film/delete-collection-button";
 import { CollectionReelLauncher } from "@/components/film/collection-reel-launcher";
 
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const detail = await getCollectionDetail(id);
+  return { title: detail ? `${detail.collection.name} — Film Room` : "Collection — MIDO XI" };
+}
+
 export default async function CollectionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 

@@ -54,7 +54,30 @@ export async function listVideos(): Promise<Video[]> {
   const supabase = await createClient();
   if (!supabase) return [];
   const { data } = await supabase.from("videos").select("*").order("created_at", { ascending: false });
-  return (data ?? []).map(rowToVideo);
+  const videos = (data ?? []).map(rowToVideo);
+
+  /*
+    Uploads carry a storage PATH, not a URL — nothing can play or even
+    peek at one. Signed here in a single batch call so a library page
+    can show a real frame from each video instead of a grey rectangle,
+    and so `url` means the same thing for every source.
+
+    Batched deliberately: signing one at a time is a round trip per
+    video, which on a full library is the slowest thing on the page.
+  */
+  const uploads = videos.filter((v) => v.source === "upload" && v.url && !v.url.startsWith("http"));
+  if (uploads.length > 0) {
+    const { data: signed } = await supabase.storage
+      .from("videos")
+      .createSignedUrls(uploads.map((v) => v.url), 3600);
+    const byPath = new Map((signed ?? []).map((s) => [s.path, s.signedUrl]));
+    for (const v of uploads) {
+      const url = byPath.get(v.url);
+      if (url) v.url = url;
+    }
+  }
+
+  return videos;
 }
 
 export async function getVideoWithClips(id: string): Promise<VideoDetail | null> {

@@ -9,6 +9,19 @@ import { FilmStudio } from "@/components/film/film-studio";
 import { DeleteVideoButton } from "@/components/film/delete-video-button";
 import { StartStudyButton } from "@/components/film/start-study-button";
 
+/*
+  A real title per video.
+
+  Every film-room route used to render the same generic tab title, which
+  is worst exactly when it matters: presenting from a laptop with four
+  matches open, every tab reading "MIDO XI — Football Performance OS".
+*/
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const detail = await getVideoWithClips(id);
+  return { title: detail ? `${detail.video.title} — Film Room` : "Film Room — MIDO XI" };
+}
+
 export default async function StudyPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
