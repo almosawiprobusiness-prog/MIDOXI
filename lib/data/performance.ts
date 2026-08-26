@@ -1,6 +1,7 @@
 import "server-only";
 import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
+import { demoStore } from "./store";
 import {
   PER90_SOURCES,
   highlightsFrom,
@@ -128,51 +129,71 @@ function empty(): PerformanceView {
 // ── demo ─────────────────────────────────────────────────────
 
 /*
-  Seeded, and deliberately only as rich as the real thing can be. The old demo
-  showed box touches, runs in behind and pressures per 90 — tracking numbers
-  MIDO cannot record and explicitly refuses to claim. A demo that promises more
-  than the product delivers is a demo that sells a lie.
+  Derived from the demo store, never stated here.
+
+  This function used to carry a private six-match season — different
+  opponents, different minutes, a different world from the one the Match
+  Center showed on the previous screen. A player flipping between the
+  two pages saw "vs Carlton United 3–0" become "vs Ashford United 3–0",
+  which is the fastest possible way to stop trusting every number in the
+  product.
+
+  So the rule the real path follows is the rule the demo follows: this
+  page HOLDS no matches. It reads the same store rows the Match Center,
+  the Timeline and the Locker read, and if the demo season changes it
+  changes here for free. The only work done here is translating the
+  store's camelCase stat fields into the snake_case column names the
+  per-90 maths shares with the Supabase path.
 */
+
+/** Store stat fields → the match_stats column names per90From reads. */
+const STAT_COLUMN: Record<string, string> = {
+  shots: "shots",
+  shotsOnTarget: "shots_on_target",
+  chancesCreated: "chances_created",
+  keyPasses: "key_passes",
+  dribbles: "dribbles",
+  duelsWon: "duels_won",
+  recoveries: "recoveries",
+  tackles: "tackles",
+  interceptions: "interceptions",
+  aerialsWon: "aerials_won",
+};
+
 function demoPerformance(): PerformanceView {
-  const day = 864e5;
-  const now = Date.now();
-  const at = (d: number) => new Date(now - d * day).toISOString();
+  const stored = demoStore.listMatches();
+  const statById = demoStore.listStats();
 
-  const seed: (Omit<MatchRow, "date" | "opponentShort"> & { daysAgo: number })[] = [
-    { id: "m6", daysAgo: 12, opponent: "Halton Town", competition: "Pre-Season Cup · Final", home: false, gf: 2, ga: 1, position: "CF", started: true, minutes: 78, goals: 1, assists: 1, rating: 7.6 },
-    { id: "m5", daysAgo: 19, opponent: "Ashford United", competition: "Pre-Season", home: true, gf: 3, ga: 0, position: "CF", started: true, minutes: 90, goals: 2, assists: 0, rating: 8.1 },
-    { id: "m4", daysAgo: 26, opponent: "Fenwick City", competition: "Pre-Season", home: false, gf: 1, ga: 1, position: "RW", started: true, minutes: 62, goals: 0, assists: 1, rating: 6.9 },
-    { id: "m3", daysAgo: 33, opponent: "Marden Rovers", competition: "Pre-Season", home: true, gf: 1, ga: 2, position: "CF", started: true, minutes: 71, goals: 1, assists: 0, rating: 6.8 },
-    { id: "m2", daysAgo: 40, opponent: "Colby Athletic", competition: "Friendly", home: false, gf: 2, ga: 2, position: "CF", started: false, minutes: 45, goals: 0, assists: 1, rating: 6.7 },
-    { id: "m1", daysAgo: 47, opponent: "Deanwood", competition: "Friendly", home: true, gf: 4, ga: 1, position: "CF", started: true, minutes: 82, goals: 0, assists: 0, rating: 7.0 },
-  ];
-
-  const matches: MatchRow[] = seed.map((m) => ({
-    ...m,
-    date: at(m.daysAgo),
-    opponentShort: abbr(m.opponent),
+  const matches: MatchRow[] = stored.map((m) => ({
+    id: m.id,
+    date: m.date,
+    opponent: m.opponent,
+    opponentShort: m.opponentShort || abbr(m.opponent),
+    competition: m.competition || "Match",
+    home: m.home,
+    gf: m.goalsFor ?? null,
+    ga: m.goalsAgainst ?? null,
+    position: m.position || "—",
+    started: m.started,
+    minutes: m.minutes || 0,
+    goals: m.goals || 0,
+    assists: m.assists || 0,
+    rating: m.rating ?? null,
   }));
 
-  // Stat lines a person could plausibly have written down after a match.
-  const statSeed: Record<string, Partial<Record<string, number>>> = {
-    m6: { shots: 4, shots_on_target: 2, chances_created: 2, key_passes: 2, duels_won: 5, aerials_won: 3 },
-    m5: { shots: 5, shots_on_target: 3, chances_created: 1, key_passes: 1, duels_won: 6, aerials_won: 4 },
-    m4: { shots: 2, shots_on_target: 1, chances_created: 2, key_passes: 3, duels_won: 4, aerials_won: 1 },
-    m3: { shots: 3, shots_on_target: 2, chances_created: 0, key_passes: 1, duels_won: 3, aerials_won: 2 },
-    m2: { shots: 1, shots_on_target: 0, chances_created: 1, key_passes: 1, duels_won: 2, aerials_won: 1 },
-    m1: { shots: 3, shots_on_target: 1, chances_created: 1, key_passes: 2, duels_won: 5, aerials_won: 3 },
-  };
+  const minutesById = new Map(matches.map((m) => [m.id, m.minutes]));
+  const lines: StatLine[] = Object.entries(statById).map(([matchId, stats]) => {
+    const values: Record<string, number | null | undefined> = {};
+    for (const [field, column] of Object.entries(STAT_COLUMN)) {
+      const v = (stats as Record<string, number | undefined>)[field];
+      if (v !== undefined) values[column] = v;
+    }
+    return { matchId, minutes: minutesById.get(matchId) ?? 0, values };
+  });
 
-  const lines: StatLine[] = matches.map((m) => ({
-    matchId: m.id,
-    minutes: m.minutes,
-    values: statSeed[m.id] ?? {},
-  }));
-
-  const sessions = Array.from({ length: 24 }, (_, i) => ({
-    date: at(i * 2 + 1),
-    minutes: 60 + ((i * 17) % 45),
-  }));
+  const sessions = demoStore
+    .listTraining()
+    .map((t) => ({ date: t.scheduledAt, minutes: t.durationMin || 0 }));
 
   return {
     source: "demo",

@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Clapperboard, Plus, FolderOpen, BookOpen, CheckCircle2, Circle, Star } from "lucide-react";
+import { Clapperboard, Plus, FolderOpen, BookOpen, CheckCircle2, Circle, Star, ClipboardList, ArrowUpRight } from "lucide-react";
 import { listVideos, listClips } from "@/lib/data/film";
+import { listStudyMoments } from "@/lib/data/matches";
 import { listCollections } from "@/lib/data/collections";
 import { listStudySessions } from "@/lib/data/study";
 import { getDiscover } from "@/lib/data/discover";
@@ -18,8 +19,8 @@ export const metadata = { title: "Film Room — MIDO XI" };
 const SENTIMENTS = ["positive", "review", "correction"] as const;
 
 export default async function FilmRoomPage() {
-  const [videos, clips, collections, studySessions, discover] = await Promise.all([
-    listVideos(), listClips(), listCollections(), listStudySessions(), getDiscover(),
+  const [videos, clips, collections, studySessions, discover, studyMoments] = await Promise.all([
+    listVideos(), listClips(), listCollections(), listStudySessions(), getDiscover(), listStudyMoments(),
   ]);
   const videoMap = Object.fromEntries(videos.map((v) => [v.id, v.title]));
   const clipCount = (vid: string) => clips.filter((c) => c.videoId === vid).length;
@@ -46,6 +47,39 @@ export default async function FilmRoomPage() {
       />
 
       <DiscoverPanel result={discover} />
+
+      {/*
+        The review form promises "Feeds Film Room" beside its "what
+        moment should I study?" field. This is that feed — the player's
+        own answers, surfaced where they said they wanted them. Without
+        it, the answer went into a column nothing read, and effort with
+        no visible consequence is how a player learns to skip the form.
+      */}
+      {studyMoments.length > 0 && (
+        <section className="mb-8">
+          <SectionHeader label="From your match reviews" />
+          <div className="grid gap-3 md:grid-cols-3">
+            {studyMoments.map((sm) => (
+              <Link
+                key={sm.matchId}
+                href={`/app/matches/${sm.matchId}`}
+                className="group panel flex items-start gap-3 p-4 transition-colors hover:border-signal-line"
+              >
+                <ClipboardList className="mt-0.5 size-4 shrink-0 text-signal-bright" />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm leading-relaxed text-text-hi">
+                    &ldquo;{sm.moment}&rdquo;
+                  </span>
+                  <span className="label-tech mt-1.5 block">
+                    Your review · {sm.home ? "vs" : "@"} {sm.opponent}
+                  </span>
+                </span>
+                <ArrowUpRight className="size-3.5 shrink-0 text-text-faint transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Library overview */}
       <section className="mb-8 grid gap-4 lg:grid-cols-[1fr_auto]">

@@ -1,5 +1,6 @@
 import { Swords, Clock, Plus, CalendarDays } from "lucide-react";
 import { listMatches } from "@/lib/data/matches";
+import { daysBetween } from "@/lib/intelligence/signals";
 import { listEvents } from "@/lib/data/calendar";
 import { isDemoMode } from "@/lib/env";
 import type { Match } from "@/lib/types";
@@ -22,15 +23,20 @@ function outcome(m: Match): "W" | "D" | "L" {
   component.
 */
 function nextFixtureFrom(events: CalendarEvent[]): { event: CalendarEvent; daysOut: number } | null {
-  const now = Date.now();
+  const now = new Date();
+  /*
+    daysBetween — the same calendar-day counting the scorer and the
+    Locker use — rather than a ceil of elapsed hours. Ceil called
+    matchday morning "1 day out" (seven hours to kick-off rounds up),
+    and disagreed with every other surface by one for part of each day.
+    Matchday itself still counts as upcoming: a fixture stops being
+    "next" when the calendar day has passed, not at kick-off.
+  */
   const event = events
-    .filter((e) => e.kind === "match" && new Date(e.startsAt).getTime() > now)
+    .filter((e) => e.kind === "match" && daysBetween(e.startsAt, now) <= 0)
     .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())[0];
   if (!event) return null;
-  return {
-    event,
-    daysOut: Math.max(0, Math.ceil((new Date(event.startsAt).getTime() - now) / 864e5)),
-  };
+  return { event, daysOut: Math.max(0, -daysBetween(event.startsAt, now)) };
 }
 
 export default async function MatchesPage() {

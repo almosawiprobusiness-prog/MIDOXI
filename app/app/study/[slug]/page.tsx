@@ -14,6 +14,7 @@ import {
 import { getStudyPage } from "@/lib/data/studies";
 import { person } from "@/lib/knowledge/people";
 import { PROVENANCE_META } from "@/lib/knowledge/study-types";
+import { coversSameGround } from "@/lib/intelligence/next-best-action";
 import { SectionHeader } from "@/components/ui/primitives";
 import { KnowledgeCheck } from "@/components/study/knowledge-check";
 import {
@@ -52,6 +53,22 @@ export default async function StudyPage({ params }: PageProps<"/app/study/[slug]
   const { view, record, takeaways } = page;
   const done = new Set(record?.completedModules ?? []);
 
+  /*
+    Where this study touches what the player is actually working on.
+
+    Both halves of the join are already on this page — the study's
+    taught concepts and the reader's active goals — and the overlap is
+    the single most persuasive fact the page can state: not "this is a
+    good study" but "this study is about YOUR focus". Leaving it
+    uncomputed made the free tier look generic when it is not; the only
+    personalisation on show was the paid button. Same word-overlap the
+    scorer uses to connect studies to goals, so the two surfaces cannot
+    disagree about what "relevant" means.
+  */
+  const bearsOn = view.viewer.goals.filter((goal) =>
+    view.concepts.some((c) => coversSameGround(c.name, goal)),
+  );
+
   return (
     <div className="mx-auto max-w-[1100px] px-4 py-6 md:px-6 lg:py-8">
       <Link
@@ -78,6 +95,23 @@ export default async function StudyPage({ params }: PageProps<"/app/study/[slug]
         <p className="rise-in mt-3 max-w-2xl text-sm leading-relaxed text-text-dim" style={{ animationDelay: "120ms" }}>
           {view.subject.premise}
         </p>
+        {bearsOn.length > 0 && (
+          <div className="rise-in mt-4 flex flex-wrap items-center gap-2" style={{ animationDelay: "160ms" }}>
+            <span className="flex items-center gap-1.5 text-xs text-text-dim">
+              <Target className="size-3.5 text-signal-bright" />
+              Bears directly on your current focus:
+            </span>
+            {bearsOn.map((goal) => (
+              <Link
+                key={goal}
+                href="/app/development"
+                className="chip chip-signal transition-colors hover:border-signal-line"
+              >
+                {goal}
+              </Link>
+            ))}
+          </div>
+        )}
       </header>
 
       {/* ── Verified record + concept spine ─────────────── */}

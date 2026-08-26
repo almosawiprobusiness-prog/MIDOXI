@@ -42,17 +42,23 @@ export const player: PlayerProfile = {
   level: "Senior · Semi-Professional",
 };
 
-/** The next fixture — season opener, three days out (MD-3). */
+/*
+  The next fixture — WHAT it is, never WHEN.
+
+  This object once carried a date and a hardcoded `daysRemaining: 3`,
+  frozen on the day it was written, while the demo calendar computed the
+  real distance — so the Locker said "3 days" and the Match Center said
+  "4". Timing now comes exclusively from the calendar seed in
+  lib/data/store.ts (the match event on Saturday of the current week),
+  and this seed keeps only the facts that do not age.
+*/
 export const nextMatch = {
   opponent: "Riverside Athletic",
   opponentShort: "RIV",
   competition: "League · Round 1",
-  date: "2026-08-15T15:00:00",
   home: true,
   venue: "Northgate Park",
   expectedPosition: "CF" as const,
-  daysRemaining: 3,
-  md: "MD-3" as const,
 };
 
 export const recentMatch: Match = {

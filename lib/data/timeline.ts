@@ -2,6 +2,7 @@ import "server-only";
 import { createClient, createAdminClient, getAuthUser } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
 import { demoStore } from "./store";
+import { listGoals } from "./development";
 import { getRecovery } from "./recovery";
 import {
   groupByDay,
@@ -94,6 +95,30 @@ export async function getTimeline(q: TimelineQuery = {}): Promise<TimelineView> 
   }
 
   const entries: TimelineEntry[] = (data ?? []).map(rowTo);
+
+  /*
+    Name the thread. Clip, study and evidence rows already carry a
+    goalId in the view's meta — but an id renders as nothing, so the
+    development connection the timeline exists to show was invisible: a
+    clip called "Near-post arrival" sat one row from the goal it
+    evidenced with no line between them. Titles are stamped at read
+    time, from one bounded read, because changing player_timeline
+    itself is a migration and a decision — this is neither.
+
+    Only for the player's own view: on the coach path (`forUser`) the
+    signed-in user's goals are the wrong player's.
+  */
+  if (!owner) {
+    const goals = await listGoals().catch(() => []);
+    const titleById = new Map(goals.map((g) => [g.id, g.title]));
+    for (const e of entries) {
+      const gid = e.meta.goalId;
+      if (typeof gid === "string" && titleById.has(gid)) {
+        e.meta.goalTitle = titleById.get(gid);
+      }
+    }
+  }
+
   return { source: "yours", entries, days: groupByDay(entries), from, to };
 }
 
@@ -225,8 +250,20 @@ async function demoTimeline(
         refId: e.id,
         title: e.note || "Evidence added",
         summary: null,
-        meta: { goalId: g.id, evidenceKind: e.kind, source: "self" },
+        meta: { goalId: g.id, goalTitle: g.title, evidenceKind: e.kind, source: "self" },
       });
+    }
+  }
+
+  // Same read-time stamping the real path does, for clip/study rows
+  // whose goalId was recorded above without a title.
+  {
+    const titleById = new Map(demoStore.listGoals().map((g) => [g.id, g.title]));
+    for (const e of out) {
+      const gid = e.meta.goalId;
+      if (typeof gid === "string" && !e.meta.goalTitle && titleById.has(gid)) {
+        e.meta.goalTitle = titleById.get(gid);
+      }
     }
   }
 

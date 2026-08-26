@@ -42,6 +42,63 @@ export async function listMatches(): Promise<Match[]> {
   return (data ?? []).map(rowToMatch);
 }
 
+/** A reviewed match's "study this" line, with enough match to name it. */
+export interface StudyMoment {
+  matchId: string;
+  opponent: string;
+  home: boolean;
+  date: string;
+  moment: string;
+}
+
+/**
+ * The moments a player's own reviews said to study, newest first.
+ *
+ * The review form has always promised "Feeds Film Room" next to this
+ * field, and until this function existed nothing kept that promise —
+ * the answer went into a column and an event payload that no surface
+ * read. A form that asks for effort and visibly does nothing with it
+ * teaches players to stop filling it in, and the review is the
+ * product's richest signal source.
+ */
+export async function listStudyMoments(limit = 3): Promise<StudyMoment[]> {
+  if (isDemoMode) {
+    return demoStore
+      .listMatches()
+      .map((m) => ({ match: m, review: demoStore.getMatch(m.id)?.review }))
+      .filter((x) => x.review?.momentToStudy?.trim())
+      .slice(0, limit)
+      .map((x) => ({
+        matchId: x.match.id,
+        opponent: x.match.opponent,
+        home: x.match.home,
+        date: x.match.date,
+        moment: x.review!.momentToStudy!.trim(),
+      }));
+  }
+
+  const supabase = await createClient();
+  if (!supabase) return [];
+  const { data } = await supabase
+    .from("match_reviews")
+    .select("match_id, moment_to_study, matches!inner(opponent, home, played_at)")
+    .not("moment_to_study", "is", null)
+    .neq("moment_to_study", "")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  return (data ?? []).map((r) => {
+    const m = r.matches as unknown as { opponent: string; home: boolean; played_at: string };
+    return {
+      matchId: String(r.match_id),
+      opponent: String(m?.opponent ?? "Match"),
+      home: Boolean(m?.home),
+      date: String(m?.played_at ?? ""),
+      moment: String(r.moment_to_study ?? "").trim(),
+    };
+  });
+}
+
 export async function getMatchDetail(id: string): Promise<MatchDetail | null> {
   if (isDemoMode) return demoStore.getMatch(id);
 

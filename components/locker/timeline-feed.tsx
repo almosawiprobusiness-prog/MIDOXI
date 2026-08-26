@@ -57,6 +57,25 @@ function ObservationLine({ meta }: { meta: Record<string, unknown> }) {
   );
 }
 
+/*
+  The development thread, named.
+
+  Clip, study and evidence rows carry the goal they serve. Without this
+  line the timeline was a well-ordered list of disconnected acts — a
+  clip one row away from the goal it evidences, with nothing joining
+  them. One phrase turns the list into the story the page promises: you
+  can now read DOWN a goal's thread across weeks.
+*/
+function GoalThread({ meta }: { meta: Record<string, unknown> }) {
+  if (typeof meta.goalTitle !== "string") return null;
+  return (
+    <span className="text-text-faint">
+      <span aria-hidden>→ </span>
+      <span className="text-signal">{meta.goalTitle}</span>
+    </span>
+  );
+}
+
 function Extra({ entry }: { entry: TimelineEntry }) {
   switch (entry.kind) {
     case "match":
@@ -66,9 +85,17 @@ function Extra({ entry }: { entry: TimelineEntry }) {
     case "analysis":
       return <ObservationLine meta={entry.meta} />;
     case "evidence":
-      return entry.meta.concept ? (
-        <span className="text-signal">{String(entry.meta.concept).replace(/-/g, " ")}</span>
-      ) : null;
+      return (
+        <span className="flex flex-wrap gap-x-3">
+          {entry.meta.concept ? (
+            <span className="text-signal">{String(entry.meta.concept).replace(/-/g, " ")}</span>
+          ) : null}
+          <GoalThread meta={entry.meta} />
+        </span>
+      );
+    case "clip":
+    case "study":
+      return <GoalThread meta={entry.meta} />;
     default:
       return null;
   }

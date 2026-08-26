@@ -14,6 +14,7 @@ import type {
   DevelopmentCategory,
 } from "@/lib/types";
 import * as seed from "@/lib/seed";
+import { daysBetween } from "@/lib/intelligence/signals";
 
 export interface LockerData {
   isSeed: boolean;
@@ -52,28 +53,71 @@ function buildSeedLocker(): LockerData {
     .filter((gl) => gl.status !== "achieved")
     .slice(0, 3)
     .map((gl) => ({ id: gl.id, category: gl.category, title: gl.title, detail: gl.why, goalId: gl.id }));
+
+  /*
+    ONE CLOCK.
+
+    The fixture's timing used to be stated here as literals — a
+    hardcoded "3 days out", frozen on the day the seed was written —
+    while the Match Center computed the same fixture's distance from the
+    demo calendar. Two screens, two counts, and a player who noticed
+    stopped believing both. The seed now keeps only what a fixture IS
+    (opponent, venue, competition); WHEN is always computed, from the
+    same calendar rows the Match Center reads.
+
+    On a Sunday the seeded Saturday match is in the past, so there is no
+    upcoming fixture — and the locker says so honestly, exactly as the
+    Match Center does, rather than inventing one.
+  */
+  const now = new Date();
+  const fixtureEvent = demoStore
+    .listEvents()
+    .filter((e) => e.kind === "match" && daysBetween(e.startsAt, now) <= 0)
+    .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())[0];
+  /*
+    Counted with the scorer's own daysBetween, not with a ceil of
+    elapsed hours. Two counting rules is how "Next match in 4 days" sat
+    directly above a recommendation saying "you play in 3 days" — and a
+    ceil of hours also calls matchday morning "1 day out", which no
+    footballer would.
+  */
+  const daysRemaining = fixtureEvent
+    ? Math.max(0, -daysBetween(fixtureEvent.startsAt, now))
+    : null;
+  const kickoff = fixtureEvent
+    ? new Date(fixtureEvent.startsAt).toLocaleDateString("en-GB", { weekday: "short" }) +
+      " · " +
+      new Date(fixtureEvent.startsAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+    : undefined;
+
+  // The most recent match is the store's, not a private copy of it.
+  const recent = demoStore.listMatches()[0] ?? null;
+
   return {
     isSeed: true,
     displayName: seed.player.knownAs,
     player: seed.player,
-    nextMatch: {
-      opponent: seed.nextMatch.opponent,
-      competition: seed.nextMatch.competition,
-      home: seed.nextMatch.home,
-      venue: seed.nextMatch.venue,
-      expectedPosition: seed.nextMatch.expectedPosition,
-      daysRemaining: seed.nextMatch.daysRemaining,
-      md: seed.nextMatch.md,
-      kickoff: "Sat · 15:00",
-    },
-    recentMatch: { ...seed.recentMatch, stats: seed.recentMatchStats },
+    nextMatch:
+      daysRemaining === null
+        ? null
+        : {
+            opponent: seed.nextMatch.opponent,
+            competition: seed.nextMatch.competition,
+            home: seed.nextMatch.home,
+            venue: seed.nextMatch.venue,
+            expectedPosition: seed.nextMatch.expectedPosition,
+            daysRemaining,
+            md: daysRemaining === 0 ? "MD" : `MD-${daysRemaining}`,
+            kickoff,
+          },
+    recentMatch: recent ? { ...recent, stats: seed.recentMatchStats } : null,
     focus,
     goals,
     readiness: { latest, rpe },
     week: seed.weekEvents,
     study: seed.studyAssignment,
     checkedInToday: seed.todayCheckedIn,
-    todayIndex: 2, // DEMO_TODAY is a Wednesday
+    todayIndex: weekdayIndex(new Date()),
   };
 }
 

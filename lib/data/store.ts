@@ -63,17 +63,53 @@ function atDay(offset: number, hh: number, mm = 0) {
   return localISO(d);
 }
 
+/** N whole days ago at a given local time. Seeds use this so the demo never ages. */
+function daysAgoAt(days: number, hh: number, mm = 0) {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  d.setHours(hh, mm, 0, 0);
+  return localISO(d);
+}
+
+/*
+  THE ONE SEEDED SEASON.
+
+  This store is the demo's single world — Timeline, Match Center, Film,
+  Training and Performance all describe THESE rows. It was not always so:
+  the performance page once carried a private six-match season of its
+  own, so a player flipping between two screens saw two different match
+  histories with two different opponents, and the locker froze its
+  fixture at a hardcoded "3 days out" while this file computed 4. Every
+  seeded fact lives here now, and every date is relative, so the demo
+  reads the same on any day it is opened.
+
+  The recent three (Halton, Carlton, Ashwell) are load-bearing: clips,
+  reviews, the timeline narrative and the locker's recent-match panel
+  all reference them by id. The older three exist to give Performance a
+  season worth charting. Only Halton has the full written-down stat
+  line; the others carry the handful of numbers a player plausibly
+  records — a demo that shows Opta-grade coverage of every match is
+  promising something the product cannot do.
+*/
 function seedMatches(): Match[] {
   return [
-    { id: "m_ip", opponent: "Halton Town", opponentShort: "HAL", competition: "Pre-Season Cup · Final", date: "2026-08-09T15:00:00", home: false, goalsFor: 2, goalsAgainst: 1, formation: "4-3-3", position: "CF", started: true, minutes: 78, rating: 7.6, goals: 1, assists: 1, reviewed: true },
-    { id: "m_02", opponent: "Carlton United", opponentShort: "CAR", competition: "Pre-Season · Friendly", date: "2026-08-02T15:00:00", home: true, goalsFor: 3, goalsAgainst: 0, formation: "4-3-3", position: "CF", started: true, minutes: 65, rating: 8.1, goals: 2, assists: 0, reviewed: false },
-    { id: "m_03", opponent: "Ashwell Rangers", opponentShort: "ASH", competition: "Pre-Season · Friendly", date: "2026-07-26T13:00:00", home: false, goalsFor: 1, goalsAgainst: 1, formation: "4-2-3-1", position: "RW", started: false, minutes: 32, rating: 6.4, goals: 0, assists: 1, reviewed: false },
+    { id: "m_ip", opponent: "Halton Town", opponentShort: "HAL", competition: "Pre-Season Cup · Final", date: daysAgoAt(12, 15), home: false, goalsFor: 2, goalsAgainst: 1, formation: "4-3-3", position: "CF", started: true, minutes: 78, rating: 7.6, goals: 1, assists: 1, reviewed: true },
+    { id: "m_02", opponent: "Carlton United", opponentShort: "CAR", competition: "Pre-Season · Friendly", date: daysAgoAt(19, 15), home: true, goalsFor: 3, goalsAgainst: 0, formation: "4-3-3", position: "CF", started: true, minutes: 65, rating: 8.1, goals: 2, assists: 0, reviewed: false },
+    { id: "m_03", opponent: "Ashwell Rangers", opponentShort: "ASH", competition: "Pre-Season · Friendly", date: daysAgoAt(26, 13), home: false, goalsFor: 1, goalsAgainst: 1, formation: "4-2-3-1", position: "RW", started: false, minutes: 32, rating: 6.4, goals: 0, assists: 1, reviewed: false },
+    { id: "m_04", opponent: "Marden Rovers", opponentShort: "MAR", competition: "Pre-Season · Friendly", date: daysAgoAt(33, 15), home: true, goalsFor: 1, goalsAgainst: 2, formation: "4-3-3", position: "CF", started: true, minutes: 71, rating: 6.8, goals: 1, assists: 0, reviewed: true },
+    { id: "m_05", opponent: "Colby Athletic", opponentShort: "COL", competition: "Friendly", date: daysAgoAt(40, 14), home: false, goalsFor: 2, goalsAgainst: 2, formation: "4-2-3-1", position: "CF", started: false, minutes: 45, rating: 6.7, goals: 0, assists: 1, reviewed: true },
+    { id: "m_06", opponent: "Deanwood", opponentShort: "DEA", competition: "Friendly", date: daysAgoAt(47, 15), home: true, goalsFor: 4, goalsAgainst: 1, formation: "4-3-3", position: "CF", started: true, minutes: 82, rating: 7.0, goals: 0, assists: 0, reviewed: true },
   ];
 }
 
 function seedStats(): Record<string, MatchStatsInput> {
   return {
     m_ip: { shots: 4, shotsOnTarget: 2, touches: 41, passes: 22, passPct: 82, keyPasses: 2, chancesCreated: 3, dribbles: 3, duelsWon: 7, duelsTotal: 11, aerialsWon: 3, recoveries: 4, interceptions: 1, tackles: 2, foulsWon: 3, foulsCommitted: 2, offsides: 1, yellow: 0, red: 0 },
+    m_02: { shots: 5, shotsOnTarget: 3, chancesCreated: 1, keyPasses: 1, duelsWon: 6, aerialsWon: 4 },
+    m_03: { shots: 2, shotsOnTarget: 1, chancesCreated: 2, keyPasses: 3, duelsWon: 4, aerialsWon: 1 },
+    m_04: { shots: 3, shotsOnTarget: 2, chancesCreated: 0, keyPasses: 1, duelsWon: 3, aerialsWon: 2 },
+    m_05: { shots: 1, shotsOnTarget: 0, chancesCreated: 1, keyPasses: 1, duelsWon: 2, aerialsWon: 1 },
+    m_06: { shots: 3, shotsOnTarget: 1, chancesCreated: 1, keyPasses: 2, duelsWon: 5, aerialsWon: 3 },
   };
 }
 
@@ -109,11 +145,51 @@ function seedEvidence(): EvidenceEntry[] {
 }
 
 function seedTraining(): TrainingEntry[] {
-  return [
+  const thisWeek: TrainingEntry[] = [
     { id: "t1", kind: "team", title: "Team Training", scheduledAt: atDay(1, 10, 30), durationMin: 90, objective: "Attacking patterns in the final third", rpe: 7, physicalFeel: 4, technicalFeel: 4, improved: "Timing of the third-man run.", feltOff: "" },
     { id: "t2", kind: "gym", title: "Lower Power", scheduledAt: atDay(1, 13, 0), durationMin: 45, objective: "Trap-bar + jumps", rpe: 8, physicalFeel: 3, technicalFeel: 3, improved: "", feltOff: "Left hip a little tight." },
     { id: "t3", kind: "individual", title: "Finishing · Individual", scheduledAt: atDay(2, 12, 30), durationMin: 40, objective: "Near-post finishing — 30 reps", rpe: 6, physicalFeel: 4, technicalFeel: 5, improved: "First-time finishes across the front zone.", feltOff: "" },
   ];
+
+  /*
+    The season behind this week. A semi-professional rhythm — two team
+    nights and a gym slot most weeks, which is also what the seeded
+    memory says this player can actually do. Sparse detail on purpose:
+    a player does not annotate every Tuesday from six weeks ago, and a
+    history where every old session has notes reads as manufactured.
+    These give the workload chart a real eight weeks and the timeline a
+    season, without touching the training page's this-week view.
+  */
+  const past: TrainingEntry[] = [];
+  const rhythm: { day: number; hh: number; kind: TrainingEntry["kind"]; title: string; min: number; rpe: number }[] = [
+    { day: 1, hh: 19, kind: "team", title: "Team Training", min: 90, rpe: 7 },
+    { day: 3, hh: 19, kind: "team", title: "Team Training", min: 90, rpe: 7 },
+    { day: 4, hh: 17, kind: "gym", title: "Gym — Lower", min: 45, rpe: 8 },
+  ];
+  for (let week = 1; week <= 7; week++) {
+    for (const r of rhythm) {
+      // One session a fortnight goes unlogged, because real logs have holes.
+      if (week % 2 === 0 && r.kind === "gym") continue;
+      const d = weekMonday();
+      d.setDate(d.getDate() - week * 7 + r.day);
+      d.setHours(r.hh, 0, 0, 0);
+      past.push({
+        id: `th_${week}_${r.day}`,
+        kind: r.kind,
+        title: r.title,
+        scheduledAt: localISO(d),
+        durationMin: r.min,
+        rpe: r.rpe,
+        objective: "",
+        physicalFeel: null,
+        technicalFeel: null,
+        improved: "",
+        feltOff: "",
+      });
+    }
+  }
+
+  return [...thisWeek, ...past];
 }
 
 function seedEvents(): CalendarEvent[] {
@@ -331,6 +407,10 @@ export const demoStore = {
   },
 
   // ---- training ----
+  /** Every stat line in the store, keyed by match id. For derived views. */
+  listStats(): Record<string, MatchStatsInput> {
+    return { ...db.stats };
+  },
   listTraining(): TrainingEntry[] {
     return [...db.training].sort((a, b) => new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime());
   },
