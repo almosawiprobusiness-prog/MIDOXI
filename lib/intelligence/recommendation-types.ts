@@ -96,6 +96,103 @@ export function parseSource(token: string): RecommendationSource {
   return /\s/.test(rest) ? { type, label: rest } : { type, id: rest };
 }
 
+/*
+  How long an answered recommendation stays answered.
+
+  Both buttons are claims the DATA does not yet reflect. "Done" is a
+  claim about the past — the session may not be logged for hours.
+  "Not now" is a claim about today. In neither case does anything in the
+  underlying record change, so without this window the scorer re-ranks
+  identical inputs and puts the same card straight back. Dismissing
+  something and watching it return, promoted, teaches people that the
+  controls are decorative.
+
+  ONE DAY, and no longer. This is not the mechanism that makes a
+  dismissal stick — DISMISS_COOLDOWN_DAYS above is, by halving the score
+  for a week, so a waved-away action can still come back when the
+  situation genuinely changes. This window is narrower and blunter: not
+  today, because you already answered today.
+*/
+export const SETTLED_QUIET_DAYS = 1;
+
+/*
+  What "why this?" is allowed to say.
+
+  The scorer's tokens are keys — `goal:g1`, `study:recency` — because it
+  is pure and has no way to look a title up. Printed as-is they read as
+  "GOAL g1", which is worse than saying nothing: it looks like the system
+  is quoting evidence while actually showing the player its plumbing.
+
+  So each token is translated into the INPUT it names. Not a restatement
+  of the advice — the reason line above already carries that — but the
+  thing MIDO consulted, in words a footballer would use. Where a token
+  already carries a human label (an observation is a real football
+  phrase), the label is the answer and no translation is needed.
+*/
+const SOURCE_PHRASE: Record<string, string> = {
+  "goal": "Your current development focus",
+  "goal:none": "You have no development focus set",
+  "match:last": "Your last match",
+  "match:unreviewed": "It has no review yet",
+  "match:recent": "You played in the last two days",
+  "match:none": "You have no matches logged",
+  "readiness": "Your readiness check-in",
+  "readiness:low": "Your readiness is below your normal",
+  "fixture:next": "Your next fixture",
+  "fixture:tomorrow": "You play tomorrow",
+  "fixture:none": "No fixture close",
+  "study:recency": "When you last studied",
+  "study:completed": "A study you have already completed",
+  "training:recency": "When you last trained",
+  "checkin:recency": "When you last checked in",
+};
+
+/**
+ * A source, in words rather than keys.
+ *
+ * Returns null when a source has nothing meaningful to say to a player —
+ * the panel drops those rather than padding the list, because a "why
+ * this?" that lists six items to prove diligence is doing the same job
+ * as no explanation at all.
+ */
+export function describeSource(source: RecommendationSource): string | null {
+  const tail = source.label ?? source.id ?? null;
+
+  /*
+    `study:completed:Rodri — scanning` puts its qualifier inside the
+    label, because parseSource splits on the FIRST colon and everything
+    after it contains a space. Peel that qualifier back off, so the table
+    can match on it and so what is shown is the football words rather
+    than the key that happened to precede them.
+  */
+  let qualifier: string | null = null;
+  let human: string | null = tail;
+  if (tail) {
+    const at = tail.indexOf(":");
+    if (at > 0 && !/\s/.test(tail.slice(0, at))) {
+      qualifier = tail.slice(0, at);
+      human = tail.slice(at + 1) || null;
+    }
+  }
+
+  const keys = [
+    qualifier ? `${source.type}:${qualifier}` : null,
+    tail ? `${source.type}:${tail}` : null,
+    source.type,
+  ].filter((k): k is string => Boolean(k));
+
+  for (const key of keys) {
+    const phrase = SOURCE_PHRASE[key];
+    if (!phrase) continue;
+    // Name the specific thing when the token carried one.
+    return qualifier && human ? `${phrase}: ${human}` : phrase;
+  }
+
+  // A label with no entry is already football words — quote it. A bare
+  // id with no entry is plumbing, and is dropped.
+  return human && /\s/.test(human) ? human : null;
+}
+
 /** What gets written when a ranked action is actually shown. */
 export interface SurfacedInput {
   kind: ActionKind;

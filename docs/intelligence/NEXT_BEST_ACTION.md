@@ -1,7 +1,7 @@
 # Next Best Action
 
-**Status:** engine built and tested (26 tests). Not yet wired into the
-Locker.
+**Status:** engine built and tested (42 tests). Wired into the Player
+Locker — see `RECOMMENDATION_ENGINE.md` for everything around it.
 
 `lib/intelligence/next-best-action.ts` — pure, deterministic,
 dependency-free. Signals in, ranked actions out. No database, no model

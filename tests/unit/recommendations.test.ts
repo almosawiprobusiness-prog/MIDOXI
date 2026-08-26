@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   parseSource,
+  describeSource,
   toSurfaced,
   isStale,
   RECOMMENDATION_TTL_DAYS,
@@ -109,5 +110,49 @@ describe("the windows", () => {
       behaviour that makes a product feel like it is not listening.
     */
     expect(DISMISS_COOLDOWN_DAYS).toBeGreaterThan(RECOMMENDATION_TTL_DAYS);
+  });
+});
+
+describe("describeSource", () => {
+  it("names the input rather than printing the key", () => {
+    expect(describeSource(parseSource("goal:g1"))).toBe("Your current development focus");
+    expect(describeSource(parseSource("study:recency"))).toBe("When you last studied");
+    expect(describeSource(parseSource("readiness"))).toBe("Your readiness check-in");
+    expect(describeSource(parseSource("fixture:tomorrow"))).toBe("You play tomorrow");
+  });
+
+  it("quotes an observation, which is already football words", () => {
+    expect(describeSource(parseSource("observation:Late scan before receiving"))).toBe(
+      "Late scan before receiving",
+    );
+  });
+
+  it("keeps the subject when a qualified token carries one", () => {
+    expect(describeSource(parseSource("study:completed:Rodri — scanning"))).toBe(
+      "A study you have already completed: Rodri — scanning",
+    );
+  });
+
+  it("drops a token it cannot say in English", () => {
+    // Better to show one honest source than pad the list with plumbing.
+    expect(describeSource(parseSource("internal:xyz123"))).toBeNull();
+  });
+
+  it("never returns a string containing a raw token separator", () => {
+    /*
+      The bug this whole function exists for: "GOAL g1" rendered under
+      "Why this?" as though it were evidence.
+    */
+    const tokens = [
+      "goal:g1", "goal:none", "match:last", "match:unreviewed", "match:recent",
+      "match:none", "readiness", "readiness:low", "fixture:next", "fixture:tomorrow",
+      "fixture:none", "study:recency", "training:recency", "checkin:recency",
+    ];
+    for (const t of tokens) {
+      const out = describeSource(parseSource(t));
+      expect(out, t).toBeTruthy();
+      expect(out, t).not.toMatch(/^[a-z]+:/);
+      expect(out, t).not.toBe(t);
+    }
   });
 });

@@ -24,6 +24,9 @@ import { Briefing } from "@/components/locker/briefing";
 import { ProfilePromptCard } from "@/components/locker/profile-prompt";
 import { getProfileSettings } from "@/lib/data/profile";
 import { nextPrompt } from "@/lib/data/profiling";
+import { NextBestAction } from "@/components/locker/next-best-action";
+import { getNextActions } from "@/lib/intelligence/next-actions";
+import { briefingLinesToSuppress } from "@/lib/intelligence/overlap";
 
 const DAY_LETTERS = ["M", "T", "W", "T", "F", "S", "S"];
 
@@ -39,7 +42,11 @@ const kindColor: Record<string, string> = {
 };
 
 export async function PlayerLocker() {
-  const [data, profile] = await Promise.all([getLockerData(), getProfileSettings()]);
+  const [data, profile, actions] = await Promise.all([
+    getLockerData(),
+    getProfileSettings(),
+    getNextActions(),
+  ]);
   /*
     Progressive profiling: one question, and only when the missing field is
     genuinely degrading something. Most established accounts see nothing here.
@@ -82,12 +89,20 @@ export async function PlayerLocker() {
       </header>
 
       {/*
-        The briefing sits above everything, because the first question on
-        opening the app is "what needs me today" — and answering it from rules
-        over facts already held costs nothing and takes no time.
+        Two rule engines, one slot, deliberately not merged.
+
+        The recommendation panel goes first: it reads the whole record —
+        matches, study, training, observations, what was dismissed — and
+        commits to one thing. The briefing below is the rest of today's
+        facts, minus anything the panel has already covered, so nobody is
+        told to review the same match twice in two different voices.
       */}
       <section className="rise-in mb-6 space-y-3" style={{ animationDelay: "140ms" }}>
-        <Briefing data={data} />
+        <NextBestAction items={actions.items} informed={actions.informed} />
+        <Briefing
+          data={data}
+          suppress={briefingLinesToSuppress(actions.items.map((a) => a.kind))}
+        />
         <ProfilePromptCard prompt={prompt} />
       </section>
 

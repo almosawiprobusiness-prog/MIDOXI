@@ -6,6 +6,8 @@ import { isDemoMode } from "@/lib/env";
 import { demoStore } from "@/lib/data/store";
 import { videoUrlKind, LONG_FOOTAGE_ADVICE } from "@/lib/data/film-types";
 import type { ClipInput } from "@/lib/data/film-types";
+import { emitMidoEvent } from "@/lib/events/emit";
+import { idempotencyKey } from "@/lib/events/types";
 
 export type Result = { ok: true; id?: string; demo?: boolean } | { ok: false; error: string };
 
@@ -20,6 +22,29 @@ function revalidateFilm(videoId?: string) {
   revalidatePath("/app/film-room");
   revalidatePath("/app");
   if (videoId) revalidatePath(`/app/film-room/${videoId}`);
+}
+
+/*
+  Footage arriving is the start of the film half of the loop.
+
+  Emitted from both entry points — a pasted link and an uploaded file —
+  because from the log's point of view they are the same fact: this
+  player now has footage they did not have before. Recording only one of
+  them would make "when did you last bring film in" answerable for half
+  the product.
+
+  `occurredAt` is left to default. Unlike a match, footage has no date of
+  its own that differs from when it was added; the moment it arrived IS
+  the fact.
+*/
+async function recordVideoAdded(id: string, title: string, source: string) {
+  await emitMidoEvent({
+    type: "VIDEO_UPLOADED",
+    subjectType: "video",
+    subjectId: id,
+    payload: { title, source },
+    idempotencyKey: idempotencyKey(["video", "added", id]),
+  });
 }
 
 // ---------- videos ----------
@@ -45,6 +70,7 @@ export async function addVideo(input: { title: string; url: string; matchId?: st
 
   if (isDemoMode) {
     const id = demoStore.createVideo({ title: input.title.trim(), source, url, externalId: yt ?? undefined, matchId: input.matchId ?? null });
+    await recordVideoAdded(id, input.title.trim(), source);
     revalidateFilm();
     return { ok: true, id, demo: true };
   }
@@ -58,6 +84,7 @@ export async function addVideo(input: { title: string; url: string; matchId?: st
     .select("id")
     .single();
   if (error) return { ok: false, error: error.message };
+  await recordVideoAdded(data.id, input.title.trim(), source);
   revalidateFilm();
   return { ok: true, id: data.id };
 }
@@ -88,6 +115,7 @@ export async function createUploadedVideo(input: {
     .select("id")
     .single();
   if (error) return { ok: false, error: error.message };
+  await recordVideoAdded(data.id, input.title.trim(), "upload");
   revalidateFilm();
   return { ok: true, id: data.id };
 }

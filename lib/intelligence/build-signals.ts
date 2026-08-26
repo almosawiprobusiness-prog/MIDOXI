@@ -1,5 +1,6 @@
 import "server-only";
 import { listMatches } from "@/lib/data/matches";
+import { listEvents } from "@/lib/data/calendar";
 import { listGoals } from "@/lib/data/development";
 import { listTraining } from "@/lib/data/training";
 import { getRecovery } from "@/lib/data/recovery";
@@ -29,7 +30,7 @@ import type { PlayerSignals } from "./next-best-action";
 export async function buildPlayerSignals(now: Date = new Date()): Promise<PlayerSignals> {
   const since = new Date(now.getTime() - EVENT_WINDOW_DAYS * 86_400_000).toISOString();
 
-  const [matches, goals, training, recovery, events, dismissedKinds] = await Promise.all([
+  const [matches, goals, training, recovery, events, dismissedKinds, calendar] = await Promise.all([
     listMatches().catch(() => []),
     listGoals().catch(() => []),
     listTraining().catch(() => []),
@@ -41,11 +42,16 @@ export async function buildPlayerSignals(now: Date = new Date()): Promise<Player
     }).catch(() => []),
     // Closes the dismissal loop: the scorer halves what was waved away.
     recentlyDismissedKinds(now).catch(() => []),
+    // Fixtures live in the calendar, not in match rows — see signals.ts.
+    listEvents().catch(() => []),
   ]);
 
   return toPlayerSignals(
     {
       matches: matches.map((m) => ({ id: m.id, date: m.date, reviewed: m.reviewed })),
+      fixtures: calendar
+        .filter((e) => e.kind === "match")
+        .map((e) => ({ date: e.startsAt })),
       goals: goals.map((g) => ({ id: g.id, title: g.title, status: g.status })),
       training: training.map((t) => ({ scheduledAt: t.scheduledAt })),
       checkins: (recovery?.days ?? []).map((d) => ({ date: d.date, readiness: d.readiness })),

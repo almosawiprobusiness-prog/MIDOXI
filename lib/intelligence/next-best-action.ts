@@ -195,12 +195,49 @@ interface Candidate {
 }
 
 /**
+ * Why a candidate did or did not make it.
+ *
+ * The scorer throws away everything below the floor, which is right for
+ * a dashboard and wrong for debugging: the question that costs the most
+ * time is never "why did it say this", it is "why did it NOT say the
+ * thing I expected". A discarded candidate carries that answer, and
+ * discarding it silently is what makes a ranking feel arbitrary.
+ */
+export type DropReason = "below-floor" | "below-floor-after-dismissal";
+
+export interface ScoredCandidate {
+  action: RankedAction;
+  /** Before any dismissal penalty. */
+  rawScore: number;
+  /** A recent dismissal halved this one. */
+  halved: boolean;
+  surfaced: boolean;
+  dropped: DropReason | null;
+}
+
+/** The bar a candidate has to clear, published so a tool can draw it. */
+export const SURFACE_FLOOR = FLOOR;
+
+/**
  * Rank what to do next.
  *
  * Returns every eligible action, highest first. The caller decides how
  * many to show — the Locker shows one prominently and two quietly.
  */
 export function rankActions(s: PlayerSignals): RankedAction[] {
+  return explainActions(s)
+    .filter((c) => c.surfaced)
+    .map((c) => c.action);
+}
+
+/**
+ * Rank, and keep the rejects.
+ *
+ * Identical arithmetic to `rankActions` — that function is now defined
+ * in terms of this one, so the two cannot drift and a tool built on this
+ * is showing what the Locker actually did, not a reconstruction of it.
+ */
+export function explainActions(s: PlayerSignals): ScoredCandidate[] {
   const out: Candidate[] = [];
   const dismissed = new Set(s.recentlyDismissed ?? []);
 
@@ -461,20 +498,38 @@ export function rankActions(s: PlayerSignals): RankedAction[] {
   }
 
   return out
-    .filter((c) => c.score >= FLOOR)
-    // Something waved away recently drops but is not deleted: the
-    // situation may genuinely have changed.
-    .map((c) => (dismissed.has(c.kind) ? { ...c, score: Math.round(c.score * 0.5) } : c))
-    .filter((c) => c.score >= FLOOR)
-    .sort((a, b) => b.score - a.score || a.kind.localeCompare(b.kind))
-    .map((c) => ({
-      kind: c.kind,
-      title: c.title,
-      score: Math.round(c.score),
-      reason: sentence(c.reasons),
-      sources: c.sources,
-      minutes: c.minutes,
-    }));
+    .map((c) => {
+      const belowFloor = c.score < FLOOR;
+      // Something waved away recently drops but is not deleted: the
+      // situation may genuinely have changed.
+      const halved = !belowFloor && dismissed.has(c.kind);
+      const score = halved ? Math.round(c.score * 0.5) : c.score;
+
+      const dropped: DropReason | null = belowFloor
+        ? "below-floor"
+        : score < FLOOR
+          ? "below-floor-after-dismissal"
+          : null;
+
+      return {
+        action: {
+          kind: c.kind,
+          title: c.title,
+          score: Math.round(score),
+          reason: sentence(c.reasons),
+          sources: c.sources,
+          minutes: c.minutes,
+        },
+        rawScore: Math.round(c.score),
+        halved,
+        surfaced: dropped === null,
+        dropped,
+      };
+    })
+    .sort(
+      (a, b) =>
+        b.action.score - a.action.score || a.action.kind.localeCompare(b.action.kind),
+    );
 }
 
 /** Joins the rules that fired into one readable line. */

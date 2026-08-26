@@ -221,3 +221,41 @@ describe("a player with no history", () => {
     expect(s.activeGoals).toEqual([]);
   });
 });
+
+describe("fixtures from the calendar", () => {
+  /*
+    Match ROWS are results — the UI creates them after a game. Fixtures
+    live in the calendar. Before this input existed, match preparation
+    could only fire for a player who forward-dated a match row, which
+    nobody does, so the scorer's most rhythm-aware rule was dead in
+    practice while its tests passed on synthetic input.
+  */
+  it("reads the next match from a calendar fixture", () => {
+    const s = build({ fixtures: [{ date: "2026-08-27T15:00:00Z" }] });
+    expect(s.daysUntilNextMatch).toBe(3);
+  });
+
+  it("takes the nearest of a fixture and a forward-dated match row", () => {
+    const s = build({
+      matches: [{ id: "m9", date: "2026-08-29T15:00:00Z", reviewed: false }],
+      fixtures: [{ date: "2026-08-26T15:00:00Z" }],
+    });
+    expect(s.daysUntilNextMatch).toBe(2);
+  });
+
+  it("ignores fixtures already played", () => {
+    const s = build({ fixtures: [{ date: "2026-08-20T15:00:00Z" }] });
+    expect(s.daysUntilNextMatch).toBeNull();
+  });
+
+  it("a past fixture does not become the last match", () => {
+    // Fixtures carry no result — only a match row can say what happened.
+    const s = build({ fixtures: [{ date: "2026-08-20T15:00:00Z" }] });
+    expect(s.daysSinceLastMatch).toBeNull();
+  });
+
+  it("a fixture today is matchday", () => {
+    const s = build({ fixtures: [{ date: "2026-08-24T19:00:00Z" }] });
+    expect(s.daysUntilNextMatch).toBe(0);
+  });
+});

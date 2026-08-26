@@ -8,6 +8,7 @@ import {
   toSurfaced,
   RECOMMENDATION_TTL_DAYS,
   DISMISS_COOLDOWN_DAYS,
+  SETTLED_QUIET_DAYS,
   type Recommendation,
   type RecommendationSource,
 } from "@/lib/intelligence/recommendation-types";
@@ -22,8 +23,11 @@ import type { ActionKind, RankedAction } from "@/lib/intelligence/next-best-acti
   arithmetic.
 */
 
+/** In demo mode the row carries its own close time; the real table has columns. */
+type DemoRow = Recommendation & { settledAt?: string };
+
 interface DemoDB {
-  rows: Recommendation[];
+  rows: DemoRow[];
   seq: number;
 }
 const g = globalThis as unknown as { __midoRecDB?: DemoDB };
@@ -67,11 +71,70 @@ function expiryFrom(now: Date): string {
  *
  * Never throws — a dashboard must render even if its bookkeeping fails.
  */
+/**
+ * Kinds the player already answered today, either way.
+ *
+ * The scorer cannot see this for itself: it ranks from the record, and
+ * neither pressing "Done" nor pressing "Not now" puts anything in the
+ * record. Re-ranking unchanged inputs returns the same card — and with
+ * one card gone, the one that was just dismissed is promoted into the
+ * slot it was dismissed from.
+ *
+ * So both are honoured for the day. The scorer's week-long halving of a
+ * dismissal still does the longer work; this only stops MIDO arguing
+ * with an answer it was given a minute ago.
+ */
+async function settledRecently(now: Date): Promise<Set<ActionKind>> {
+  const since = now.getTime() - SETTLED_QUIET_DAYS * 86_400_000;
+  const answered = ["completed", "dismissed"];
+
+  if (isDemoMode) {
+    return new Set(
+      demoDB.rows
+        .filter((r) => answered.includes(r.status))
+        .filter((r) => !r.settledAt || Date.parse(r.settledAt) >= since)
+        .map((r) => r.kind),
+    );
+  }
+
+  try {
+    const supabase = await createClient();
+    if (!supabase) return new Set();
+    const user = await getAuthUser();
+    if (!user) return new Set();
+
+    /*
+      Two columns hold the time, one per status, so this asks by row age
+      rather than by either stamp — `updated_at` is not a column here and
+      created_at would be wrong. Cheap because the window is a day and
+      the table holds at most one row per kind per status.
+    */
+    const { data } = await supabase
+      .from("mido_recommendations")
+      .select("kind, completed_at, dismissed_at")
+      .eq("user_id", user.id)
+      .in("status", answered)
+      .limit(40);
+
+    const out = new Set<ActionKind>();
+    for (const r of data ?? []) {
+      const at = (r.completed_at as string | null) ?? (r.dismissed_at as string | null);
+      if (at && Date.parse(at) >= since) out.add(r.kind as ActionKind);
+    }
+    return out;
+  } catch {
+    // Failing open re-offers something already answered — mildly
+    // annoying, and better than a dashboard with no advice on it.
+    return new Set();
+  }
+}
+
 export async function surfaceRecommendations(
   actions: RankedAction[],
   now: Date = new Date(),
 ): Promise<Recommendation[]> {
-  const wanted = actions.map(toSurfaced);
+  const settled = await settledRecently(now);
+  const wanted = actions.map(toSurfaced).filter((w) => !settled.has(w.kind));
   const wantedKinds = new Set(wanted.map((w) => w.kind));
 
   if (isDemoMode) {
@@ -175,6 +238,40 @@ function listFromDemo(now: Date = new Date()): Recommendation[] {
 }
 
 /** What MIDO is currently telling this player, best first. */
+/**
+ * Every recent row, whatever its status. For the inspector only.
+ *
+ * The product never needs this — a player is shown what is active, not
+ * an archive of advice. A developer asking "did the dismissal actually
+ * write" does, and answering it from the event log alone means trusting
+ * two systems to debug one.
+ */
+export async function listRecentRecommendations(limit = 25): Promise<Recommendation[]> {
+  if (isDemoMode) {
+    return [...demoDB.rows]
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, limit);
+  }
+
+  try {
+    const supabase = await createClient();
+    if (!supabase) return [];
+    const user = await getAuthUser();
+    if (!user) return [];
+
+    const { data } = await supabase
+      .from("mido_recommendations")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    return (data ?? []).map(rowTo);
+  } catch {
+    return [];
+  }
+}
+
 export async function listActiveRecommendations(now: Date = new Date()): Promise<Recommendation[]> {
   if (isDemoMode) return listFromDemo(now);
 
@@ -219,6 +316,7 @@ async function close(
     const row = demoDB.rows.find((r) => r.id === id);
     if (!row) return false;
     row.status = status;
+    row.settledAt = new Date().toISOString();
     await emitMidoEvent({
       type,
       subjectType: "recommendation",
@@ -276,7 +374,10 @@ export async function recentlyDismissedKinds(now: Date = new Date()): Promise<Ac
   const since = new Date(now.getTime() - DISMISS_COOLDOWN_DAYS * 86_400_000).toISOString();
 
   if (isDemoMode) {
-    return demoDB.rows.filter((r) => r.status === "dismissed").map((r) => r.kind);
+    return demoDB.rows
+      .filter((r) => r.status === "dismissed")
+      .filter((r) => !r.settledAt || r.settledAt >= since)
+      .map((r) => r.kind);
   }
 
   try {

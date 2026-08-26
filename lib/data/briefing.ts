@@ -40,7 +40,15 @@ export const LOW_READINESS = 55;
 /** A match this close changes what today should be. */
 export const MATCH_WEEK_DAYS = 3;
 
-export function buildBriefing(data: LockerData): BriefingLine[] {
+/**
+ * @param suppress Briefing line ids already covered by a surfaced Next
+ * Best Action. The two systems overlap on six of eight lines — see
+ * lib/intelligence/overlap.ts — and this is how they coexist without
+ * telling somebody to review the same match twice in different words.
+ * Empty by default, so the Briefing is unchanged wherever nothing is
+ * passed.
+ */
+export function buildBriefing(data: LockerData, suppress: string[] = []): BriefingLine[] {
   const lines: BriefingLine[] = [];
   const { nextMatch, recentMatch, focus, readiness, week, study, checkedInToday, todayIndex } = data;
 
@@ -99,7 +107,9 @@ export function buildBriefing(data: LockerData): BriefingLine[] {
         tone: "body",
         headline: `You reported ${r}/100 this morning`,
         detail:
-          "Below where you usually are. Consider volume over intensity today — and tell whoever is running the session.",
+          // "Below where you usually are" implied a personal baseline
+          // nothing here computes. Say only what the number is.
+          "That is a low-readiness day. Consider volume over intensity today — and tell whoever is running the session.",
         action: { label: "Recovery", href: "/app/recovery" },
         priority: 0,
       });
@@ -170,7 +180,16 @@ export function buildBriefing(data: LockerData): BriefingLine[] {
     });
   }
 
-  return lines.sort((a, b) => a.priority - b.priority);
+  /*
+    Filtered at the end rather than at each push, so every rule above
+    stays readable and unaware that another surface exists. The "quiet"
+    line is never suppressed: it appears only when there is nothing to
+    say, which cannot be true at the same moment a recommendation is.
+  */
+  const hidden = new Set(suppress.filter((id) => id !== "quiet"));
+  return lines
+    .filter((l) => !hidden.has(l.id))
+    .sort((a, b) => a.priority - b.priority);
 }
 
 /** The greeting line. Time of day only — nothing about the person. */

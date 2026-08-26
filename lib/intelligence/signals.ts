@@ -69,6 +69,19 @@ export function daysBetween(from: string | Date, to: string | Date): number {
 /** Everything the mapping needs, in the shape the adapters return it. */
 export interface RawSignalInputs {
   matches: { id: string; date: string; reviewed: boolean }[];
+  /**
+   * Scheduled fixtures from the calendar (kind === "match").
+   *
+   * Match ROWS are results — the product's own UI only creates them
+   * after a game is played. Fixtures live in the calendar; the Match
+   * Center says so in its own source. Without this input,
+   * `daysUntilNextMatch` could only ever be fed by a forward-dated
+   * match row nobody creates, which left the scorer's two most
+   * rhythm-aware rules — match preparation, and recovery urgency before
+   * a game — dead in practice while their tests passed on synthetic
+   * input.
+   */
+  fixtures?: { date: string }[];
   goals: { id: string; title: string; status: string }[];
   training: { scheduledAt: string }[];
   checkins: { date: string; readiness: number | null }[];
@@ -105,7 +118,18 @@ export function toPlayerSignals(raw: RawSignalInputs, now: Date): PlayerSignals 
     .sort((a, b) => a.date.localeCompare(b.date));
 
   const lastMatch = past[0] ?? null;
-  const nextMatch = future[0] ?? null;
+
+  /*
+    The next match is the nearest of BOTH sources: a forward-dated match
+    row (rare, but legal) and a calendar fixture (the normal case).
+  */
+  const upcoming = [
+    ...future.map((m) => m.date),
+    ...(raw.fixtures ?? [])
+      .filter((f) => daysBetween(f.date, nowIso) <= 0)
+      .map((f) => f.date),
+  ].sort((a, b) => a.localeCompare(b));
+  const nextMatchDate = upcoming[0] ?? null;
 
   const activeGoals = raw.goals
     .filter((g) => g.status !== "achieved")
@@ -156,7 +180,7 @@ export function toPlayerSignals(raw: RawSignalInputs, now: Date): PlayerSignals 
   return {
     daysSinceLastMatch: lastMatch ? daysBetween(lastMatch.date, nowIso) : null,
     lastMatchReviewed: lastMatch ? lastMatch.reviewed : true,
-    daysUntilNextMatch: nextMatch ? Math.abs(daysBetween(nextMatch.date, nowIso)) : null,
+    daysUntilNextMatch: nextMatchDate ? Math.abs(daysBetween(nextMatchDate, nowIso)) : null,
     readiness: latestScored?.readiness ?? null,
     daysSinceCheckin: anyCheckin ? daysBetween(anyCheckin.date, nowIso) : null,
     activeGoals,

@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   rankActions,
+  explainActions,
+  SURFACE_FLOOR,
   hasEnoughToRecommend,
   type PlayerSignals,
 } from "../../lib/intelligence/next-best-action";
@@ -334,5 +336,60 @@ describe("recent training", () => {
     const yesterday = find({ ...base, readiness: 80, daysSinceTraining: 1 }, "training")!;
     const older = find({ ...base, readiness: 80, daysSinceTraining: 5 }, "training")!;
     expect(yesterday.score).toBeLessThan(older.score);
+  });
+});
+
+describe("explainActions", () => {
+  /*
+    The inspector is only trustworthy if it is showing what the Locker
+    actually did. `rankActions` is defined in terms of `explainActions`,
+    and these pin that relationship so the two cannot quietly diverge.
+  */
+  const busy: PlayerSignals = {
+    daysSinceLastMatch: 1,
+    lastMatchReviewed: false,
+    daysUntilNextMatch: 5,
+    readiness: 80,
+    daysSinceCheckin: 0,
+    activeGoals: [{ id: "g1", title: "Near-post finishing" }],
+    daysSinceStudy: 20,
+    daysSinceTraining: 4,
+  };
+
+  it("agrees exactly with rankActions on what surfaces, and in what order", () => {
+    const explained = explainActions(busy).filter((c) => c.surfaced).map((c) => c.action);
+    expect(explained).toEqual(rankActions(busy));
+  });
+
+  it("keeps the candidates rankActions throws away", () => {
+    // Training is pushed below the floor, not merely down-weighted.
+    const resting: PlayerSignals = { ...busy, readiness: 30 };
+    const kinds = explainActions(resting).map((c) => c.action.kind);
+    expect(kinds).toContain("training");
+    expect(rankActions(resting).map((a) => a.kind)).not.toContain("training");
+  });
+
+  it("says why a candidate was dropped", () => {
+    const resting: PlayerSignals = { ...busy, readiness: 30 };
+    const training = explainActions(resting).find((c) => c.action.kind === "training");
+    expect(training?.surfaced).toBe(false);
+    expect(training?.dropped).toBe("below-floor");
+  });
+
+  it("reports a dismissal as halved, and keeps the score it had before", () => {
+    const dismissed: PlayerSignals = { ...busy, recentlyDismissed: ["review_match"] };
+    const before = explainActions(busy).find((c) => c.action.kind === "review_match");
+    const after = explainActions(dismissed).find((c) => c.action.kind === "review_match");
+
+    expect(after?.halved).toBe(true);
+    expect(after?.rawScore).toBe(before?.action.score);
+    expect(after?.action.score).toBe(Math.round((before?.action.score ?? 0) * 0.5));
+  });
+
+  it("never marks a surfaced candidate as dropped, or the reverse", () => {
+    for (const c of explainActions(busy)) {
+      expect(c.surfaced).toBe(c.dropped === null);
+      expect(c.action.score).toBeGreaterThanOrEqual(c.surfaced ? SURFACE_FLOOR : 0);
+    }
   });
 });

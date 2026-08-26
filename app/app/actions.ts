@@ -9,6 +9,9 @@ import { ROLE_COOKIE } from "@/lib/auth/session";
 import { isRoleId, type RoleId } from "@/lib/roles/roles";
 import { getMembership } from "@/lib/billing/membership";
 import { canUseRole } from "@/lib/billing/plans";
+import { emitMidoEvent } from "@/lib/events/emit";
+import { idempotencyKey } from "@/lib/events/types";
+import { readinessOf } from "@/lib/data/recovery-types";
 
 /** Sign out (real mode) and return to the landing page. */
 export async function signOut() {
@@ -109,6 +112,37 @@ export async function saveCheckin(input: CheckinInput): Promise<ActionResult> {
     { onConflict: "user_id,checkin_date" }
   );
   if (error) return { ok: false, error: error.message };
+
+  /*
+    The check-in is the only place a readiness figure comes from, so it
+    is the one MIDO must never guess — and the log records the figure
+    that was actually derived, not the four raw scores.
+
+    Derived with `readinessOf` rather than averaged here. Three places
+    computing "how ready are you" three different ways is how a product
+    contradicts itself on the same morning, and this is the third place.
+
+    Keyed by DAY. The write is an upsert — editing this morning's
+    check-in is a correction, not a second check-in — so a day that was
+    revised must not read as two.
+  */
+  const readiness = readinessOf({
+    date: today,
+    energy: input.energy,
+    sleep: input.sleep,
+    soreness: input.soreness,
+    mental: input.mental,
+    note: input.note ?? null,
+  });
+
+  await emitMidoEvent({
+    type: "PLAYER_CHECKIN_COMPLETED",
+    subjectType: "checkin",
+    subjectId: today,
+    occurredAt: new Date(`${today}T12:00:00.000Z`).toISOString(),
+    payload: { readiness },
+    idempotencyKey: idempotencyKey(["checkin", today]),
+  });
 
   revalidatePath("/app");
   return { ok: true };

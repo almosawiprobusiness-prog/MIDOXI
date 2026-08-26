@@ -20,8 +20,19 @@ const TONE: Record<BriefingTone, { icon: LucideIcon; color: string }> = {
   quiet: { icon: Coffee, color: "var(--text-faint)" },
 };
 
-export function Briefing({ data }: { data: LockerData }) {
-  const lines = buildBriefing(data);
+/**
+ * @param suppress Line ids the Next Best Action panel above has already
+ * covered. Optional, so every other caller is unaffected.
+ */
+export function Briefing({ data, suppress = [] }: { data: LockerData; suppress?: string[] }) {
+  const lines = buildBriefing(data, suppress);
+
+  /*
+    Everything worth saying was said by the panel above. A "Today" header
+    over an empty list reads as a fault; saying nothing reads as nothing
+    left to say, which is the truth.
+  */
+  if (lines.length === 0) return null;
 
   return (
     <div className="min-w-0 panel-raised overflow-hidden">
