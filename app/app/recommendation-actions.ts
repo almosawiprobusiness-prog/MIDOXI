@@ -29,3 +29,26 @@ export async function markRecommendationDismissed(id: string): Promise<Result> {
   revalidatePath("/app");
   return { ok: true };
 }
+
+/**
+ * The two halves of the funnel the server cannot see.
+ *
+ * Completing and dismissing already go through server actions, so they
+ * are counted where they happen. Opening a recommendation is a link
+ * click and asking "why this?" is a disclosure toggle — both happen
+ * entirely in the browser, and without this the funnel would have a
+ * denominator and an outcome with nothing in between.
+ *
+ * Narrow on purpose: two names, no free parameters. A general-purpose
+ * "track anything from the client" endpoint is how an analytics
+ * vocabulary stops being a vocabulary.
+ */
+export async function trackRecommendationInteraction(
+  what: "opened" | "why_viewed",
+  kind: string,
+): Promise<void> {
+  await track(
+    what === "opened" ? "recommendation_opened" : "recommendation_why_viewed",
+    { kind: kind.slice(0, 40) },
+  );
+}

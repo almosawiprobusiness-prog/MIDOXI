@@ -11,6 +11,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   markRecommendationDone,
   markRecommendationDismissed,
+  trackRecommendationInteraction,
 } from "@/app/app/recommendation-actions";
 import type { SurfacedAction } from "@/lib/intelligence/next-actions";
 import { describeSource } from "@/lib/intelligence/recommendation-types";
@@ -181,6 +182,10 @@ export function NextBestAction({
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <Link
                 href={meta(primary.kind).href}
+                onClick={() => {
+                  // Fire-and-forget: navigation must not wait on a metric.
+                  void trackRecommendationInteraction("opened", primary.kind);
+                }}
                 className="inline-flex h-9 items-center gap-2 rounded-lg bg-signal px-3.5 text-sm font-medium text-white transition-colors hover:bg-signal-deep"
               >
                 Go <ArrowUpRight className="size-4" />
@@ -213,7 +218,13 @@ export function NextBestAction({
               */}
               {whyLines.length > 0 && (
                 <button
-                  onClick={() => setWhy(why === primary.id ? null : primary.id)}
+                  onClick={() => {
+                    // Counted on open only — a toggle closed is not a second look.
+                    if (why !== primary.id) {
+                      void trackRecommendationInteraction("why_viewed", primary.kind);
+                    }
+                    setWhy(why === primary.id ? null : primary.id);
+                  }}
                   className="inline-flex h-9 items-center gap-1.5 px-1 text-xs text-text-faint transition-colors hover:text-signal-bright"
                 >
                   <Sparkles className="size-3.5" />
@@ -261,6 +272,7 @@ export function NextBestAction({
                   </div>
                   <Link
                     href={meta(r.kind).href}
+                    onClick={() => void trackRecommendationInteraction("opened", r.kind)}
                     className="mt-0.5 inline-flex shrink-0 items-center gap-1 text-xs text-text-faint transition-colors hover:text-signal-bright"
                   >
                     Open <ArrowUpRight className="size-3.5" />

@@ -1,12 +1,26 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Activity, Users, CreditCard, Cpu, AlertTriangle, Database } from "lucide-react";
+import { Activity, Users, CreditCard, Cpu, AlertTriangle, Database, ArrowUpRight } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getAdminOverview } from "@/lib/data/admin";
 import { features, isDemoMode, configIssues } from "@/lib/env";
 import { FEATURE_LABELS } from "@/lib/billing/plans";
 import { SectionHeader } from "@/components/ui/primitives";
 
-export const metadata = { title: "Admin — MIDO XI" };
+/*
+  The title is gated too, not only the body.
+
+  Metadata resolves before the render stream opens, so a `notFound()`
+  raised only in the component still lets the tab title go out — and
+  this page's whole access rule is that a non-admin should not learn the
+  route exists. A 404 that announces "Founding XI" has disclosed exactly
+  what it was refusing to disclose.
+*/
+export async function generateMetadata() {
+  const user = await getCurrentUser();
+  if (!user?.isAdmin) notFound();
+  return { title: "Admin — MIDO XI" };
+}
 export const dynamic = "force-dynamic";
 
 const FEATURE_LABEL = Object.fromEntries(FEATURE_LABELS.map((f) => [f.key, f.label]));
@@ -34,6 +48,13 @@ export default async function AdminPage() {
           <h1 className="font-display text-2xl font-bold tracking-tight text-text-hi">Operations</h1>
           <p className="text-sm text-text-dim">Usage, revenue and AI economics — last 30 days.</p>
         </div>
+        <Link
+          href="/app/admin/beta"
+          className="group ml-auto inline-flex items-center gap-2 rounded-lg border border-line px-3.5 py-2 text-sm text-text-dim transition-colors hover:border-signal-line hover:text-signal-bright"
+        >
+          Founding XI
+          <ArrowUpRight className="size-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+        </Link>
       </div>
 
       {!o.available && (

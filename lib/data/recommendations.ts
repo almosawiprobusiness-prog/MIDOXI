@@ -2,6 +2,7 @@ import "server-only";
 import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
 import { emitMidoEvent } from "@/lib/events/emit";
+import { track } from "@/lib/analytics/track";
 import { idempotencyKey } from "@/lib/events/types";
 import {
   isStale,
@@ -213,6 +214,9 @@ export async function surfaceRecommendations(
           "recommending" the same recovery every time a page loaded.
         */
         if (made?.id) {
+          // Counted here, with the football event, because "shown" must
+          // mean new advice put in front of somebody — not a re-render.
+          await track("recommendation_shown", { kind: w.kind });
           await emitMidoEvent({
             type: "MIDO_RECOMMENDATION_CREATED",
             subjectType: "recommendation",

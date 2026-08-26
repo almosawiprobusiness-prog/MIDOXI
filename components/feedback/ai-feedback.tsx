@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { usePathname } from "next/navigation";
 import { ThumbsUp, ThumbsDown, Check, Loader2 } from "lucide-react";
 import { sendFeedback } from "@/app/app/feedback-actions";
 
@@ -15,13 +16,14 @@ import { sendFeedback } from "@/app/app/feedback-actions";
 */
 
 export function AiFeedback({ subject }: { subject: string }) {
+  const pathname = usePathname();
   const [state, setState] = useState<"idle" | "down" | "sent">("idle");
   const [reason, setReason] = useState("");
   const [pending, start] = useTransition();
 
   const send = (rating: 1 | -1, body?: string) => {
     start(async () => {
-      await sendFeedback({ kind: "ai_rating", subject, rating, body });
+      await sendFeedback({ kind: "ai_feedback", objectId: subject, route: pathname, rating, body });
       setState("sent");
     });
   };

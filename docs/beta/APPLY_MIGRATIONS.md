@@ -1,12 +1,12 @@
-# Applying migrations 0031 · 0032 · 0033
+# Applying migrations 0031 · 0032 · 0033 · 0034
 
 **Who runs this:** you, in the Supabase SQL editor. I don't handle the
 keys, so the applying is yours; everything else — the SQL itself, the
 verification, and what to do if something fails — is prepared here.
 
-**Order matters only in that 0031 and 0032 unlock the intelligence loop
-and 0033 unlocks analytics/feedback. All three are independent and each
-is safe to re-run** (`create ... if not exists`, `drop policy if
+**0031 and 0032 unlock the intelligence loop; 0033 unlocks
+analytics/feedback and 0034 extends it. Run them in order — 0034 alters
+a table 0033 creates — and each is safe to re-run** (`create ... if not exists`, `drop policy if
 exists` throughout).
 
 **Staging first if you have one.** If the project only has the one
@@ -24,12 +24,15 @@ time, in order:
 1. `supabase/migrations/0031_mido_events.sql`
 2. `supabase/migrations/0032_mido_recommendations.sql`
 3. `supabase/migrations/0033_beta_telemetry.sql`
+4. `supabase/migrations/0034_feedback_triage.sql` — must run after
+   0033; it widens that table's feedback vocabulary and adds the
+   triage/context columns the admin inbox reads.
 
 Each should end with `Success. No rows returned`.
 
 ## Step 2 — verify the catalog
 
-Paste this after all three. Every row of the output should say `ok`.
+Paste this after all four. Every row of the output should say `ok`.
 
 ```sql
 with checks(name, pass) as (
@@ -63,7 +66,17 @@ with checks(name, pass) as (
   ('0033 feedback table exists',
     (select count(*) from pg_tables where tablename = 'beta_feedback') = 1),
   ('0033 feedback RLS enabled',
-    (select relrowsecurity from pg_class where relname = 'beta_feedback'))
+    (select relrowsecurity from pg_class where relname = 'beta_feedback')),
+
+  ('0034 triage columns present',
+    (select count(*) from information_schema.columns
+      where table_name = 'beta_feedback'
+        and column_name in ('route','device_class','app_version','object_id','status','severity')) = 6),
+  ('0034 new feedback vocabulary accepted',
+    (select pg_get_constraintdef(oid) from pg_constraint
+      where conname = 'beta_feedback_kind_check') like '%confusing%'),
+  ('0034 open-queue index',
+    (select count(*) from pg_indexes where indexname = 'beta_feedback_open_idx') = 1)
 )
 select name, case when pass then 'ok' else '*** FAIL ***' end as result
 from checks;
@@ -96,7 +109,7 @@ Nothing before 0031 depends on these tables, so the rollback is simply:
 drop table if exists mido_events;
 drop table if exists mido_recommendations;
 drop table if exists product_analytics;
-drop table if exists beta_feedback;
+drop table if exists beta_feedback;   -- 0034 lives inside this table
 ```
 
 — then tell me what the error was and I'll fix the migration before you

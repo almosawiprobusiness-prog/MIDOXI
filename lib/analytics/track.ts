@@ -36,6 +36,24 @@ export type ProductEvent =
   | "match_logged"
   | "match_review_completed"
   | "training_completed"
+  /*
+    The Next Best Action funnel, in full.
+
+    SHOWN is counted when a recommendation is genuinely NEW — the same
+    moment the football log records one as created — not on every
+    dashboard render. Counting renders would make the denominator a
+    measure of how often somebody refreshed the Locker, and the
+    shown:opened ratio is the whole hypothesis: does a player act on
+    what MIDO puts first?
+
+    WHY_VIEWED is the one that tells us if the explanation is doing any
+    work. If players open recommendations without ever asking why, the
+    "why this?" line is decoration; if they ask why and then do not act,
+    the reasoning is not convincing.
+  */
+  | "recommendation_shown"
+  | "recommendation_opened"
+  | "recommendation_why_viewed"
   | "recommendation_completed"
   | "recommendation_dismissed";
 
