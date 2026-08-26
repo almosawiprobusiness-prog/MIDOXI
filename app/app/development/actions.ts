@@ -7,6 +7,7 @@ import { demoStore } from "@/lib/data/store";
 import type { GoalInput, EvidenceInput } from "@/lib/data/development-types";
 import { emitMidoEvent } from "@/lib/events/emit";
 import { idempotencyKey } from "@/lib/events/types";
+import { track } from "@/lib/analytics/track";
 
 export type Result = { ok: true; id?: string; demo?: boolean } | { ok: false; error: string };
 
@@ -49,6 +50,7 @@ async function recordGoal(
   // the one a recommendation should react to.
   const achieved = input.status === "achieved";
   const type = kind === "created" ? "GOAL_CREATED" : achieved ? "GOAL_COMPLETED" : "GOAL_UPDATED";
+  if (kind === "created") await track("goal_created", { category: input.category });
 
   await emitMidoEvent({
     type,

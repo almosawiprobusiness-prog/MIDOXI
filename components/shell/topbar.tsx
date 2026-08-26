@@ -7,6 +7,7 @@ import { Search, Menu, Sparkles } from "lucide-react";
 import { roleDef, sectionTitleFor, type ShellIdentity } from "@/lib/roles/roles";
 import { MobileNav } from "./mobile-nav";
 import { NotificationBell } from "./notification-bell";
+import { FeedbackButton } from "./feedback-button";
 import type { Notification } from "@/lib/data/notification-types";
 
 export function Topbar({
@@ -63,6 +64,8 @@ export function Topbar({
         <span className="flex-1 truncate">Ask MIDO, search, or command…</span>
         <kbd className="chip hidden sm:inline-flex">⌘K</kbd>
       </button>
+
+      <FeedbackButton />
 
       <NotificationBell initial={notifications} initialUnread={notifUnread} />
 

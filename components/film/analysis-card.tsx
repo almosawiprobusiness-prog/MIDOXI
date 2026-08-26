@@ -16,6 +16,7 @@ import { CONFIDENCE_META, type AnalysisObservation } from "@/lib/video/provider"
 import type { ClipAnalysis } from "@/lib/data/analyses";
 import { fmtTime } from "@/lib/data/film-types";
 import { cn } from "@/lib/utils";
+import { AiFeedback } from "@/components/feedback/ai-feedback";
 
 /*
   One saved reading, and the loop that comes off it.
@@ -135,6 +136,11 @@ export function AnalysisCard({
           />
         ))}
       </ul>
+
+      {/* Beta: was this read of the footage useful? */}
+      <div className="flex justify-end border-t border-line px-4 py-2.5">
+        <AiFeedback subject={`film:${analysis.kind}`} />
+      </div>
     </article>
   );
 }

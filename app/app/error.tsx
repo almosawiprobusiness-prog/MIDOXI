@@ -22,6 +22,17 @@ export default function AppError({
 }) {
   useEffect(() => {
     console.error("[workspace-error]", error.digest ?? "", error.message);
+    // Relay to the server log — the browser console is invisible to us.
+    fetch("/api/client-error", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        boundary: "workspace",
+        path: window.location.pathname,
+        digest: error.digest ?? "",
+        message: error.message,
+      }),
+    }).catch(() => {});
   }, [error]);
 
   return (

@@ -7,6 +7,7 @@ import { demoStore } from "@/lib/data/store";
 import type { TrainingInput } from "@/lib/data/training-types";
 import { emitMidoEvent } from "@/lib/events/emit";
 import { idempotencyKey } from "@/lib/events/types";
+import { track } from "@/lib/analytics/track";
 
 export type Result = { ok: true; id?: string; demo?: boolean } | { ok: false; error: string };
 
@@ -53,6 +54,7 @@ async function writeLog(supabase: NonNullable<Awaited<ReturnType<typeof createCl
   `training_sessions` and is reachable by subjectId.
 */
 async function recordTraining(id: string, input: TrainingInput) {
+  await track("training_completed", { kind: input.kind });
   await emitMidoEvent({
     type: "TRAINING_LOGGED",
     subjectType: "training",

@@ -17,6 +17,7 @@ import { PROVENANCE_META } from "@/lib/knowledge/study-types";
 import { coversSameGround } from "@/lib/intelligence/next-best-action";
 import { SectionHeader } from "@/components/ui/primitives";
 import { KnowledgeCheck } from "@/components/study/knowledge-check";
+import { AiFeedback } from "@/components/feedback/ai-feedback";
 import {
   PersonaliseButton,
   TakeIntoTrainingButton,
@@ -277,6 +278,11 @@ export default async function StudyPage({ params }: PageProps<"/app/study/[slug]
           </div>
         </div>
       </section>
+
+      {/* Beta: is the football writing on this page actually useful? */}
+      <div className="mt-8 flex justify-end">
+        <AiFeedback subject={`study:${slug}`} />
+      </div>
 
       {/* ── Knowledge check ─────────────────────────────── */}
       {view.quiz.length > 0 && (

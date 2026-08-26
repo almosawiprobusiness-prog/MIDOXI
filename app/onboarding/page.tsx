@@ -36,6 +36,21 @@ export default async function OnboardingPage() {
           <span className="font-display text-2xl font-bold text-text-hi">MIDO</span>
           <span className="font-display text-2xl font-bold text-signal">XI</span>
         </div>
+        {/*
+          The Founding XI note. Static and unskippable-because-tiny: four
+          honest sentences before the wizard, not a tour, not confetti.
+          The software itself has to be the welcome.
+        */}
+        <div className="mb-4 panel px-4 py-3">
+          <p className="label-tech text-signal-bright">Founding XI</p>
+          <p className="mt-1.5 text-sm leading-relaxed text-text-dim">
+            You are one of the first eleven players on MIDO. It is early, and that is
+            the point — what you find rough, tell us with the feedback button and it
+            gets fixed for everyone. Your football record belongs to you: every line
+            of it is yours to read, correct, and delete.
+          </p>
+        </div>
+
         <div className="panel-raised p-6 shadow-2xl shadow-black/40">
           {isDemoMode && (
             <p className="mb-4 rounded-lg border border-review/30 bg-review/10 px-3 py-2 text-xs text-review">

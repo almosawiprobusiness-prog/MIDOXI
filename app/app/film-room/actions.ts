@@ -8,6 +8,7 @@ import { videoUrlKind, LONG_FOOTAGE_ADVICE } from "@/lib/data/film-types";
 import type { ClipInput } from "@/lib/data/film-types";
 import { emitMidoEvent } from "@/lib/events/emit";
 import { idempotencyKey } from "@/lib/events/types";
+import { track } from "@/lib/analytics/track";
 
 export type Result = { ok: true; id?: string; demo?: boolean } | { ok: false; error: string };
 
@@ -38,6 +39,7 @@ function revalidateFilm(videoId?: string) {
   the fact.
 */
 async function recordVideoAdded(id: string, title: string, source: string) {
+  await track("film_uploaded", { source });
   await emitMidoEvent({
     type: "VIDEO_UPLOADED",
     subjectType: "video",

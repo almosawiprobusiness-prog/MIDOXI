@@ -12,6 +12,7 @@ import { canUseRole } from "@/lib/billing/plans";
 import { emitMidoEvent } from "@/lib/events/emit";
 import { idempotencyKey } from "@/lib/events/types";
 import { readinessOf } from "@/lib/data/recovery-types";
+import { track } from "@/lib/analytics/track";
 
 /** Sign out (real mode) and return to the landing page. */
 export async function signOut() {
@@ -143,6 +144,8 @@ export async function saveCheckin(input: CheckinInput): Promise<ActionResult> {
     payload: { readiness },
     idempotencyKey: idempotencyKey(["checkin", today]),
   });
+
+  await track("checkin_completed");
 
   revalidatePath("/app");
   return { ok: true };

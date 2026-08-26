@@ -7,6 +7,7 @@ import { demoStore } from "@/lib/data/store";
 import type { MatchInput, MatchStatsInput, MatchReviewInput } from "@/lib/data/match-types";
 import { emitMidoEvent } from "@/lib/events/emit";
 import { idempotencyKey } from "@/lib/events/types";
+import { track } from "@/lib/analytics/track";
 
 export type Result = { ok: true; id?: string; demo?: boolean } | { ok: false; error: string };
 
@@ -35,6 +36,7 @@ function revalidate() {
   paperwork.
 */
 async function recordMatchCreated(id: string, input: MatchInput) {
+  await track("match_logged");
   await emitMidoEvent({
     type: "MATCH_CREATED",
     subjectType: "match",
@@ -195,6 +197,7 @@ export async function saveMatchStats(id: string, stats: MatchStatsInput): Promis
   a recommendation needs to decide what to say next.
 */
 async function recordMatchReviewed(id: string, review: MatchReviewInput) {
+  await track("match_review_completed", { flaggedForStudy: Boolean(review.momentToStudy?.trim()) });
   const answered = [
     review.didWell,
     review.couldImprove,

@@ -24,6 +24,7 @@ import { conceptsForGoals } from "@/lib/knowledge/mapping";
 import { createClip } from "@/app/app/film-room/actions";
 import { emitMidoEvent } from "@/lib/events/emit";
 import { idempotencyKey } from "@/lib/events/types";
+import { track } from "@/lib/analytics/track";
 
 /*
   Running an analysis.
@@ -259,6 +260,10 @@ async function save(
     unlabelled: an event the scorer cannot match to anything is a row it
     has to read and discard on every query.
   */
+  await track("film_analysis_completed", {
+    observations: input.outcome.observations.length,
+  });
+
   for (const [i, o] of input.outcome.observations.entries()) {
     if (!o.concept) continue;
     await emitMidoEvent({

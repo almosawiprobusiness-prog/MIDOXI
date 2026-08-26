@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
 import type { Role } from "@/lib/types";
+import { track } from "@/lib/analytics/track";
 
 export interface OnboardingPayload {
   role: Role;
@@ -143,6 +144,7 @@ export async function completeOnboarding(
     }
   }
 
+  await track("onboarding_completed", { role: payload.role });
   return { ok: true };
 }
 

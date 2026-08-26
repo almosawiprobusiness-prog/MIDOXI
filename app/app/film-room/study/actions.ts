@@ -9,6 +9,7 @@ import type { StudySessionInput, StudyNoteKind } from "@/lib/data/study-types";
 import { getStudySessionDetail } from "@/lib/data/study";
 import { emitMidoEvent } from "@/lib/events/emit";
 import { idempotencyKey } from "@/lib/events/types";
+import { track } from "@/lib/analytics/track";
 
 export type Result = { ok: true; id?: string; demo?: boolean } | { ok: false; error: string };
 
@@ -21,6 +22,8 @@ async function requireUser() {
 
 export async function startStudySession(input: StudySessionInput): Promise<Result> {
   if (!input.title?.trim()) return { ok: false, error: "Give the session a title." };
+
+  await track("study_started", { withVideo: Boolean(input.videoId), linkedToGoal: Boolean(input.goalId) });
 
   if (isDemoMode) {
     const id = demoStore.createStudySession(input);
@@ -98,6 +101,7 @@ export async function deleteStudyNote(id: string, sessionId: string): Promise<Re
   whether one was written is recorded here.
 */
 async function recordStudyCompleted(sessionId: string, subject: string, summary: string, goalId: string | null) {
+  await track("study_completed", { linkedToGoal: Boolean(goalId) });
   await emitMidoEvent({
     type: "STUDY_COMPLETED",
     subjectType: "study",
