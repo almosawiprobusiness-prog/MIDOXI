@@ -16,6 +16,10 @@
     node build.mjs            one production build into dist/
     node build.mjs --watch    rebuild on change (load dist/ unpacked)
     node build.mjs --zip      build + mido-xi-capture-<version>.zip
+    node build.mjs --store    Chrome Web Store build into dist-store/ + zip:
+                              strips the dev "key" (the store assigns the
+                              canonical id) and the localhost host_permissions
+                              (a published build has no business on localhost)
 */
 import { build, context } from "esbuild";
 import { cp, mkdir, rm, readFile, writeFile } from "node:fs/promises";
@@ -26,9 +30,10 @@ import { fileURLToPath } from "node:url";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const src = path.join(root, "src");
-const dist = path.join(root, "dist");
+const store = process.argv.includes("--store");
+const dist = path.join(root, store ? "dist-store" : "dist");
 const watch = process.argv.includes("--watch");
-const zip = process.argv.includes("--zip");
+const zip = process.argv.includes("--zip") || store;
 
 await rm(dist, { recursive: true, force: true });
 await mkdir(dist, { recursive: true });
@@ -45,12 +50,20 @@ const options = {
 };
 
 async function copyStatic() {
-  for (const f of ["manifest.json", "popup.html", "popup.css"]) {
+  for (const f of ["popup.html", "popup.css"]) {
     await cp(path.join(src, f), path.join(dist, f));
   }
   for (const dir of ["icons", "fonts"]) {
     await cp(path.join(src, dir), path.join(dist, dir), { recursive: true });
   }
+  const manifest = JSON.parse(await readFile(path.join(src, "manifest.json"), "utf8"));
+  if (store) {
+    delete manifest.key;
+    manifest.host_permissions = manifest.host_permissions.filter(
+      (h) => !h.includes("localhost"),
+    );
+  }
+  await writeFile(path.join(dist, "manifest.json"), JSON.stringify(manifest, null, 2));
 }
 
 if (watch) {
@@ -62,10 +75,10 @@ if (watch) {
   await build(options);
   await copyStatic();
   const manifest = JSON.parse(await readFile(path.join(src, "manifest.json"), "utf8"));
-  console.log(`[mido-xi-capture] built v${manifest.version} → dist/`);
+  console.log(`[mido-xi-capture] built v${manifest.version} → ${path.basename(dist)}/`);
 
   if (zip) {
-    const out = path.join(root, `mido-xi-capture-${manifest.version}.zip`);
+    const out = path.join(root, `mido-xi-capture-${store ? "store-" : ""}${manifest.version}.zip`);
     await rm(out, { force: true });
     // PowerShell on Windows, zip elsewhere — no archiver dependency.
     if (process.platform === "win32") {

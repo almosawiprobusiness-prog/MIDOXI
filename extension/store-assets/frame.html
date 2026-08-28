@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>MIDO XI Capture — store frame</title>
+<!--
+  Chrome Web Store screenshot frame, exactly 1280×800. The popup inside
+  is the REAL production bundle running in the harness iframe (same
+  origin, so this page can drive it into the state each shot needs).
+
+  Usage (serve extension/ via harness/serve.mjs, demo server on 3100
+  for the connected shot):
+    frame.html?shot=hero | library | saved | connected
+-->
+<style>
+  @font-face { font-family: "Space Grotesk"; src: url("../dist/fonts/space-grotesk.woff2") format("woff2"); font-weight: 300 700; }
+  @font-face { font-family: "Geist"; src: url("../dist/fonts/geist.woff2") format("woff2"); font-weight: 100 900; }
+  @font-face { font-family: "Geist Mono"; src: url("../dist/fonts/geist-mono.woff2") format("woff2"); font-weight: 100 900; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1280px; height: 800px; overflow: hidden; }
+  body {
+    background: #08090b;
+    color: #c4cbd4;
+    font-family: "Geist", system-ui, sans-serif;
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+  .glow {
+    position: absolute; inset: 0;
+    background: radial-gradient(90% 70% at 72% 30%, rgba(123,97,255,0.10), transparent 62%);
+  }
+  .copy { position: relative; width: 560px; padding: 0 0 0 84px; }
+  .eyebrow {
+    font-family: "Geist Mono", monospace;
+    font-size: 13px; font-weight: 500;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: #838d99; margin-bottom: 22px;
+  }
+  .eyebrow em { color: #9d88ff; font-style: normal; }
+  h1 {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 52px; line-height: 1.06; font-weight: 700;
+    letter-spacing: -0.025em; color: #f3f5f8;
+    margin-bottom: 22px;
+  }
+  h1 em { font-style: normal; color: #9d88ff; }
+  .sub { font-size: 18px; line-height: 1.6; color: #838d99; max-width: 420px; }
+  .wordmark {
+    position: absolute; left: 84px; bottom: 56px;
+    display: flex; align-items: baseline; gap: 7px;
+    font-family: "Space Grotesk", sans-serif; font-weight: 700;
+    font-size: 20px; letter-spacing: -0.02em; color: #f3f5f8;
+  }
+  .wordmark .xi { color: #7b61ff; }
+  .wordmark .tag {
+    font-family: "Geist Mono", monospace; font-size: 10.5px; font-weight: 500;
+    letter-spacing: 0.16em; text-transform: uppercase; color: #565f6b;
+    margin-left: 8px;
+  }
+  .device {
+    position: absolute; right: 120px; top: 50%;
+    transform: translateY(-50%);
+    width: 364px;
+    border: 1px solid rgba(255,255,255,0.11);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 40px 90px rgba(0,0,0,0.65), 0 0 0 1px rgba(123,97,255,0.10), 0 0 120px rgba(123,97,255,0.07);
+    background: #08090b;
+  }
+  iframe { display: block; width: 362px; height: 646px; border: 0; background: #08090b; }
+</style>
+</head>
+<body>
+  <div class="grid"></div>
+  <div class="glow"></div>
+
+  <div class="copy">
+    <div class="eyebrow" id="eyebrow"></div>
+    <h1 id="headline"></h1>
+    <p class="sub" id="sub"></p>
+  </div>
+
+  <div class="device"><iframe id="popup" src="about:blank"></iframe></div>
+
+  <div class="wordmark">MIDO<span class="xi">XI</span><span class="tag">Capture</span></div>
+
+<script>
+  const SHOTS = {
+    hero: {
+      eyebrow: "FREE · NO ACCOUNT NEEDED",
+      headline: "Save the moments you <em>notice</em>",
+      sub: "Watching football on YouTube? Capture the exact second, write what you saw, tag it — without leaving the video.",
+      src: "../harness/harness.html?page=watch&vid=QRGS3oKJPZI&title=How%20Top%20Strikers%20Always%20Find%20Space%20%7C%20Haaland%2C%20Mbapp%C3%A9&seconds=245&env=local&auth=out&seed=promo",
+      drive: null,
+    },
+    library: {
+      eyebrow: "MY MOMENTS",
+      headline: "Your football <em>study library</em>",
+      sub: "Every moment you save — searchable, filterable by category, reopening the video at the exact timestamp. Export it all as Markdown. It's yours.",
+      src: "../harness/harness.html?page=watch&vid=dQw4w9WgXcQ&seconds=314&env=local&auth=out&seed=promo",
+      drive: (doc) => doc.getElementById("library-toggle")?.click(),
+    },
+    saved: {
+      eyebrow: "FIVE SECONDS, START TO FINISH",
+      headline: "Captured. <em>Keep watching.</em>",
+      sub: "One shortcut, one thought, one save. The moment is in your library and you're back in the game.",
+      src: "../harness/harness.html?page=watch&vid=QRGS3oKJPZI&title=How%20Top%20Strikers%20Always%20Find%20Space%20%7C%20Haaland%2C%20Mbapp%C3%A9&seconds=245&env=local&auth=out&seed=promo",
+      drive: (doc) => {
+        const save = [...doc.querySelectorAll("button")].find((b) => b.textContent === "Save moment");
+        save?.click();
+      },
+    },
+    connected: {
+      eyebrow: "MIDO XI PLAYER OS",
+      headline: "Notes become <em>development</em>",
+      sub: "Connect MIDO XI and every moment can attach to a development goal — surfaced in your Film Room, standing as evidence of what you're building.",
+      src: "../harness/harness.html?page=watch&vid=QRGS3oKJPZI&title=How%20Top%20Strikers%20Always%20Find%20Space%20%7C%20Haaland%2C%20Mbapp%C3%A9&seconds=245&env=local&seed=promo",
+      drive: (doc) => {
+        const goal = doc.querySelector('[aria-label="Development goals"] .chip-select');
+        goal?.click();
+        // The dev server's demo banner — a real connected account never
+        // shows it, so it has no place in a store depiction.
+        doc.querySelector(".demo-note")?.remove();
+      },
+    },
+  };
+
+  const shot = SHOTS[new URLSearchParams(location.search).get("shot")] ?? SHOTS.hero;
+  document.getElementById("eyebrow").innerHTML = shot.eyebrow;
+  document.getElementById("headline").innerHTML = shot.headline;
+  document.getElementById("sub").textContent = shot.sub;
+
+  const frame = document.getElementById("popup");
+  frame.addEventListener("load", () => {
+    if (frame.src === "about:blank") return;
+    // Give the popup's async boot a beat, then drive the state.
+    setTimeout(() => {
+      try {
+        shot.drive?.(frame.contentDocument);
+      } catch (e) {
+        console.error("drive failed", e);
+      }
+      document.title = "READY";
+    }, 900);
+  });
+  frame.src = shot.src;
+</script>
+</body>
+</html>

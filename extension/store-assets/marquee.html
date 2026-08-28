@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>MIDO XI Capture — marquee 1400×560</title>
+<style>
+  @font-face { font-family: "Space Grotesk"; src: url("../dist/fonts/space-grotesk.woff2") format("woff2"); font-weight: 300 700; }
+  @font-face { font-family: "Geist"; src: url("../dist/fonts/geist.woff2") format("woff2"); font-weight: 100 900; }
+  @font-face { font-family: "Geist Mono"; src: url("../dist/fonts/geist-mono.woff2") format("woff2"); font-weight: 100 900; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1400px; height: 560px; overflow: hidden; }
+  body { background: #08090b; color: #c4cbd4; font-family: "Geist", sans-serif; position: relative; display: flex; align-items: center; }
+  .grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+  .glow { position: absolute; inset: 0; background: radial-gradient(80% 90% at 74% 40%, rgba(123,97,255,0.12), transparent 60%); }
+  .copy { position: relative; width: 660px; padding-left: 96px; }
+  .eyebrow { font-family: "Geist Mono", monospace; font-size: 13px; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; color: #838d99; margin-bottom: 20px; }
+  h1 { font-family: "Space Grotesk", sans-serif; font-size: 58px; line-height: 1.04; font-weight: 700; letter-spacing: -0.025em; color: #f3f5f8; margin-bottom: 20px; }
+  h1 em { font-style: normal; color: #9d88ff; }
+  .sub { font-size: 19px; line-height: 1.55; color: #838d99; max-width: 520px; }
+  .wm { position: absolute; left: 96px; bottom: 48px; display: flex; align-items: baseline; gap: 7px; font-family: "Space Grotesk", sans-serif; font-weight: 700; font-size: 20px; letter-spacing: -0.02em; color: #f3f5f8; }
+  .wm .xi { color: #7b61ff; }
+  .wm .tag { font-family: "Geist Mono", monospace; font-size: 10.5px; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; color: #565f6b; margin-left: 8px; }
+  .device {
+    position: absolute; right: 150px; top: 44px;
+    width: 364px;
+    border: 1px solid rgba(255,255,255,0.11);
+    border-radius: 14px 14px 0 0; border-bottom: 0;
+    overflow: hidden;
+    box-shadow: 0 40px 90px rgba(0,0,0,0.65), 0 0 120px rgba(123,97,255,0.07);
+    background: #08090b;
+  }
+  iframe { display: block; width: 362px; height: 516px; border: 0; background: #08090b; }
+</style>
+</head>
+<body>
+  <div class="grid"></div>
+  <div class="glow"></div>
+  <div class="copy">
+    <div class="eyebrow">Free · Football video notes</div>
+    <h1>Watch. Notice. <em>Capture.</em></h1>
+    <p class="sub">Timestamped football observations from any YouTube video — saved to your own study library in seconds. Connect MIDO XI to turn them into development evidence.</p>
+  </div>
+  <div class="device"><iframe id="popup" src="../harness/harness.html?page=watch&vid=QRGS3oKJPZI&title=How%20Top%20Strikers%20Always%20Find%20Space%20%7C%20Haaland%2C%20Mbapp%C3%A9&seconds=245&env=local&auth=out&seed=promo"></iframe></div>
+  <div class="wm">MIDO<span class="xi">XI</span><span class="tag">Capture</span></div>
+</body>
+</html>

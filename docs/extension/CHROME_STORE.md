@@ -65,12 +65,22 @@ No remote code. No content scripts. No youtube.com permission.
 - Full text: `docs/extension/PRIVACY.md` — publish at a URL (e.g.
   `https://mido-xi.vercel.app/privacy`) and link it in the listing.
 
-## Assets required
+## Assets — READY in `extension/store-assets/`
 
-- Icons: 128×128 already in `extension/src/icons/icon-128.png` (store requires 128)
-- Screenshots: 1280×800 or 640×400, 1–5 of: capture popup over a YouTube video,
-  the SAVED state, Saved Moments in the Film Room, a goal's Study Moments
-- Optional promo tiles: 440×280 (small), 1400×560 (marquee)
+- Icons: 128×128 in `extension/src/icons/icon-128.png` (packaged automatically)
+- Screenshots (1280×800, real product UI captured from the production bundle;
+  upload in this order): `shot-1-hero.png` (free capture), `shot-2-library.png`
+  (My Moments), `shot-3-saved.png` (saved state), `shot-4-connected.png`
+  (goals connected)
+- Promo tiles: `promo-tile-440x280.png` (small), `promo-marquee-1400x560.png`
+  (marquee)
+- Regenerate any of them: serve `extension/` (`node harness/serve.mjs`), run the
+  demo server for the connected shot, open
+  `store-assets/frame.html?shot=hero|library|saved|connected` at 1280×800 and
+  screenshot; `tile.html` at 440×280; `marquee.html` at 1400×560.
+- Privacy policy URL for the listing: `https://mido-xi.vercel.app/privacy/extension`
+
+Submission runbook + first-user plan: `docs/extension/LAUNCH_PLAN.md`.
 
 ## Publish steps (owner)
 

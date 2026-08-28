@@ -45,10 +45,48 @@
 
   // Seed the popup's stored environment choice before it boots.
   const store = { env };
+
+  // ?seed=promo — a curated library + prefilled draft, for store
+  // screenshots. Content is realistic and invented; no real accounts.
+  if (params.get("seed") === "promo") {
+    const day = 86400000;
+    const mk = (id, videoId, title, channel, secs, obs, cat, ageMs) => ({
+      id, videoId,
+      sourceUrl: `https://www.youtube.com/watch?v=${videoId}`,
+      videoTitle: title, channelName: channel,
+      thumbnailUrl: null,
+      timestampSeconds: secs, observation: obs, category: cat,
+      createdAt: new Date(Date.now() - ageMs).toISOString(),
+      updatedAt: null, syncState: "local", origin: "chrome_extension",
+    });
+    // Real, public videos so thumbnails resolve; observations invented.
+    store.libraryV = 1;
+    store.library = [
+      mk("p1", "bcAEk_kUktc", "HOW Hansi Flick UNLOCKED Raphinha?", "Pythagoras in Boots", 314,
+        "Raphinha delays his movement until the defender commits centrally, then attacks the space behind.", "movement", 3600000),
+      mk("p2", "UC0tvvxTtds", "How Rodri and Busquets Make the Game Look Slow", "Football Mind Gym", 1122,
+        "Scans both shoulders twice before receiving and already knows the next passing lane.", "scanning", day),
+      mk("p3", "QRGS3oKJPZI", "How Top Strikers Always Find Space | Haaland, Mbappé", "ForPro", 245,
+        "Checks away from the centre-back first, waits for his head to turn, then attacks the blindside.", "finishing", day + 7200000),
+      mk("p4", "KMQWMccF83U", "What are pressing traps and pressing triggers?", "Tifo Football", 458,
+        "The press starts on the heavy first touch, never on the pass — the whole line steps together.", "pressing", 2 * day),
+    ];
+    store.library.forEach((c) => (c.thumbnailUrl = `https://i.ytimg.com/vi/${c.videoId}/hqdefault.jpg`));
+    store.draft = {
+      videoId: VIDEO_ID,
+      observation: "Checks away first, waits for the CB to look at the ball, then attacks the blindside.",
+      goalId: null,
+      category: "movement",
+      savedAt: Date.now(),
+    };
+  }
   try {
-    const kept = sessionStorage.getItem("harness-store");
-    if (kept) Object.assign(store, JSON.parse(kept));
-    store.env = env;
+    // Promo seeds are authoritative; otherwise prior state persists.
+    if (params.get("seed") !== "promo") {
+      const kept = sessionStorage.getItem("harness-store");
+      if (kept) Object.assign(store, JSON.parse(kept));
+      store.env = env;
+    }
   } catch {}
   const persist = () => {
     try {
