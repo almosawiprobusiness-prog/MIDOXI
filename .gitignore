@@ -49,3 +49,8 @@ next-env.d.ts
 # local scratch
 scratchpad/
 supabase/run/
+
+# MIDO XI Capture extension
+/extension/node_modules
+/extension/dist
+/extension/*.zip

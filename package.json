@@ -31,7 +31,9 @@
     "verify:feed": "node scripts/verify-feed.mjs",
     "verify:annotations": "node scripts/verify-annotations.mjs",
     "verify:gemini": "node scripts/verify-gemini.mjs",
-    "try:film": "node scripts/try-film-read.mjs"
+    "try:film": "node scripts/try-film-read.mjs",
+    "verify:extension": "node scripts/verify-extension-api.mjs",
+    "ext:build": "npm --prefix extension run build"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",
