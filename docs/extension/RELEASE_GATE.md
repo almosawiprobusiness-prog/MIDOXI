@@ -33,11 +33,11 @@ Status per item: ✅ verified · 🔶 owner action required.
 - [x] ✅ Migration `0035_study_captures.sql` applied to the live database
       (2026-08-28: verify-schema ok; probed directly — service role 200, anon
       read AND insert both refused 42501, so RLS + the revoke/grant held)
-- [ ] 🔶 Migrations **0032 + 0033 (+0034)** applied — surfaced by verify-migrations
-      while checking 0035: `mido_recommendations`, `product_analytics` and
-      `beta_feedback` do not exist in the live database. Captures save fine
-      without them, but every `track()` call — the extension funnel included —
-      is silently lost until 0033 exists. Same SQL-editor routine, oldest first.
+- [x] ✅ Migrations **0032 + 0033 + 0034** applied (2026-08-28, after being caught
+      unapplied by the 0035 check; first attempt ran 0034 before 0033 and rolled
+      back). Verified live: all 89 relations present, verify:db 23/23 security
+      checks pass, and all three tables probe service 200 / anon 401 — analytics
+      now has somewhere to land.
 - [ ] 🔶 One real-Chrome unpacked capture on youtube.com against the live app
       (TEST_REPORT § "Not covered here")
 - [ ] 🔶 `MIDO_EXTENSION_IDS` set in Vercel env at publish time
