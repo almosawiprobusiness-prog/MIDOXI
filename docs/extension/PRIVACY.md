@@ -1,56 +1,61 @@
 # MIDO XI Capture — Privacy
 
-The extension exists to do one thing: save a moment you noticed in a YouTube
-football video into your own MIDO XI account. It collects what that requires and
-nothing else.
+The extension does one thing: saves a moment you noticed in a YouTube football
+video — to this device for free, or to your own MIDO XI account if you connect
+one. It collects what that requires and nothing else.
+
+## Free mode (no account)
+
+- **Your captures are stored on this device only** (browser extension storage).
+  MIDO XI does not receive them — not the note, not the video, not the fact
+  that you captured. A local save makes zero network requests.
+- The only network call in free mode is a status check to MIDO XI asking "is
+  this browser signed in?" so the extension knows which mode to show. It
+  carries no capture data. Signed out, it answers no, and everything still works.
+- Your notes are yours: search them, edit them, export them all as Markdown or
+  JSON at any time, delete them one by one (with undo) or clear the library
+  (with explicit confirmation). No lock-in, no export tax.
+
+## Connected mode (MIDO XI account)
+
+- Captures you save with **Save to MIDO**, and local moments you explicitly
+  choose to **Import**, are transmitted to your MIDO XI account. Nothing
+  uploads automatically — importing your local library is always a button you
+  press, and your local copies remain on this device afterwards.
+- Your active development goals are retrieved so a capture can be connected to
+  one.
+- Signing out never touches your local library.
 
 ## What the extension reads
 
-Only when you click the extension (or press its shortcut), and only from the tab
-you are on:
+Only when you click it (or press its shortcut), and only from the tab you are
+on: the tab's URL (is this a YouTube video, and which), and the video's current
+playback time, title and channel — read once from the live page at that moment.
+It has **no youtube.com permission and no content script**: it cannot observe
+your browsing, your other tabs, your history, or any page you did not invoke
+it on.
 
-- The tab's URL — to know whether it is a YouTube video and which one
-- The video's current playback time, title, and channel name — read once from the
-  live page at that moment
-- Nothing is read before you click; nothing keeps watching after
+## What it stores locally
 
-The extension has **no youtube.com permission** and **no content script**. It
-cannot observe your browsing, your other tabs, your history, or YouTube pages you
-did not invoke it on.
-
-## What it stores locally (chrome.storage.local, this device only)
-
-- Your environment choice (production vs localhost — a developer setting)
-- Your current unsent draft (observation text, selected goal/category), kept so a
-  closed popup does not lose your writing; cleared when the capture saves
-- Failed captures awaiting retry (max 5), including their observation text;
-  removed once saved
-- Nothing else. No history of saved captures, no tokens, no passwords.
-
-## What it sends to MIDO XI (and nowhere else)
-
-On save, to your configured MIDO XI server only:
-
-- Video id, URL, title, channel, thumbnail URL, timestamp
-- Your observation text
-- The goal/category you chose, and a random idempotency key
-
-Requests carry your existing MIDO XI session cookie so the server knows the
-capture is yours. The extension never sees or stores your password or any token.
+Your capture library, your current unsent draft (cleared on save; discarded
+after 7 days), your environment setting, and small UI flags. No tokens, no
+passwords, no history of pages visited.
 
 ## What it does NOT do
 
-- No browsing history, no tabs other than the one you invoked it on
-- No tracking pixels, no third-party analytics, no ads
-- No requests to any host except MIDO XI (fonts are bundled inside the extension;
-  the video thumbnail is loaded from YouTube's image CDN for display only)
-- No audio storage: the optional voice input uses the browser's speech-to-text and
+- No browsing history, no unrelated tabs or page content, no keystroke telemetry
+- No third-party analytics, no tracking pixels, no ads
+- No requests to any host except MIDO XI (fonts ship inside the extension; the
+  video thumbnail is loaded from YouTube's image CDN for display only)
+- No audio storage — optional voice input uses the browser's speech-to-text and
   keeps only the resulting text
-- Product analytics (how many captures happen) are recorded **server-side** by
-  MIDO XI and never contain the text of your observation
+- **No observation text in analytics, ever.** Product analytics (recorded
+  server-side, connected mode only) contain counts, categories and flags —
+  never what you wrote. Free-mode usage is not tracked at all.
 
 ## Data ownership and deletion
 
-Captures are rows in your MIDO XI account, protected by the same row-level
-security as the rest of your football record, included in your account data
-export, and deleted with your account.
+Local captures live and die on this device, on your command. Captures saved to
+MIDO XI are rows in your account — covered by the same row-level security as
+the rest of your football record, included in your account export, deleted with
+your account.

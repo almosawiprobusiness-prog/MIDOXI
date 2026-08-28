@@ -1,7 +1,9 @@
 # MIDO XI Capture — Developer Guide
 
-Save football moments from YouTube directly to the MIDO XI Player OS.
-Everything lives in `extension/`; the server side is part of the main app.
+Save timestamped football moments from YouTube — locally for free (My Moments
+library, search, export), or into the MIDO XI Player OS when connected. The
+session picks a mode; capturing is never gated on a login. Everything lives in
+`extension/`; the server side is part of the main app.
 
 ## Install
 
@@ -55,7 +57,9 @@ Demo mode is the fastest way to see the whole capture → Film Room loop working
 ## Tests
 
 ```bash
-npm test                              # repo unit tests, includes tests/unit/captures.test.ts
+npm test                              # repo unit tests: tests/unit/captures.test.ts (the wire
+                                      # contract) + tests/unit/extension-library.test.ts (the
+                                      # local library: search, export formats, v0.1 migration)
 node scripts/verify-extension-api.mjs # integration: contract, origins, idempotency,
                                       # surfacing — against a RUNNING server (use dev:demo)
 ```
@@ -70,8 +74,13 @@ node harness/serve.mjs     # from extension/ — serves on :3000 (an allowed ori
 ```
 
 Scenarios via query params: `?page=watch|shorts|none|novideo`, `&seconds=2057`,
-`&env=local|production`, `&auth=out|offline` (forces the signed-out / offline
-views), `&fail=save` (save fails → pending/retry loop).
+`&env=local|production`, `&auth=out|offline` (forces local mode / an
+unreachable MIDO), `&fail=save` (connected save fails → "Save locally instead").
+
+Free Mode against a REAL 401 (the honest free-user experience): run
+`mido-xi-real-3100` (real keys, no cookies in the pane) with `&env=local`.
+Connected Mode: run `dev:demo` instead — the demo server authenticates without
+a login, goals load, and imports land in its in-memory film room.
 
 ## Release
 

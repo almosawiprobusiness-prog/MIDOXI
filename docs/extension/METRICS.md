@@ -4,6 +4,36 @@ The extension is a validation instrument: does a serious player, already watchin
 football, naturally capture observations into their development system? These are
 the questions it must answer, and where each answer lives.
 
+## The free-mode decision (v0.2): analytics-silent by design
+
+Free mode phones home for **nothing**. A local capture makes zero network
+requests, so there is no install→first-capture telemetry, no library-opened
+event, no export counter. This is deliberate: the privacy promise ("your notes
+stay on this device") is worth more than a funnel chart, `product_analytics`
+requires an authenticated user anyway, and a capture tool that reports on its
+users before they trust it never gets the users.
+
+What that costs, and the honest proxies:
+
+| Free-product question | Answer |
+|---|---|
+| Installs | Chrome Web Store dashboard |
+| Install → capture rate | Not measurable without phoning home — proxy: store installs vs users who later connect with a non-empty library |
+| Free captures per user, library/export usage | Not measured. The product-level signal is whether free users CONNECT — measured precisely below |
+
+## The connect funnel (measured, server-side)
+
+`capture_saved` now carries `via: "popup" | "import"`. An `import` batch is a
+free user converting: the size of their local library at connection is the
+free-mode engagement number, delivered exactly once, with consent, at the
+moment it matters.
+
+| Question | Answer |
+|---|---|
+| Free → connected conversions | users whose first `capture_saved` has `via: "import"` |
+| How much free usage preceded connecting | count of `via: "import"` rows per user in their first day |
+| Connected capture frequency | `capture_saved` with `via: "popup"` per user per week |
+
 ## Events
 
 Three additions to the closed `ProductEvent` vocabulary (`lib/analytics/track.ts`),

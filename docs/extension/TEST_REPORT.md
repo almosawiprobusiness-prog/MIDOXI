@@ -2,6 +2,53 @@
 
 Date: 2026-08-28 · Branch: `feature/mido-xi-capture`
 
+## v0.2 — FREE MODE + LOCAL LIBRARY + IMPORT
+
+**Unit:** 700 tests / 43 files, all passing — 17 new in
+`tests/unit/extension-library.test.ts`: search semantics (AND terms across
+title/observation/channel/category, case-insensitive), category+text
+combination, newest-first sort, date labels, the clipboard format, Markdown
+export (readable, newest first, watch links, separators), JSON round-trip,
+import wire shape (id = clientKey), pending-import partitioning, and the
+v0.1 pending-queue migration (keeps client keys, skips junk/dupes/empties,
+never invents notes). Integration: 29/29 (unchanged, now exercising the
+`via` analytics prop). Strict TS clean; app + extension production builds clean.
+
+**Real browser (production bundle, chrome-shim harness):**
+
+| Scenario | Result |
+|---|---|
+| Free capture against a REAL 401 (real-keys server, no cookies) | Capture view with "Local" badge, no goals section, "Save moment", quiet Connect link |
+| First local save | "Saved / 5:14 / **Your first moment is in your library**", count badge → 1 |
+| **Privacy: free save is local** | Network log: exactly ONE request total (session status GET, 401) — zero capture data transmitted |
+| Library | Card with thumbnail-watch, title, stamp, "Today", channel, quoted note, category chip, Watch/Copy/Edit/Delete |
+| Search | "shoulders" → only the scanning capture; multi-term AND verified at unit level |
+| Filter | Chips built only from present categories; Movement isolates the movement capture |
+| Edit | Inline edit saved and re-rendered |
+| Delete + undo | 2→1, "Moment deleted" bar, Undo → 2 |
+| Export .md | Blob intercepted: correct header, count, both sections, timestamped watch links |
+| Persistence | Reload (= popup closed/reopened): both moments + count badge survive |
+| **Scale (1000 records)** | Search 6.6ms · narrowed 0.7ms · full 1000-card rebuild 24ms · correct result counts (125/8-word, 67/15-category) |
+| Connected mode | No badge, goals section, "Save to MIDO" |
+| Import banner | "4 local moments / Import them…? They also stay on this device." |
+| **Partial-failure import** | Seeded 1 invalid among 4: "3 imported · 1 could not be imported — they stay safely local"; 3 "In MIDO" chips; all 4 local copies intact; the 3 verified in the demo Film Room; invalid one absent |
+| **Duplicate protection** | Flipped an imported moment back to "local", re-imported: server deduped via clientKey — still exactly one row in the Film Room |
+| Connected save failure | fail=save: error banner + **"Save locally instead"** → observation intact → saved to library, count advanced |
+| Settings | Account, Export library, **armed clear** ("Delete all 5 moments — click again to confirm"), environment, shortcut, privacy, version |
+
+**Harness environment caveats (not product issues):** the Browser pane ran
+`visibility: hidden`, where Chrome denies all clipboard writes and clamps
+timers — so the final clipboard write could not fire there (its formatting is
+unit-pinned, its wiring verified, and `copyText` has an execCommand fallback);
+and synthetic JS clicks were used after display scaling (dpr 1.25) broke
+ref-coordinate clicks — real pointer hit-testing was already proven in the
+v0.1 pass and the owner's real-Chrome test. Owner smoke test: one Copy click
+and one capture in real Chrome covers both.
+
+---
+
+## v0.1 — original report
+
 ## Automated — unit (vitest)
 
 `npm test` — **683 tests, 42 files, all passing**, including the new

@@ -2,6 +2,42 @@
 
 Status per item: ✅ verified · 🔶 owner action required.
 
+## v0.2 — FREE MODE
+
+- [x] ✅ No MIDO account required — the session picks a mode, never blocks; capture
+      verified against a real 401
+- [x] ✅ Capture works · local save works (never clears text a write didn't persist;
+      cap refuses loudly instead of trimming)
+- [x] ✅ Library works (list, thumbnail-watch, edit, delete+undo, empty state)
+- [x] ✅ Search works (6.6ms at 1000 records) · categories/filter work
+- [x] ✅ Exact timestamp reopening works (canonical &t= links)
+- [x] ✅ Copy works (format unit-pinned; wiring verified; clipboard write blocked only
+      by the hidden test pane — one real-Chrome click confirms)
+- [x] ✅ Export works (.md primary, .json backup, whole library, human-readable)
+- [x] ✅ Local data survives restart (versioned schema; v0.1 pending queue migrated)
+- [x] ✅ Free save does not transmit to MIDO — network-inspected: zero capture requests
+
+## v0.2 — MIDO CONNECTED
+
+- [x] ✅ Account connection works · development goals load
+- [x] ✅ Capture can connect to a goal · save to MIDO works
+- [x] ✅ Local import works — explicit, partial failures reported, local copies kept
+- [x] ✅ Duplicate imports prevented (capture id = clientKey; re-import verified single row)
+- [x] ✅ Save-failure fallback: "Save locally instead", observation intact
+- [x] ✅ Logout does not break Free Mode (local library is mode-independent)
+
+## v0.2 — QUALITY
+
+- [x] ✅ MIDO visual language preserved — no redesign; new states use the same tokens
+- [x] ✅ No new permissions (manifest unchanged except version)
+- [x] ✅ No observation text in analytics; free mode is analytics-silent by design
+- [x] ✅ Privacy documentation rewritten for both modes
+- [x] ✅ 700 unit tests · 29 integration checks · builds pass · browser pass done
+
+---
+
+## v0.1 gate (all standing)
+
 - [x] ✅ Manifest V3 valid (builds, loads in the harness; MV3-only APIs)
 - [x] ✅ Minimal permissions — `activeTab`, `scripting`, `storage`; hosts only MIDO XI
       (+localhost for dev, removed at publish). **No youtube.com permission, no content script.**
@@ -38,8 +74,11 @@ Status per item: ✅ verified · 🔶 owner action required.
       back). Verified live: all 89 relations present, verify:db 23/23 security
       checks pass, and all three tables probe service 200 / anon 401 — analytics
       now has somewhere to land.
-- [ ] 🔶 One real-Chrome unpacked capture on youtube.com against the live app
-      (TEST_REPORT § "Not covered here")
+- [x] ✅ Real-Chrome unpacked load verified (2026-08-28): injection on real YouTube
+      DOM (title + live timestamp read) and cookie auth from the real extension
+      origin (the player's actual goals loaded) — the two unknowns the harness
+      had to shim. 🔶 Remaining real-Chrome smoke (v0.2 build): one save, one
+      Copy click, one library open.
 - [ ] 🔶 `MIDO_EXTENSION_IDS` set in Vercel env at publish time
 - [ ] 🔶 Chrome Web Store submission (CHROME_STORE.md; $5 registration; owner account)
 

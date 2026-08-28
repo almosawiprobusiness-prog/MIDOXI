@@ -5,35 +5,46 @@ submitted — publishing is an owner action.**
 
 ## Listing
 
-**Title:** MIDO XI Capture
+**Title:** MIDO XI Capture — Football Video Notes
 
 **Short description (≤132 chars):**
-Save football moments from YouTube directly to your MIDO XI Player OS — the
-timestamp, what you noticed, and the goal it feeds.
+Save timestamped football observations while watching YouTube. Search, revisit
+and export your moments — free, no account needed.
 
 **Long description:**
 
-> A serious footballer is already watching football. MIDO XI Capture makes the
-> noticing count.
+> Anyone serious about football is already watching it — and noticing things. A
+> striker delaying his run. A midfielder scanning before the ball arrives. A
+> back line stepping a beat too late. MIDO XI Capture lets you save exactly
+> those moments without leaving the video.
 >
-> Watching a video on YouTube, you spot something — a striker delaying his run, a
-> midfielder scanning before the ball arrives. Click MIDO XI Capture (or press
-> Alt+Shift+M). The extension already knows the video and the exact second. Write
-> what you noticed, optionally connect it to one of your MIDO XI development
-> goals and a football category, and save. You are back watching in seconds.
+> Watching on YouTube, press Alt+Shift+M or click the extension. It already
+> knows the video and the exact second. Write what you noticed, tag a football
+> category — movement, scanning, pressing, finishing — and save. You're back
+> watching in seconds.
 >
-> Inside MIDO XI, every captured moment appears in your Film Room and on the
-> development goal it feeds — with a link that reopens the video at the exact
-> timestamp. Your study becomes development evidence.
+> Everything you capture lives in My Moments: search it, filter it by category,
+> reopen the exact timestamp, copy a formatted note, or export your whole
+> library as Markdown. Your notes are stored on your device and belong to you.
+> No account required.
 >
-> Requires a MIDO XI account. YouTube only in this version.
+> For players on MIDO XI, the Player OS: connect your account and your moments
+> become development evidence — linked to your goals, surfaced in your Film
+> Room and studies, with your existing local library importable in one click.
+>
+> For players, coaches, analysts, scouts and anyone who studies the game.
+> YouTube only in this version.
 
 **Category:** Productivity (or Sports). **Language:** English.
 
+Store copy naturally covers what people actually search — football analysis,
+soccer tactics notes, YouTube timestamp notes, video study, coaching notes —
+without keyword stuffing: the phrases above appear once each, in sentences.
+
 ## Single purpose statement
 
-Capture a timestamped observation from the YouTube video the user is watching and
-save it to the user's MIDO XI account.
+Capture a timestamped observation from the YouTube video the user is watching
+and save it to the user's local library or, if connected, their MIDO XI account.
 
 ## Permissions justification
 

@@ -1,8 +1,79 @@
 # MIDO XI Capture — Architecture
 
-A Chrome extension (Manifest V3) that saves football moments from YouTube into the
-existing MIDO XI Player OS. It is a capture companion, not a product: one popup,
-one table, two API routes, and two places in the Player OS where the moments land.
+A Chrome extension (Manifest V3) that captures football moments from YouTube —
+for free, for anyone, with no account — and connects them to the MIDO XI Player
+OS for players who have one. One popup, one local library, one table, two API
+routes, and two places in the Player OS where connected moments land.
+
+## The product model (v0.2)
+
+**FREE (LOCAL) MODE** — no account, no login wall, no network dependency for
+saving. Capture → observation → category → **Save moment** → the on-device
+library. Search, filter, edit, copy, export (.md / .json), delete with undo.
+The library is capped at 2000 moments and adding past the cap refuses loudly —
+silent trimming of someone's notes is the one failure a notes tool cannot have.
+
+**CONNECTED MODE** — everything above, plus: active development goals load,
+captures save to MIDO XI (`Save to MIDO`), and local moments can be explicitly
+imported. Saving to MIDO failing offers **Save locally instead** — the library
+is the safety net, which is why v0.1's separate pending-retry queue is gone.
+
+The session decides a *mode*, never whether the player may work.
+
+## FREE MODE ARCHITECTURE
+
+- `extension/src/lib/library-core.ts` — pure logic (types, search/filter, date
+  labels, copy/Markdown/JSON formatting, import partitioning, v0.1 migration).
+  Chrome-free so `tests/unit/extension-library.test.ts` pins it.
+- `extension/src/lib/library.ts` — chrome.storage.local wrapper: one versioned
+  array key, add/update/remove/restore/clear, small flags (milestones, import
+  banner dismissal). Reads degrade to empty; writes report failure so the UI
+  never clears text that did not persist.
+- `extension/src/library-view.ts` — MY MOMENTS: search (plain substring, AND
+  across title/observation/channel/category), category chips built from what
+  the library contains, per-moment watch/copy/edit/delete+undo, exports.
+- Storage choice: chrome.storage.local over IndexedDB. 2000 × ~0.5KB ≈ 1MB in
+  a 10MB quota; one keyed array is simpler, and measured at 1000 records the
+  full list renders in ~24ms and search in ~7ms.
+- Free mode's only network call is the session status check (mode detection —
+  GET, no capture data). A local save makes zero requests, verified by network
+  inspection.
+
+## CONNECTED MODE ARCHITECTURE
+
+Unchanged from v0.1 (cookie session, Origin gate, server revalidation) plus:
+
+- Save failure (offline / expired / 5xx) → "Save locally instead" writes the
+  validated capture into the library with `syncState: "local"`.
+- **Import**: the library banner offers explicit upload of local moments. Each
+  posts through the existing `/api/extension/captures` with the capture's own
+  `id` as `clientKey`, so a re-import (or an import racing a crash) dedupes
+  server-side instead of doubling. Successes are marked `syncState: "synced"` +
+  `midoId`; failures are counted, reported ("3 could not be imported — they
+  stay safely local"), and never dropped. The local copy always survives.
+- The POST body carries `via: "import" | "popup"`, surfaced only in analytics
+  props — the free→connected funnel is readable without a new event.
+
+## LOCAL DATA MODEL
+
+`LocalCapture` (library-core.ts): `id` (uuid; doubles as the import client
+key), `videoId`, `sourceUrl`, `videoTitle`, `channelName`, `thumbnailUrl`,
+`timestampSeconds` (numeric; labels are derived), `observation`, `category`,
+`createdAt`, `updatedAt`, `syncState: "local" | "synced"`, `midoId?`,
+`origin: "chrome_extension"`. Stored under one `library` key with a
+`libraryV` schema version.
+
+## MIGRATION FROM THE v0.1 AUTH-REQUIRED FLOW
+
+- v0.1 blocked the whole UI on a session; v0.2's boot() runs page-read, session
+  and library count in parallel and renders capture regardless.
+- v0.1's `pending` retry queue (failed MIDO saves) is migrated on first load
+  into library entries with `syncState: "local"` (`migratePendingToLibrary`),
+  keeping each entry's clientKey as its id so a later import still dedupes
+  against any copy that did reach the server. The old key is then removed.
+  Nothing a player wrote is dropped by the upgrade.
+- Drafts are unchanged, with one addition: drafts older than 7 days are
+  discarded on read.
 
 ## Current relevant systems (audited before building)
 
