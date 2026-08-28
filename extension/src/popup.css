@@ -58,6 +58,10 @@
 
 * { box-sizing: border-box; border-color: var(--line); margin: 0; padding: 0; }
 
+/* The hidden attribute must beat any class display value — .settings
+   is display:flex, and author styles outrank the UA's [hidden] rule. */
+[hidden] { display: none !important; }
+
 html { color-scheme: dark; }
 
 body {

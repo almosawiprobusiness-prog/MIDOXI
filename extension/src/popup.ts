@@ -338,8 +338,11 @@ function renderCapture(): void {
 
   /* video card */
   const card = el("div", { class: "video-card panel" });
-  const thumb = el("img", { class: "video-thumb", alt: "", src: video.thumbnailUrl });
+  // Listener BEFORE src: a fast 404 must not beat the handler and leave
+  // a broken-image box in the card.
+  const thumb = el("img", { class: "video-thumb", alt: "" });
   thumb.addEventListener("error", () => thumb.remove());
+  thumb.src = video.thumbnailUrl;
   const meta = el("div", { class: "video-meta" });
   meta.append(el("div", { class: "video-title" }, video.title));
   if (video.channel) meta.append(el("div", { class: "video-channel" }, video.channel));

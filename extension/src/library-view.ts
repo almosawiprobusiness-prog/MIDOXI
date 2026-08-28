@@ -203,8 +203,9 @@ export async function renderLibraryView(container: HTMLElement, deps: LibraryDep
     const top = el("div", { class: "lib-card-top" });
     if (c.thumbnailUrl) {
       const thumbBtn = el("button", { class: "lib-thumb", type: "button", "aria-label": `Watch ${c.videoTitle} at ${formatTimestamp(c.timestampSeconds)}` });
-      const img = el("img", { src: c.thumbnailUrl, alt: "" });
+      const img = el("img", { alt: "" });
       img.addEventListener("error", () => thumbBtn.remove());
+      img.src = c.thumbnailUrl;
       thumbBtn.append(img);
       thumbBtn.addEventListener("click", () => openTab(timestampedYoutubeUrl(c.videoId, c.timestampSeconds)));
       top.append(thumbBtn);
