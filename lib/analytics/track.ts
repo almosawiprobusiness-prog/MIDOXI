@@ -55,7 +55,20 @@ export type ProductEvent =
   | "recommendation_opened"
   | "recommendation_why_viewed"
   | "recommendation_completed"
-  | "recommendation_dismissed";
+  | "recommendation_dismissed"
+  /*
+    The MIDO XI Capture funnel, in three events that each answer one
+    validation question. OPENED: does an installed extension get used?
+    (fired on an authenticated session check — one per popup open, so
+    distinct users per week is the connection metric and the count is
+    the habit metric.) SAVED: does watching become capturing? — props
+    carry linkedToGoal and the category enum, never the observation
+    text. OPENED_IN_MIDO: do captured moments get revisited, which is
+    the difference between a notebook and a development system.
+  */
+  | "extension_opened"
+  | "capture_saved"
+  | "capture_opened_in_mido";
 
 /**
  * Record one product action. Fire-and-forget by design.

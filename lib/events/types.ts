@@ -30,6 +30,14 @@ export type MidoEventType =
   | "FILM_OBSERVATION_CREATED"
   | "STUDY_STARTED"
   | "STUDY_COMPLETED"
+  /*
+    A moment noticed in someone else's football, saved from the browser
+    by MIDO XI Capture. Admitted because it is a live signal of what the
+    player is studying RIGHT NOW — a run of captures about scanning
+    should change what MIDO recommends next, the same way a completed
+    study does.
+  */
+  | "STUDY_MOMENT_CAPTURED"
   | "TRAINING_LOGGED"
   | "RECOVERY_LOGGED"
   // ── coach / trainer / club, emitted but not yet consumed ──
@@ -131,6 +139,7 @@ export const EVENT_SUBJECT: Record<MidoEventType, SubjectType> = {
   FILM_OBSERVATION_CREATED: "video",
   STUDY_STARTED: "study",
   STUDY_COMPLETED: "study",
+  STUDY_MOMENT_CAPTURED: "study",
   TRAINING_LOGGED: "training",
   RECOVERY_LOGGED: "checkin",
   SESSION_ASSIGNED: "session",
