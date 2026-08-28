@@ -61,6 +61,10 @@ export async function POST(request: Request) {
     await track("capture_saved", {
       linkedToGoal: Boolean(input.goalId),
       category: input.category ?? "none",
+      // "import" = a Free Mode library moment brought into MIDO; "popup"
+      // = captured live while connected. Same event, one enum apart, so
+      // the free→connected funnel is readable without a new vocabulary.
+      via: body.via === "import" ? "import" : "popup",
     });
     await emitMidoEvent({
       type: "STUDY_MOMENT_CAPTURED",
