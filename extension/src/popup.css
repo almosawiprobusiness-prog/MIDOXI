@@ -420,28 +420,175 @@ textarea:focus { border-color: var(--signal-line); outline: none; }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── pending strip ───────────────────────────────────────── */
+/* ── header: mode + library ──────────────────────────────── */
 
-#pending-strip { padding: 0 16px 10px; }
-.pending {
+.top-actions { display: flex; align-items: center; gap: 6px; }
+
+.mode-badge {
+  margin-left: 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  padding: 2px 8px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+/* ── my moments (local library) ──────────────────────────── */
+
+.lib-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.lib-head > div:nth-child(2) { flex: 1; min-width: 0; }
+.lib-export { display: flex; align-items: center; gap: 8px; }
+.lib-export-btn { height: 30px; padding: 0 10px; font-size: 12px; gap: 5px; }
+.lib-export-btn svg { width: 13px; height: 13px; }
+.lib-json {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.lib-json:hover { color: var(--text-dim); }
+
+.lib-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--ink-850);
+  padding: 0 10px;
+  margin-bottom: 10px;
+  color: var(--text-faint);
+}
+.lib-search svg { width: 14px; height: 14px; flex: none; }
+.lib-search input {
+  width: 100%;
+  height: 34px;
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-hi);
+}
+.lib-search input::placeholder { color: var(--text-faint); }
+.lib-search input:focus { outline: none; }
+.lib-search:focus-within { border-color: var(--signal-line); }
+
+.lib-filter { margin-bottom: 12px; }
+
+.lib-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+.lib-none { padding: 14px 4px; }
+
+.lib-card { padding: 10px 12px; }
+.lib-card-top { display: flex; gap: 10px; }
+.lib-thumb {
+  width: 64px;
+  height: 36px;
+  flex: none;
+  border-radius: 5px;
+  border: 1px solid var(--line);
+  overflow: hidden;
+  background: var(--ink-850);
+  padding: 0;
+}
+.lib-thumb img { width: 100%; height: 100%; object-fit: cover; opacity: 0.85; }
+.lib-thumb:hover img { opacity: 1; }
+.lib-meta { min-width: 0; flex: 1; }
+.lib-title-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.lib-title {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-hi);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lib-stamp { flex: none; font-size: 12.5px; color: var(--signal-bright); }
+.lib-sub { display: flex; gap: 8px; margin-top: 1px; font-size: 10.5px; color: var(--text-faint); }
+.lib-sub span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.lib-obs { margin-top: 7px; font-size: 13px; line-height: 1.5; color: var(--text); }
+
+.lib-edit {
+  margin-top: 7px;
+  min-height: 64px;
+  font-size: 13px;
+}
+.lib-edit-row { display: flex; gap: 6px; margin-top: 6px; }
+.lib-mini { height: 30px; padding: 0 12px; font-size: 12px; }
+
+.lib-foot { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+.lib-actions { margin-left: auto; display: flex; align-items: center; gap: 2px; }
+.lib-act {
+  display: grid;
+  place-items: center;
+  min-width: 26px;
+  height: 24px;
+  border-radius: 6px;
+  padding: 0 5px;
+  color: var(--text-faint);
+  font-size: 11.5px;
+  transition: color 0.15s;
+}
+.lib-act svg { width: 13px; height: 13px; }
+.lib-act:hover { color: var(--signal-bright); }
+.lib-act-watch { color: var(--signal-bright); font-weight: 500; }
+.lib-act-watch:hover { color: var(--signal); }
+.lib-act-del:hover { color: var(--correction); }
+.lib-flash { color: var(--positive) !important; }
+
+.lib-undo {
+  position: sticky;
+  bottom: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  margin-top: 8px;
   border-radius: var(--r-md);
-  border: 1px solid rgba(231, 165, 60, 0.35);
-  background: rgba(231, 165, 60, 0.1);
-  padding: 7px 10px 7px 12px;
+  border: 1px solid var(--line-strong);
+  background: var(--ink-850);
+  padding: 7px 12px;
+  font-size: 12px;
+  color: var(--text-dim);
 }
-.pending span { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--review); }
-.pending button {
-  border-radius: 7px;
-  border: 1px solid rgba(231, 165, 60, 0.4);
-  padding: 3px 10px;
-  font-size: 11.5px;
-  color: var(--review);
+.lib-undo button { color: var(--signal-bright); font-size: 12px; font-weight: 500; }
+.lib-undo button:hover { color: var(--signal); }
+
+.lib-import { padding: 12px; margin-bottom: 12px; border-color: var(--signal-line); }
+.lib-import p { margin-top: 4px; font-size: 12.5px; color: var(--text); }
+.lib-import-row { display: flex; gap: 6px; margin-top: 8px; }
+.lib-import-note { font-size: 12px; color: var(--text-dim); }
+
+/* ── capture extras ──────────────────────────────────────── */
+
+.form-error-action {
+  display: block;
+  margin-top: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-hi);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
-.pending button:hover { background: rgba(231, 165, 60, 0.12); }
+
+.connect-link {
+  font-size: 12.5px;
+  color: var(--text-faint);
+  transition: color 0.15s;
+}
+.connect-link:hover { color: var(--signal-bright); }
 
 /* ── settings ────────────────────────────────────────────── */
 
@@ -460,6 +607,26 @@ textarea:focus { border-color: var(--signal-line); outline: none; }
 }
 .settings-row a { color: var(--signal-bright); text-decoration: none; }
 .settings-row a:hover { text-decoration: underline; }
+.settings-actions { display: flex; gap: 8px; }
+.settings-connect {
+  border-radius: 7px;
+  border: 1px solid var(--signal-line);
+  background: var(--signal-wash);
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--signal-bright);
+}
+.settings-connect:hover { background: rgba(123, 97, 255, 0.2); }
+.settings-note { font-size: 11.5px; line-height: 1.5; color: var(--text-faint); }
+.settings-danger {
+  font-size: 12px;
+  color: var(--text-faint);
+  text-align: right;
+  transition: color 0.15s;
+}
+.settings-danger:hover { color: var(--correction); }
+.settings-danger.armed { color: var(--correction); font-weight: 500; }
 
 /* ── demo note ───────────────────────────────────────────── */
 

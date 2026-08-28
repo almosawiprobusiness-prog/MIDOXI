@@ -81,7 +81,7 @@ export type SaveState =
   | { kind: "rejected"; message: string }
   | { kind: "error"; message: string };
 
-export async function postCapture(input: CaptureInput): Promise<SaveState> {
+export async function postCapture(input: CaptureInput, via?: "import"): Promise<SaveState> {
   const base = await apiBase();
   let res: Response;
   try {
@@ -89,7 +89,9 @@ export async function postCapture(input: CaptureInput): Promise<SaveState> {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
+      // `via` tells the server's analytics a library import from a live
+      // popup save apart; it never changes what is stored.
+      body: JSON.stringify(via ? { ...input, via } : input),
     });
   } catch {
     return { kind: "offline" };
