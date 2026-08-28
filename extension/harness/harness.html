@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>MIDO XI Capture — dev harness</title>
+  <!--
+    Loads the REAL built popup (dist/popup.js + popup.css) with
+    chrome.* shimmed, so every popup state can be exercised in a plain
+    browser tab against a dev server — no unpacked-extension loading
+    loop while iterating on UI.
+
+    Scenarios (query params):
+      ?page=watch            a normal YouTube watch page   (default)
+      ?page=shorts           a Shorts page
+      ?page=none             not on YouTube
+      ?page=novideo          YouTube page, no <video> readable
+      &seconds=2057          the player clock
+      &env=local|production  which MIDO XI the popup talks to (default local)
+
+    Serve the extension/ directory over http on port 3000 (an allowed
+    app origin) so the popup's cookie-credentialed fetches are accepted:
+      node harness/serve.mjs
+      → http://localhost:3000/harness/harness.html
+  -->
+  <script src="shim.js"></script>
+  <link rel="stylesheet" href="../dist/popup.css" />
+  <style>
+    /* Frame the popup like Chrome does; everything inside is real. */
+    html { background: #1b1e24; }
+    body {
+      margin: 40px auto;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <div class="field-glow" aria-hidden="true"></div>
+
+  <header class="top">
+    <div class="wordmark" aria-label="MIDO XI Capture">
+      <span class="wm-mido">MIDO</span><span class="wm-xi">XI</span>
+      <span class="label-tech wm-sub">Capture</span>
+    </div>
+    <button id="settings-toggle" class="icon-btn" type="button" aria-label="Settings" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+    </button>
+  </header>
+
+  <section id="settings" class="settings panel" hidden></section>
+  <div id="pending-strip" hidden></div>
+  <main id="view" aria-live="polite"></main>
+
+  <script src="../dist/popup.js"></script>
+</body>
+</html>

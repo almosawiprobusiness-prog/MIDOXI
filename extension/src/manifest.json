@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "MIDO XI Capture",
+  "version": "0.1.0",
+  "description": "Save football moments from YouTube directly to your MIDO XI Player OS.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyCK7mQI7oxJ8I/sJxqPeJZskD2FMa2JHeBdsx+pwUKECVE8JRA1ZqqLynEjZ71WriBL6HekEyYZa5cle9YyBqWbmCZVOIU04rGwHBSNQ5A6nYRk54lJSlXPIDC2OX3oz4hYZ8l36lSIiNBxQuSlwI1nb5ia5qwSan5VAls5mBzaRUeCujwebCfvC1+oBf1XkvB0v+7WLGPLQj0MMewSx79GEOZrKuiXlf6mIitU4CS2zULoTHvsVMx6JnVQNkopXTzHSG+WsMGvd1LMrnKEqzvz2Bi2kyjHjoONQCx9TAWtMkdQpcKCbPaP33qfLc9FenppfXe+P+C7sEpZZZU0tfQIDAQAB",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "MIDO XI Capture",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": [
+    "https://mido-xi.vercel.app/*",
+    "http://localhost:3100/*",
+    "http://localhost:3000/*"
+  ],
+  "commands": {
+    "_execute_action": {
+      "suggested_key": { "default": "Alt+Shift+M" },
+      "description": "Capture the current moment"
+    }
+  }
+}
