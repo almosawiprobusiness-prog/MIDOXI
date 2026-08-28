@@ -30,8 +30,14 @@ Status per item: ✅ verified · 🔶 owner action required.
 - [x] ✅ Extension can be loaded unpacked (`extension/dist/`, stable id)
 - [x] ✅ Documentation complete (ARCHITECTURE, README, PRIVACY, METRICS, CHROME_STORE,
       TEST_REPORT, this file)
-- [ ] 🔶 Migration `0035_study_captures.sql` applied to the live database
-      (SQL editor → `npm run verify:db`)
+- [x] ✅ Migration `0035_study_captures.sql` applied to the live database
+      (2026-08-28: verify-schema ok; probed directly — service role 200, anon
+      read AND insert both refused 42501, so RLS + the revoke/grant held)
+- [ ] 🔶 Migrations **0032 + 0033 (+0034)** applied — surfaced by verify-migrations
+      while checking 0035: `mido_recommendations`, `product_analytics` and
+      `beta_feedback` do not exist in the live database. Captures save fine
+      without them, but every `track()` call — the extension funnel included —
+      is silently lost until 0033 exists. Same SQL-editor routine, oldest first.
 - [ ] 🔶 One real-Chrome unpacked capture on youtube.com against the live app
       (TEST_REPORT § "Not covered here")
 - [ ] 🔶 `MIDO_EXTENSION_IDS` set in Vercel env at publish time
