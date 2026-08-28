@@ -33,6 +33,7 @@ const TABLES = {
   "0011 referrals": [
     "referral_codes", "referral_visits", "referrals", "referral_rewards", "comped_access",
   ],
+  "0035 study captures": ["study_captures"],
 };
 
 /*
