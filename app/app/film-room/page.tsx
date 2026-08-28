@@ -4,7 +4,10 @@ import { listVideos, listClips } from "@/lib/data/film";
 import { listStudyMoments } from "@/lib/data/matches";
 import { listCollections } from "@/lib/data/collections";
 import { listStudySessions } from "@/lib/data/study";
+import { listCaptures } from "@/lib/data/captures";
+import { listGoals } from "@/lib/data/development";
 import { getDiscover } from "@/lib/data/discover";
+import { SavedMoments } from "@/components/film/saved-moments";
 import { isDemoMode } from "@/lib/env";
 import { AddVideoDialog } from "@/components/film/add-video-dialog";
 import { DiscoverPanel } from "@/components/film/discover-panel";
@@ -18,10 +21,18 @@ export const metadata = { title: "Film Room — MIDO XI" };
 
 const SENTIMENTS = ["positive", "review", "correction"] as const;
 
-export default async function FilmRoomPage() {
-  const [videos, clips, collections, studySessions, discover, studyMoments] = await Promise.all([
-    listVideos(), listClips(), listCollections(), listStudySessions(), getDiscover(), listStudyMoments(),
-  ]);
+export default async function FilmRoomPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ moment?: string }>;
+}) {
+  const [{ moment }, videos, clips, collections, studySessions, discover, studyMoments, captures, goals] =
+    await Promise.all([
+      searchParams,
+      listVideos(), listClips(), listCollections(), listStudySessions(), getDiscover(), listStudyMoments(),
+      listCaptures(), listGoals(),
+    ]);
+  const goalTitles = Object.fromEntries(goals.map((g) => [g.id, g.title]));
   const videoMap = Object.fromEntries(videos.map((v) => [v.id, v.title]));
   const clipCount = (vid: string) => clips.filter((c) => c.videoId === vid).length;
   const favourites = clips.filter((c) => c.favorite).length;
@@ -78,6 +89,22 @@ export default async function FilmRoomPage() {
               </Link>
             ))}
           </div>
+        </section>
+      )}
+
+      {/*
+        Saved moments — what MIDO XI Capture sent here.
+
+        The extension's whole promise is "capture it in five seconds,
+        find it again in MIDO" — this section is the second half. It
+        sits above the library because a fresh capture is the most
+        recent thing the player did, and the ?moment= deep link from
+        the popup's "View in MIDO" lands on the exact card.
+      */}
+      {captures.length > 0 && (
+        <section className="mb-8" id="moments">
+          <SectionHeader label={`Saved moments · ${captures.length}`} />
+          <SavedMoments captures={captures} goalTitles={goalTitles} focusId={moment ?? null} />
         </section>
       )}
 

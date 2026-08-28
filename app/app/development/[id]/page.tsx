@@ -2,7 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { getGoalDetail } from "@/lib/data/development";
+import { listCapturesForGoal } from "@/lib/data/captures";
 import { categoryStyle } from "@/components/ui/primitives";
+import { SavedMoments } from "@/components/film/saved-moments";
 import { GoalFormDialog } from "@/components/development/goal-form-dialog";
 import { DeleteGoalButton } from "@/components/development/delete-goal-button";
 import { GoalLoop } from "@/components/development/goal-loop";
@@ -26,7 +28,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function GoalDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const detail = await getGoalDetail(id);
+  const [detail, captures] = await Promise.all([getGoalDetail(id), listCapturesForGoal(id)]);
   if (!detail) notFound();
 
   const { goal, evidence } = detail;
@@ -95,6 +97,22 @@ export default async function GoalDetailPage({ params }: { params: Promise<{ id:
           </div>
         ))}
       </div>
+
+      {/*
+        Study moments captured against this goal from the browser.
+        The player's watching becomes this goal's evidence — which is
+        the loop the extension exists to close.
+      */}
+      {captures.length > 0 && (
+        <div className="mt-6">
+          <div className="label-tech mb-3">Study moments · {captures.length}</div>
+          <SavedMoments
+            captures={captures}
+            goalTitles={{ [goal.id]: goal.title }}
+            compact
+          />
+        </div>
+      )}
 
       {/* Loop + evidence */}
       <div className="mt-6">
