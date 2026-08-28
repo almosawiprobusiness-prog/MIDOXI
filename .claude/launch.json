@@ -18,6 +18,18 @@
         "dev:demo"
       ],
       "port": 3100
+    },
+    {
+      "name": "mido-xi-real-3100",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "3100"
+      ],
+      "port": 3100
     }
   ]
 }
