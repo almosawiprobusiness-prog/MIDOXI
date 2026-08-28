@@ -9,7 +9,11 @@
   const seconds = Number(params.get("seconds") ?? 2057);
   const env = params.get("env") ?? "local";
 
-  const VIDEO_ID = "dQw4w9WgXcQ";
+  // ?vid= + ?title= model YouTube SPA navigation: each popup open reads
+  // the page fresh, so "navigated to video B" is simply the next open
+  // reporting B's id/title/clock.
+  const VIDEO_ID = params.get("vid") ?? "dQw4w9WgXcQ";
+  const TITLE = params.get("title") ?? "Harry Kane — Every Movement Pattern Explained";
   const SCENARIOS = {
     watch: {
       url: `https://www.youtube.com/watch?v=${VIDEO_ID}`,
@@ -17,7 +21,7 @@
         href: `https://www.youtube.com/watch?v=${VIDEO_ID}`,
         seconds,
         paused: false,
-        title: "Harry Kane — Every Movement Pattern Explained",
+        title: TITLE,
         channel: "Football IQ",
       },
     },

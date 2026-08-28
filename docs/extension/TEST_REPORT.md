@@ -36,6 +36,41 @@ never invents notes). Integration: 29/29 (unchanged, now exercising the
 | Connected save failure | fail=save: error banner + **"Save locally instead"** → observation intact → saved to library, count advanced |
 | Settings | Account, Export library, **armed clear** ("Delete all 5 moments — click again to confirm"), environment, shortcut, privacy, version |
 
+**Save-failure diagnosis (the "stuck after Save Moment" report):** ROOT CAUSE —
+no product bug. The Browser pane's ref-coordinate clicks were landing ~25%
+off-target after the display moved to 125% scaling (devicePixelRatio 1.25),
+and the hidden pane could not screenshot to recalibrate. Evidence:
+`elementFromPoint` at the click coordinate returned the intended chip (the
+coordinate was right, the transport wasn't); the draft held the typed text but
+no category (the chip click before Save also never landed); and with clicks
+dispatched at the DOM level the UNCHANGED save path completed first try. Zero
+code changed for this. Real extension clicks are real user clicks — the
+failure mode cannot exist in production.
+
+**SPA navigation recheck (two videos, one sequence, fresh storage):**
+Video A ("Barcelona vs Athletic — Full Match", 5:14) captured → navigate →
+Video B ("Rodri — Tactical Analysis", 18:42) captured → Video C ("Defensive
+Shape Clip", 4:05) captured. Library shows all three, newest first, each with
+its own title/stamp/observation; the three Watch links carry three distinct
+video ids each with its own `&t=` (intercepted and verified); and Video A's
+draft did NOT leak into Video B's textarea (drafts are keyed by video). No
+stale metadata anywhere — as designed: no persistent page state exists to
+go stale.
+
+**Mode switching (local → connected → logout → local):** connected shows the
+goals and "Save to MIDO" with the library intact and the import banner offered;
+logged out shows the Local badge, "Save moment", goals COMPLETELY gone (the
+extension holds no cloud data to leak), import banner gone, library intact at 3.
+Mode is re-derived on every popup open — no reload gymnastics.
+
+**Privacy re-sweep:** across the three local saves of the SPA sequence, the
+network log shows zero requests to `/api/extension/*`; the only request in the
+whole window was the connected-phase session status GET.
+
+**Copy content audit:** the clipboard format (unit-pinned) contains title,
+timestamp, observation, category label and the timestamped URL — no internal
+ids, no sync state, no session values.
+
 **Harness environment caveats (not product issues):** the Browser pane ran
 `visibility: hidden`, where Chrome denies all clipboard writes and clamps
 timers — so the final clipboard write could not fire there (its formatting is

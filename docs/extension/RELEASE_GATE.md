@@ -26,6 +26,19 @@ Status per item: ✅ verified · 🔶 owner action required.
 - [x] ✅ Save-failure fallback: "Save locally instead", observation intact
 - [x] ✅ Logout does not break Free Mode (local library is mode-independent)
 
+## v0.2 — FINAL QA PASS (2026-08-28, gate-closing run)
+
+- [x] ✅ Save-failure report diagnosed: environment (display-scaling click offset in
+      the hidden test pane), zero product code changed — see TEST_REPORT
+- [x] ✅ SPA recheck: three videos captured in sequence, fresh storage — distinct
+      ids/titles/timestamps end to end, drafts keyed per video, no stale metadata
+- [x] ✅ Mode switching: local → connected → logout → local; goals appear/vanish
+      correctly, library survives every transition, mode re-derived per open
+- [x] ✅ Privacy re-sweep: zero `/api/extension` requests across three local saves
+- [x] ✅ Search probes by title / observation phrase / category term; combined
+      search+filter; clean no-match state
+- [x] ✅ Copy content audited: no internal ids, no session data
+
 ## v0.2 — QUALITY
 
 - [x] ✅ MIDO visual language preserved — no redesign; new states use the same tokens
