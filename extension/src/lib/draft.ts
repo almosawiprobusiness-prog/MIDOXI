@@ -1,27 +1,20 @@
 /*
-  Never lose an observation.
+  Never lose an observation mid-thought.
 
-  Two kinds of local state, both in chrome.storage.local, both small,
-  both disposable once MIDO XI has the data:
+  The DRAFT is what is being typed right now, keyed to the video it is
+  about, written on every input and cleared on a successful save —
+  Chrome closes popups on any focus loss, and that must never cost the
+  player their sentence. Recovery is bounded: a draft older than a week
+  is a stale thought, not a rescue, and is discarded on read.
 
-  · DRAFT — what is being typed right now, keyed to the video it is
-    about. Written on every input, cleared on successful save. Closing
-    the popup mid-thought (which Chrome does on any focus loss) costs
-    nothing.
-
-  · PENDING — captures whose save FAILED. The full validated payload,
-    including its clientKey, so a retry after connectivity returns is
-    idempotent end to end. Capped: this is a safety net for a bad
-    minute on a train, not an offline sync engine.
-
-  Observation text lives only on this device, only until it reaches
-  MIDO XI, and is never sent anywhere else.
+  (v0.1 also kept a `pending` retry queue here for failed MIDO saves.
+  Free Mode replaced it: a capture that cannot reach MIDO now saves
+  into the local library instead — see library.ts, which migrates any
+  old pending entries on first load.)
 */
-import type { CaptureInput } from "../../../lib/data/capture-types";
+import { DRAFT_MAX_AGE_MS } from "./library-core";
 
 const DRAFT_KEY = "draft";
-const PENDING_KEY = "pending";
-export const PENDING_CAP = 5;
 
 export interface Draft {
   videoId: string;
@@ -36,7 +29,12 @@ export async function readDraft(videoId: string): Promise<Draft | null> {
     const { [DRAFT_KEY]: d } = await chrome.storage.local.get(DRAFT_KEY);
     if (!d || typeof d !== "object") return null;
     const draft = d as Draft;
-    return draft.videoId === videoId && typeof draft.observation === "string" ? draft : null;
+    if (draft.videoId !== videoId || typeof draft.observation !== "string") return null;
+    if (typeof draft.savedAt !== "number" || Date.now() - draft.savedAt > DRAFT_MAX_AGE_MS) {
+      void clearDraft();
+      return null;
+    }
+    return draft;
   } catch {
     return null;
   }
@@ -55,38 +53,5 @@ export async function clearDraft(): Promise<void> {
     await chrome.storage.local.remove(DRAFT_KEY);
   } catch {
     // Nothing to do — a stale draft is filtered by videoId on read.
-  }
-}
-
-export async function listPending(): Promise<CaptureInput[]> {
-  try {
-    const { [PENDING_KEY]: p } = await chrome.storage.local.get(PENDING_KEY);
-    return Array.isArray(p) ? (p as CaptureInput[]).slice(0, PENDING_CAP) : [];
-  } catch {
-    return [];
-  }
-}
-
-export async function pushPending(input: CaptureInput): Promise<void> {
-  try {
-    const existing = await listPending();
-    // Same clientKey = same capture attempt; replace, don't duplicate.
-    const rest = existing.filter((p) => !input.clientKey || p.clientKey !== input.clientKey);
-    await chrome.storage.local.set({ [PENDING_KEY]: [input, ...rest].slice(0, PENDING_CAP) });
-  } catch {
-    // Worst case the retry chip undercounts; the current popup still
-    // holds the text on screen.
-  }
-}
-
-export async function removePending(clientKey: string | null | undefined): Promise<void> {
-  if (!clientKey) return;
-  try {
-    const existing = await listPending();
-    await chrome.storage.local.set({
-      [PENDING_KEY]: existing.filter((p) => p.clientKey !== clientKey),
-    });
-  } catch {
-    // A cleared-on-server pending row deduplicates harmlessly on retry.
   }
 }
