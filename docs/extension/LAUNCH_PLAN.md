@@ -14,9 +14,63 @@ Everything is prepared; the steps are in strict order because each depends on
 the one before.
 
 ### 1. Deploy the backend (blocks everything)
-Merge `feature/mido-xi-capture` → `main`, push. Vercel deploys. Verify:
-- `https://mido-xi.vercel.app/api/extension/session` answers `401 {"authenticated":false}` (not 404)
-- `https://mido-xi.vercel.app/privacy/extension` renders the extension privacy policy
+
+**What ships:** `main` is strictly behind `feature/mido-xi-capture` (no
+divergence — the merge is a fast-forward), so this push carries the 4
+Founding XI beta commits plus all extension work. The database is already
+ahead of the code (migrations 0031–0035 applied and verified live), so code
+and schema land consistent. **No new env vars are needed for this deploy.**
+
+**a. Pre-flight** (from the repo root, on `feature/mido-xi-capture`):
+```bash
+npm test && npm run build
+```
+Both must be green (they were at gate close).
+
+**b. Merge and push:**
+```bash
+git checkout main
+```
+```bash
+git pull origin main
+```
+```bash
+git merge feature/mido-xi-capture
+```
+```bash
+git push origin main
+```
+(`git pull` should say up to date; the merge should say fast-forward. If
+either says anything about conflicts, stop — something changed on the remote.)
+
+**c. Watch the deploy:** Vercel builds automatically on the push —
+[vercel.com dashboard](https://vercel.com) → mido-xi → Deployments, wait for
+**Ready** (~2 min). A failed build leaves the previous deployment serving, so
+production is never down while you look at it.
+
+**d. Verify production** (all three, in order):
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" https://mido-xi.vercel.app/api/extension/session
+```
+→ must print **401** (404 = not deployed; 500 = check Vercel logs).
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" https://mido-xi.vercel.app/privacy/extension
+```
+→ must print **200**.
+```bash
+node scripts/verify-extension-api.mjs https://mido-xi.vercel.app
+```
+→ runs the session/origin/validation contract against production (the
+persistence tests self-skip without a login — expected; everything that runs
+must pass).
+
+**e. Rollback, if ever needed:** Vercel dashboard → Deployments → previous
+deployment → **Instant Rollback** (seconds, no git surgery). The migrations
+are additive and were already live before this deploy, so the database never
+needs rolling back.
+
+**f. Real smoke:** extension gear → Environment → **MIDO XI** (production),
+sign in at mido-xi.vercel.app, one capture end to end.
 
 ### 2. Final smoke (2 minutes)
 v0.2 unpacked in real Chrome, extension env set to **production**: one free
