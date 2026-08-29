@@ -57,7 +57,13 @@ console.log("SESSION");
 {
   const res = await fetch(`${base}/api/extension/session`, { headers: { origin: EXT_ORIGIN } });
   const body = await res.json();
-  ok("answers 200 with an extension Origin", res.status === 200, `status ${res.status}`);
+  // 200 = signed in / demo; 401 = real mode without cookies. Both mean
+  // the route exists and answered correctly — 404 is the failure.
+  ok(
+    "session route answers (200 signed-in or 401 signed-out)",
+    res.status === 200 || res.status === 401,
+    `status ${res.status}`,
+  );
   ok("reflects the extension origin in ACAO", res.headers.get("access-control-allow-origin") === EXT_ORIGIN);
   ok("allows credentials", res.headers.get("access-control-allow-credentials") === "true");
   ok("reports authentication state", typeof body.authenticated === "boolean");
