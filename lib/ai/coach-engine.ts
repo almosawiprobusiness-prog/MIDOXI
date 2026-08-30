@@ -1,5 +1,5 @@
 import "server-only";
-import { generateJson, aiAvailable, aiStatus } from "./anthropic";
+import { generateJson, aiAvailable, aiStatus, modelFor } from "./anthropic";
 import { checkFeature } from "@/lib/billing/membership";
 import { refusalReason } from "@/lib/billing/gate-copy";
 import { consumeFeature, logAiUsage } from "@/lib/billing/meter";
@@ -165,6 +165,7 @@ RULES:
   await logAiUsage({
     feature: "ai_interactions",
     tier: "standard",
+    model: modelFor("standard"),
     inputTokens: res.ok ? res.usage.input : 0,
     outputTokens: res.ok ? res.usage.output : 0,
     cacheReadTokens: res.ok ? res.usage.cacheRead : 0,
@@ -272,6 +273,7 @@ RULES — these are absolute:
   await logAiUsage({
     feature: "ai_interactions",
     tier: "standard",
+    model: modelFor("standard"),
     inputTokens: res.ok ? res.usage.input : 0,
     outputTokens: res.ok ? res.usage.output : 0,
     cacheReadTokens: res.ok ? res.usage.cacheRead : 0,

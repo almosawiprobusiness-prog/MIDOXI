@@ -18,7 +18,8 @@ import type { PlayerSignals } from "./next-best-action";
      pin them rather than re-deriving them.
 
   2. CITABLE. Everything in the context carries a stable key
-     ("goal:<id>", "film:<concept>", "readiness", "rhythm", "memory").
+     ("goal:<id>", "film:<concept>", "study:<slug>", "readiness",
+     "rhythm", "memory").
      A generation that wants to justify itself must cite one of these
      keys, and `validSourceKeys` is the whole universe — anything else
      a model invents is dropped in code, not argued with in a prompt.
@@ -110,6 +111,20 @@ export function selectPlayerContext(
 }
 
 /**
+ * A completed study's citation key. Studies arrive as display subjects
+ * ("Harry Kane"), so the key is a slug of the subject — stable for the
+ * same study, safe inside a bracketed tag.
+ */
+export function studyKey(subject: string): string {
+  const slug = subject
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+  return `study:${slug || "unknown"}`;
+}
+
+/**
  * Every key a generation may cite. The validator treats this as the
  * whole universe: a source outside it did not come from the record.
  */
@@ -119,6 +134,7 @@ export function validSourceKeys(ctx: PlayerContext): Set<string> {
   if (ctx.memoryBlock) keys.add("memory");
   for (const g of ctx.goals) keys.add(`goal:${g.id}`);
   for (const c of ctx.filmConcepts) keys.add(`film:${c.concept}`);
+  for (const st of ctx.studies) keys.add(studyKey(st.subject));
   return keys;
 }
 
@@ -155,7 +171,14 @@ export function contextPromptBlock(ctx: PlayerContext): string {
     );
   }
 
-  for (const st of ctx.studies) lines.push(`- [rhythm] Studied "${st.subject}" ${st.daysAgo} day(s) ago.`);
+  /*
+    Studies used to ride under [rhythm], which made "apply what you
+    studied" uncitable — a session block built on the Kane study had no
+    key to name. Each completed study is now its own evidence line.
+  */
+  for (const st of ctx.studies) {
+    lines.push(`- [${studyKey(st.subject)}] Studied "${st.subject}" ${st.daysAgo} day(s) ago.`);
+  }
 
   let block = lines.join("\n");
   if (ctx.memoryBlock) block += `\n\n${ctx.memoryBlock}`;

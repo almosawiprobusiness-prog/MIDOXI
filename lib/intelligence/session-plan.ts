@@ -1,6 +1,6 @@
 import type { SessionKind } from "@/lib/types";
 import type { PlayerContext } from "./context";
-import { validSourceKeys } from "./context";
+import { validSourceKeys, studyKey } from "./context";
 
 /*
   THE SESSION PLAN — the shape of a generated training session, its
@@ -46,6 +46,63 @@ export interface SessionProposal {
 export const MAX_BLOCKS = 6;
 export const MIN_BLOCKS = 2;
 
+/*
+  THE SESSION BRIEF — the player's choices for today, all optional.
+
+  Defaults are absence: an empty brief means "MIDO decides from the
+  record", which is what the engine already did. Every field is a chip
+  the player taps, never a form they fill, and the values are closed
+  sets so a brief can be rendered into a prompt without sanitising
+  free text.
+*/
+export const BRIEF_MINUTES = [30, 45, 60, 75, 90] as const;
+export const BRIEF_LOCATIONS = ["pitch", "gym", "home", "wall", "small-space"] as const;
+export const BRIEF_MODES = ["solo", "partner", "group"] as const;
+export const BRIEF_EQUIPMENT = [
+  "ball",
+  "cones",
+  "goal",
+  "wall",
+  "rebounder",
+  "mannequins",
+  "weights",
+  "bands",
+  "boxes",
+] as const;
+
+export interface SessionBrief {
+  minutes?: (typeof BRIEF_MINUTES)[number];
+  location?: (typeof BRIEF_LOCATIONS)[number];
+  mode?: (typeof BRIEF_MODES)[number];
+  equipment?: string[];
+}
+
+/** Keep only recognised values; an unknown chip never reaches a prompt. */
+export function sanitizeBrief(raw: SessionBrief | null | undefined): SessionBrief {
+  if (!raw) return {};
+  const brief: SessionBrief = {};
+  if (raw.minutes && (BRIEF_MINUTES as readonly number[]).includes(raw.minutes)) brief.minutes = raw.minutes;
+  if (raw.location && (BRIEF_LOCATIONS as readonly string[]).includes(raw.location)) brief.location = raw.location;
+  if (raw.mode && (BRIEF_MODES as readonly string[]).includes(raw.mode)) brief.mode = raw.mode;
+  if (Array.isArray(raw.equipment)) {
+    const eq = raw.equipment.filter((e) => (BRIEF_EQUIPMENT as readonly string[]).includes(e));
+    if (eq.length) brief.equipment = eq;
+  }
+  return brief;
+}
+
+/** The brief as prompt lines. Empty string when the player chose nothing. */
+export function briefPromptBlock(brief: SessionBrief): string {
+  const lines: string[] = [];
+  if (brief.minutes) lines.push(`- Time available: ${brief.minutes} minutes. The session totals this.`);
+  if (brief.location) lines.push(`- Place: ${brief.location.replace("-", " ")}.`);
+  if (brief.mode) lines.push(`- Mode: ${brief.mode}${brief.mode === "solo" ? " — no partner, no server, no group drills" : ""}.`);
+  if (brief.equipment?.length) {
+    lines.push(`- Equipment available, and nothing else: ${brief.equipment.join(", ")}.`);
+  }
+  return lines.length ? `SESSION BRIEF (the player's choices for today — the session must fit them):\n${lines.join("\n")}` : "";
+}
+
 /** Human label for a source key, resolved against the context. */
 export function sourceLabel(key: string, ctx: PlayerContext): string {
   if (key === "readiness") return `Readiness ${ctx.situation.readiness}/100`;
@@ -56,6 +113,10 @@ export function sourceLabel(key: string, ctx: PlayerContext): string {
     return g ? `Goal: ${g.title}` : "Goal";
   }
   if (key.startsWith("film:")) return `Film: ${key.slice(5)}`;
+  if (key.startsWith("study:")) {
+    const st = ctx.studies.find((s) => studyKey(s.subject) === key);
+    return st ? `Study: ${st.subject}` : "Study";
+  }
   return key;
 }
 
@@ -89,9 +150,17 @@ export function validateBlocks(
  * prescribes shapes of work, never claims about the player it cannot
  * cite.
  */
-export function composeSessionPlan(ctx: PlayerContext): SessionProposal {
+export function composeSessionPlan(ctx: PlayerContext, brief: SessionBrief = {}): SessionProposal {
   const blocks: SessionBlock[] = [];
   const lowReadiness = ctx.situation.readiness !== null && ctx.situation.readiness < 40;
+  /*
+    The brief compresses the same session rather than inventing a
+    different one: a 30-minute ask gets the short prescriptions, not
+    fewer reasons. Low readiness wins every tie — a short session can
+    still be gentle, but a gentle one is never made intense to fill
+    the time.
+  */
+  const short = brief.minutes !== undefined && brief.minutes <= 35;
 
   const film = ctx.filmConcepts[0] ?? null;
   const goal = ctx.goals[0] ?? null;
@@ -101,7 +170,7 @@ export function composeSessionPlan(ctx: PlayerContext): SessionProposal {
     detail: lowReadiness
       ? "Extended activation: easy movement, mobility, build to moderate intensity only."
       : "Activation: progressive movement prep into short accelerations.",
-    work: lowReadiness ? "12 minutes" : "8 minutes",
+    work: lowReadiness ? "12 minutes" : short ? "5 minutes" : "8 minutes",
     sourceKey: lowReadiness ? "readiness" : "rhythm",
     why: lowReadiness
       ? "Your last check-in scored low, so today builds up gently and stays submaximal."
@@ -122,7 +191,7 @@ export function composeSessionPlan(ctx: PlayerContext): SessionProposal {
     blocks.push({
       name: `Goal work: ${goal.title}`,
       detail: `Constraint game or pattern where the action only counts when it starts with the goal behaviour.`,
-      work: lowReadiness ? "8 minutes, low intensity" : "12 minutes",
+      work: lowReadiness ? "8 minutes, low intensity" : short ? "8 minutes" : "12 minutes",
       sourceKey: `goal:${goal.id}`,
       why: `Directly serves your active goal.`,
     });
@@ -133,7 +202,7 @@ export function composeSessionPlan(ctx: PlayerContext): SessionProposal {
     detail: lowReadiness
       ? "Down-regulation: easy movement and breathing. Note how the body responded."
       : "Transfer: free play finishing through today's focus, then note one thing that improved.",
-    work: lowReadiness ? "5 minutes" : "10 minutes",
+    work: lowReadiness || short ? "5 minutes" : "10 minutes",
     sourceKey: lowReadiness ? "readiness" : "rhythm",
     why: "Ends the session with evidence you can log.",
   });
@@ -141,8 +210,8 @@ export function composeSessionPlan(ctx: PlayerContext): SessionProposal {
   const lead = film?.concept ?? goal?.title ?? "fundamentals";
   return {
     title: `Individual session — ${lead.toLowerCase()}`,
-    kind: "individual",
-    durationMin: lowReadiness ? 35 : 50,
+    kind: brief.location === "gym" ? "gym" : "individual",
+    durationMin: brief.minutes ?? (lowReadiness ? 35 : 50),
     objective: goal
       ? `Move "${goal.title}" forward${film ? ` through what the film showed (${film.concept.toLowerCase()})` : ""}.`
       : `A focused individual session built from your recent record.`,

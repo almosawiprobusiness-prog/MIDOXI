@@ -73,10 +73,20 @@ describe("selectPlayerContext", () => {
 });
 
 describe("validSourceKeys", () => {
-  it("is the whole citation universe: goals, concepts, readiness, rhythm, memory", () => {
+  it("is the whole citation universe: goals, concepts, studies, readiness, rhythm, memory", () => {
     const keys = validSourceKeys(selectPlayerContext(signals(), "MEMORY"));
     expect(keys).toEqual(
-      new Set(["rhythm", "readiness", "memory", "goal:g1", "film:late scanning", "film:first touch"]),
+      new Set([
+        "rhythm",
+        "readiness",
+        "memory",
+        "goal:g1",
+        "film:late scanning",
+        "film:first touch",
+        // Studies joined the universe in the intelligence-layer phase —
+        // "apply what you studied" needs a key a block can cite.
+        "study:rodri",
+      ]),
     );
   });
 

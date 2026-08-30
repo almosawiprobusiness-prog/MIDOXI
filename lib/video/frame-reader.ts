@@ -1,5 +1,5 @@
 import "server-only";
-import { generateJson, aiAvailable, aiStatus } from "@/lib/ai/anthropic";
+import { generateJson, aiAvailable, aiStatus, modelFor } from "@/lib/ai/anthropic";
 import { checkFeature } from "@/lib/billing/membership";
 import { refusalReason } from "@/lib/billing/gate-copy";
 import { consumeFeature, logAiUsage, releaseFeature } from "@/lib/billing/meter";
@@ -138,6 +138,7 @@ export const frameReader: VideoAnalysisProvider = {
     await logAiUsage({
       feature: "deep_analyses",
       tier: "standard",
+      model: modelFor("standard"),
       inputTokens: res.ok ? res.usage.input : 0,
       outputTokens: res.ok ? res.usage.output : 0,
       cacheReadTokens: res.ok ? res.usage.cacheRead : 0,

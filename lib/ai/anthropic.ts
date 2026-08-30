@@ -61,6 +61,15 @@ const MODELS: Record<ClaudeTier, string> = {
   deep: "claude-opus-5",
 };
 
+/**
+ * The model a tier resolves to — for `logAiUsage({ model })`, so spend
+ * can be attributed to a model version after this table changes. The
+ * table itself stays private: callers choose tiers, never models.
+ */
+export function modelFor(tier: ClaudeTier): string {
+  return MODELS[tier];
+}
+
 export type AiFailReason = "disabled" | "no_credits" | "rate_limited" | "error";
 
 export type AiResult<T> =

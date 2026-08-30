@@ -1,5 +1,7 @@
 import "server-only";
-import { generateJson, aiAvailable, aiStatus } from "./anthropic";
+import { generateJson, aiAvailable, aiStatus, modelFor } from "./anthropic";
+import { SESSION_DRAFT } from "./prompts";
+import { sessionPayloadSchema, validateAi, type SessionPayload } from "./schemas";
 import { checkFeature } from "@/lib/billing/membership";
 import { refusalReason } from "@/lib/billing/gate-copy";
 import { consumeFeature, releaseFeature, logAiUsage } from "@/lib/billing/meter";
@@ -8,8 +10,10 @@ import { buildPlayerContext } from "@/lib/intelligence/build-context";
 import {
   composeSessionPlan,
   validateBlocks,
+  sanitizeBrief,
+  briefPromptBlock,
   MIN_BLOCKS,
-  type SessionBlock,
+  type SessionBrief,
   type SessionProposal,
 } from "@/lib/intelligence/session-plan";
 import { contextPromptBlock, validSourceKeys, type PlayerContext } from "@/lib/intelligence/context";
@@ -73,30 +77,9 @@ const SCHEMA = {
   required: ["title", "kind", "durationMin", "objective", "blocks"],
 } as const;
 
-const SYSTEM = `You are MIDO, the football intelligence inside MIDO XI.
-
-You are writing ONE individual training session for one player, derived from their actual record.
-
-HARD RULES — these are not style preferences:
-- You will be given the player's record as lines tagged with keys like [goal:...], [film:...], [readiness], [rhythm], plus optionally their standing memory. Every block you write MUST set "sourceKey" to one of those exact keys — the single piece of the record that block exists because of. A block you cannot tie to the record does not belong in the session.
-- NEVER invent statistics, test results, events or observations. If the record does not show it, do not claim it.
-- If readiness is below 40, the session stays submaximal: no maximal sprinting, no heavy loading, and say so in the block that adapts.
-- Respect the memory absolutely — if it says a drill did not work or an area is constrained, do not program it.
-- "why" is one sentence in the player's terms, citing the record in plain words ("your film showed this three times"), never hype.
-- Real prescriptions: sets, reps, minutes, rest. 3-6 blocks, 30-75 minutes total.
-- The objective names what this session moves forward, not a slogan.`;
-
 export interface DraftSessionResult {
   proposal: SessionProposal;
   context: PlayerContext;
-}
-
-interface Payload {
-  title: string;
-  kind: SessionKind;
-  durationMin: number;
-  objective: string;
-  blocks: SessionBlock[];
 }
 
 /**
@@ -105,9 +88,10 @@ interface Payload {
  * with an honest note. A consumed unit is refunded when the failure
  * was not the player's fault.
  */
-export async function draftSession(): Promise<DraftSessionResult> {
+export async function draftSession(rawBrief?: SessionBrief): Promise<DraftSessionResult> {
   const context = await buildPlayerContext();
-  const base = composeSessionPlan(context);
+  const brief = sanitizeBrief(rawBrief);
+  const base = composeSessionPlan(context, brief);
 
   const gate = await checkFeature("ai_interactions");
   if (!gate.allowed) {
@@ -133,12 +117,13 @@ export async function draftSession(): Promise<DraftSessionResult> {
   }
   if (!(await consumeFeature("ai_interactions"))) return { proposal: base, context };
 
+  const briefBlock = briefPromptBlock(brief);
   const started = Date.now();
-  const res = await generateJson<Payload>({
-    tier: "standard",
-    system: SYSTEM,
+  const res = await generateJson<SessionPayload>({
+    tier: SESSION_DRAFT.tier,
+    system: SESSION_DRAFT.system,
     prompt: `${contextPromptBlock(context)}
-
+${briefBlock ? `\n${briefBlock}\n` : ""}
 Valid sourceKey values, and nothing else: ${[...validSourceKeys(context)].join(", ")}
 
 Write the session.`,
@@ -151,7 +136,8 @@ Write the session.`,
 
   await logAiUsage({
     feature: "ai_interactions",
-    tier: "standard",
+    tier: SESSION_DRAFT.tier,
+    model: modelFor(SESSION_DRAFT.tier),
     inputTokens: res.ok ? res.usage.input : 0,
     outputTokens: res.ok ? res.usage.output : 0,
     cacheReadTokens: res.ok ? res.usage.cacheRead : 0,
@@ -169,7 +155,22 @@ Write the session.`,
     };
   }
 
-  const blocks = validateBlocks(res.data.blocks ?? [], context);
+  /*
+    Shape gate before the sanity gates: json_schema enforcement plus
+    JSON.parse have already run, so a payload failing Zod here is wrong
+    in a way worth refusing outright — treated exactly like a model
+    failure, and refunded like one.
+  */
+  const payload = validateAi(sessionPayloadSchema, res.data);
+  if (!payload) {
+    await releaseFeature("ai_interactions");
+    return {
+      proposal: { ...base, note: "MIDO's draft came back malformed — the composed session is shown instead." },
+      context,
+    };
+  }
+
+  const blocks = validateBlocks(payload.blocks ?? [], context);
   if (blocks.length < MIN_BLOCKS) {
     /*
       The model answered but too little of it survived citation
@@ -184,10 +185,10 @@ Write the session.`,
 
   return {
     proposal: {
-      title: (res.data.title || base.title).slice(0, 120),
-      kind: SESSION_KINDS.includes(res.data.kind) ? res.data.kind : "individual",
-      durationMin: Math.min(120, Math.max(20, Math.round(res.data.durationMin || base.durationMin))),
-      objective: (res.data.objective || base.objective).slice(0, 300),
+      title: (payload.title || base.title).slice(0, 120),
+      kind: SESSION_KINDS.includes(payload.kind as SessionKind) ? (payload.kind as SessionKind) : "individual",
+      durationMin: Math.min(120, Math.max(20, Math.round(payload.durationMin || base.durationMin))),
+      objective: (payload.objective || base.objective).slice(0, 300),
       blocks,
       source: "mido",
       note: null,

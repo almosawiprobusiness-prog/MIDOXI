@@ -138,14 +138,16 @@ export async function createTraining(input: TrainingInput): Promise<Result> {
  * the resolved source labels — the player confirms before anything is
  * written, the same contract as voice logging and film evidence.
  */
-export async function generateSession(): Promise<
+export async function generateSession(
+  brief?: import("@/lib/intelligence/session-plan").SessionBrief,
+): Promise<
   | { ok: true; proposal: import("@/lib/intelligence/session-plan").SessionProposal; sources: Record<string, string> }
   | { ok: false; error: string }
 > {
   try {
     const { draftSession } = await import("@/lib/ai/session-engine");
     const { sourceLabel } = await import("@/lib/intelligence/session-plan");
-    const { proposal, context } = await draftSession();
+    const { proposal, context } = await draftSession(brief);
     const sources: Record<string, string> = {};
     for (const b of proposal.blocks) sources[b.sourceKey] = sourceLabel(b.sourceKey, context);
     return { ok: true, proposal, sources };
