@@ -152,8 +152,12 @@ integrated this phase.**
 
 ## Owner actions raised by this research
 
-1. **Gemini minors clause** — read Vertex AI terms / contact Google; decide
-   AI Studio key vs Vertex migration. Blocks nothing already shipped, but
-   should be resolved before Vision is marketed.
+1. **Gemini minors clause** — ~~decide AI Studio key vs Vertex~~
+   **RESOLVED 2026-08-30: production migrated to Vertex AI (Gemini
+   Enterprise Agent Platform)** — enterprise terms, same billed
+   project, same models. Executed setup + rollback path in
+   MIDO_VISION_ARCHITECTURE.md.
 2. Supabase Pro upgrade decision when clip volume warrants (>50MB uploads).
-3. Nothing else — no new provider accounts needed this phase.
+3. Open retest: current docs say YouTube ingestion is PUBLIC videos
+   only — verify whether unlisted links still read, and update the
+   in-product advice if not.

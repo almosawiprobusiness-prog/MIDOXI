@@ -90,6 +90,25 @@ the same switch. `scripts/verify-vertex.mjs` proves auth, endpoint,
 model existence, YouTube+videoMetadata, and the inline lane against
 the real project before any player traffic does.
 
+**EXECUTED 2026-08-30 — production runs Vertex.** Setup on project
+`gen-lang-client-0202552309` (the same billed project behind the old
+AI Studio key): Agent Platform API enabled; an account-bound API key
+("MIDO XI Vertex Key", restricted to the Agent Platform API, bound to
+the existing `ais-gemini-key-…` service account, which was granted
+**Agent Platform User** — the rebranded `roles/aiplatform.user`; the
+grant took ~1 min to propagate past 403). `verify-vertex.mjs` 3/3
+against the live endpoint; env vars set in Vercel production and
+redeployed. `GEMINI_API_KEY` stays configured as the documented
+rollback: delete the VERTEX vars and the client speaks studio again.
+
+**Model pin, and why:** `GEMINI_VIDEO_MODEL=gemini-2.5-flash`.
+Measured live: YouTube `fileData` on Vertex returns **500 INTERNAL on
+`gemini-3.6-flash`** (text and inline work) while `gemini-2.5-flash`
+reads YouTube perfectly, with and without `videoMetadata` clipping.
+2.5-flash is also the model every cost/density benchmark in these docs
+was measured on, and is currently cheaper than 3.6's promo pricing.
+Re-test 3.6+YouTube on Vertex before unpinning.
+
 GCS-backed large uploads on vertex are deliberately unbuilt until the
 inline ceiling is genuinely hit in practice; the current product wall
 is the 50MB storage cap anyway, and match-length footage arrives as
