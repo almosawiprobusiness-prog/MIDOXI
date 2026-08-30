@@ -7,6 +7,7 @@ import { createClip, deleteClip } from "@/app/app/film-room/actions";
 import {
   SENTIMENTS,
   fmtTime,
+  seekEmbedUrl,
   sentimentMeta,
   type ClipSentiment,
   type FilmClip,
@@ -26,10 +27,15 @@ import {
 
   Moments are logged with the clock the player shows, by hand, and are
   saved as real clips — they land in the clip library, carry sentiment
-  and a note, and feed everything clips already feed. The one thing a
-  manual moment cannot do is seek the iframe on click; it opens the
-  page in a new tab instead, where the viewer scrubs to the minute
-  they wrote down.
+  and a note, and feed everything clips already feed.
+
+  Seeking back: seekEmbedUrl() knows the services with a published
+  deep-link time contract (Vimeo's player, Dailymotion, Twitch's
+  player). For those, tapping a moment's time reloads the frame at
+  that second. For everyone else the timestamp stays a badge and the
+  copy says so — a guessed `t=` param can reroute an SPA entirely
+  (sport.video turns it into highlight-share mode), which is worse
+  than asking the viewer to scrub.
 */
 
 export function EmbeddedStage({
@@ -49,6 +55,9 @@ export function EmbeddedStage({
   const [busy, setBusy] = useState(false);
   const [removing, setRemoving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Reloading the iframe at a moment's second, where the service allows it.
+  const [stage, setStage] = useState<{ src: string; key: number }>({ src: video.url, key: 0 });
+  const canSeek = seekEmbedUrl(video.url, 0) !== null;
 
   const startSeconds = () => {
     const m = parseInt(minute || "0", 10);
@@ -104,7 +113,8 @@ export function EmbeddedStage({
       <div className="min-w-0">
         <div className="overflow-hidden rounded-xl border border-line bg-ink-950">
           <iframe
-            src={video.url}
+            key={stage.key}
+            src={stage.src}
             title={video.title}
             className="aspect-video w-full"
             allow="fullscreen; autoplay; encrypted-media; picture-in-picture"
@@ -130,7 +140,12 @@ export function EmbeddedStage({
 
       <div className="min-w-0">
         <div className="panel p-4">
-          <div className="label-tech mb-3">Log a moment</div>
+          <div className="label-tech mb-2">Log a moment</div>
+          <ol className="mb-3 list-decimal space-y-0.5 pl-4 text-[11px] leading-relaxed text-text-faint">
+            <li>Watch on the player — its own clock is the truth.</li>
+            <li>When something matters, type that clock below.</li>
+            <li>Pick what kind of moment it is, write a line, save.</li>
+          </ol>
           <div className="flex items-center gap-2">
             <input
               value={minute}
@@ -149,24 +164,31 @@ export function EmbeddedStage({
               aria-label="Second"
               className={`${inp} h-9 w-16 text-center`}
             />
-            <div className="ml-auto flex gap-1">
-              {SENTIMENTS.map((s) => (
-                <button
-                  key={s.key}
-                  onClick={() => setSentiment(s.key)}
-                  aria-label={s.label}
-                  title={s.label}
-                  className="size-7 rounded-md border transition-colors"
-                  style={
-                    sentiment === s.key
-                      ? { borderColor: s.color, background: s.wash }
-                      : { borderColor: "var(--line-strong)" }
-                  }
+            <span className="text-[11px] text-text-faint">the player&rsquo;s clock</span>
+          </div>
+          <div className="mt-2 grid grid-cols-3 gap-1.5">
+            {SENTIMENTS.map((s) => (
+              <button
+                key={s.key}
+                onClick={() => setSentiment(s.key)}
+                aria-label={s.label}
+                aria-pressed={sentiment === s.key}
+                className="flex flex-col items-center gap-1 rounded-md border px-1 py-1.5 transition-colors"
+                style={
+                  sentiment === s.key
+                    ? { borderColor: s.color, background: s.wash }
+                    : { borderColor: "var(--line-strong)" }
+                }
+              >
+                <span className="block size-2 rounded-full" style={{ background: s.color }} />
+                <span
+                  className="text-[10px] font-medium tracking-wide"
+                  style={{ color: sentiment === s.key ? s.color : "var(--text-dim)" }}
                 >
-                  <span className="mx-auto block size-2 rounded-full" style={{ background: s.color }} />
-                </button>
-              ))}
-            </div>
+                  {s.label}
+                </span>
+              </button>
+            ))}
           </div>
           <input
             value={title}
@@ -201,9 +223,22 @@ export function EmbeddedStage({
                 const s = sentimentMeta(c.sentiment) ?? SENTIMENTS[1];
                 return (
                   <div key={c.id} className="panel flex items-start gap-3 p-3">
-                    <span className="data-mono mt-0.5 shrink-0 text-sm text-signal-bright">
-                      {fmtTime(c.startSeconds)}
-                    </span>
+                    {canSeek ? (
+                      <button
+                        onClick={() => {
+                          const at = seekEmbedUrl(video.url, c.startSeconds);
+                          if (at) setStage((prev) => ({ src: at, key: prev.key + 1 }));
+                        }}
+                        title={`Reload the player at ${fmtTime(c.startSeconds)}`}
+                        className="data-mono mt-0.5 shrink-0 rounded text-sm text-signal-bright underline decoration-dotted underline-offset-4 transition-colors hover:text-signal"
+                      >
+                        {fmtTime(c.startSeconds)}
+                      </button>
+                    ) : (
+                      <span className="data-mono mt-0.5 shrink-0 text-sm text-signal-bright">
+                        {fmtTime(c.startSeconds)}
+                      </span>
+                    )}
                     <div className="min-w-0 flex-1">
                       <p className="text-sm text-text-hi">{c.title}</p>
                       <span className="label-tech mt-0.5 inline-block" style={{ color: s.color }}>
@@ -230,6 +265,9 @@ export function EmbeddedStage({
           {sorted.length > 0 && (
             <p className="mt-2 flex items-center gap-1.5 text-[11px] text-text-faint">
               <Check className="size-3" /> Saved to your clip library like any other clip.
+              {canSeek
+                ? " Tap a time to reload the player there."
+                : ` To rewatch one, scrub ${host}'s player to the time shown.`}
             </p>
           )}
         </div>

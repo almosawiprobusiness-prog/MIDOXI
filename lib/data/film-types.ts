@@ -276,6 +276,38 @@ export function embedUrlFor(url: string): string {
 }
 
 /**
+ * A URL that opens this embedded page AT a given second — for services
+ * with a published deep-link time contract. Everyone else gets null:
+ * a generic `#t=` guess is worse than honesty, because SPAs reuse
+ * those params for their own routing (sport.video turns `t=` into its
+ * highlight-share mode and plays a 20-second clip instead of the
+ * match). Null means the stage says "scrub to the time shown" and the
+ * player keeps its dignity.
+ */
+export function seekEmbedUrl(url: string, seconds: number): string | null {
+  const s = Math.max(0, Math.floor(seconds));
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, "");
+    if (host === "player.vimeo.com") {
+      u.hash = `t=${s}s`;
+      return u.toString();
+    }
+    if (host === "dailymotion.com" || host === "geo.dailymotion.com") {
+      u.searchParams.set("start", String(s));
+      return u.toString();
+    }
+    if (host === "player.twitch.tv") {
+      u.searchParams.set("t", `${Math.floor(s / 3600)}h${Math.floor((s % 3600) / 60)}m${s % 60}s`);
+      return u.toString();
+    }
+  } catch {
+    /* not a URL; the classifier already refused it */
+  }
+  return null;
+}
+
+/**
  * Does this response's frame policy forbid embedding the page?
  *
  * Returns the human reason when embedding is blocked, null when it is

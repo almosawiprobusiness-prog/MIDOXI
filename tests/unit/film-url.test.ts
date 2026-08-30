@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { videoUrlKind, frameBlocksEmbedding, youtubeId, isHlsUrl, UPLOAD_MAX_MB } from "../../lib/data/film-types";
+import { videoUrlKind, frameBlocksEmbedding, seekEmbedUrl, youtubeId, isHlsUrl, UPLOAD_MAX_MB } from "../../lib/data/film-types";
 
 /*
   The film room used to call every non-YouTube link a "Direct video",
@@ -162,5 +162,39 @@ describe("frameBlocksEmbedding — the truth table the probe relies on", () => {
 describe("youtubeId still behaves", () => {
   it("returns null for anything that is not YouTube", () => {
     expect(youtubeId("https://cdn.example.com/match.mp4")).toBeNull();
+  });
+});
+
+describe("seekEmbedUrl — deep-link time only where the contract is published", () => {
+  it("Vimeo player gets a #t= fragment", () => {
+    expect(seekEmbedUrl("https://player.vimeo.com/video/12345", 754)).toBe(
+      "https://player.vimeo.com/video/12345#t=754s",
+    );
+  });
+
+  it("Dailymotion gets ?start=", () => {
+    expect(seekEmbedUrl("https://www.dailymotion.com/video/x7abc", 90)).toBe(
+      "https://www.dailymotion.com/video/x7abc?start=90",
+    );
+  });
+
+  it("Twitch player gets h/m/s", () => {
+    const got = seekEmbedUrl("https://player.twitch.tv/?video=v123&parent=x", 3725);
+    expect(got).toContain("t=1h2m5s");
+  });
+
+  it("unknown hosts get null — sport.video reroutes guessed t= params", () => {
+    expect(
+      seekEmbedUrl("https://watch.sport.video/3liga/some-match?game=5088", 600),
+    ).toBeNull();
+  });
+
+  it("floors and clamps the seconds", () => {
+    expect(seekEmbedUrl("https://player.vimeo.com/video/1", -5)).toBe(
+      "https://player.vimeo.com/video/1#t=0s",
+    );
+    expect(seekEmbedUrl("https://player.vimeo.com/video/1", 12.9)).toBe(
+      "https://player.vimeo.com/video/1#t=12s",
+    );
   });
 });
