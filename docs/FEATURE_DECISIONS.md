@@ -21,12 +21,12 @@ inherits every decision already recorded in
 
 | Decision | Why |
 |---|---|
-| **No drill/content library** | MOJO sells content at $59.99/yr; it is a commodity race. Our sessions are derived from the record — that is the differentiation; a library would erase it. |
+| **No drill/content library** | MOJO sells content at $59.99/yr; it is a commodity race. Our sessions are derived from the record — that is the differentiation; a library would erase it. **Re-affirmed 30 Aug 2026 (intelligence phase):** the quality lever is the curated concept graph's vocabulary (cues/trains/looksLike), enriched as needed — never sellable drill content. See AI_TRAINING_ENGINE.md. |
 | **No automated 90-minute match analysis** | Player identity on film is unsolved and the model lies about it (tested on real footage, documented in memory and VIDEO_INTELLIGENCE.md). Beta gate already forbids UI implying it. |
 | **No public community / feed / strangers** | Feed engagement is a different product with different incentives. Community = squad visibility of loop artifacts, nothing more. |
 | **No capture hardware ambitions** | Veo/Hudl/Trace own that capital-intensive fight; we ingest their output for free. |
 | **No wearable integrations beyond existing WHOOP sync** | Per the phase-15 list; check-in readiness already feeds the scorer, and an untestable emitter is a log that might be lying. |
-| **No PDF engine** | `@media print` already ships three report types; a PDF library adds a dependency to replicate the browser. |
+| **No PDF engine** | `@media print` already ships three report types; a PDF library adds a dependency to replicate the browser. **Re-affirmed 30 Aug 2026 (intelligence phase), reinterpreted:** browser print IS a vector-PDF pipeline; the phase's work was document design (the per-session training plan), not a library. Server-side PDF remains gated on the email requirement per REPORT_ENGINE.md. |
 | **No new design system** | Big Shoulders display voice + command surfaces just unified the product; the roadmap builds inside it. |
 | **No invented streak mechanics** | Techne's streaks work on volume the player *chose* to log. Surfacing real volume (minutes, sessions, studies) is in scope; gamifying with synthetic points is not — it pollutes the record the AI reads. |
 
