@@ -12,7 +12,10 @@
 export type EnvName = "production" | "local";
 
 export const ENVIRONMENTS: Record<EnvName, { base: string; label: string }> = {
-  production: { base: "https://mido-xi.vercel.app", label: "MIDO XI" },
+  // The canonical domain since the mido11.com migration. The old
+  // vercel.app origin stays in host_permissions so an installed 0.3.x
+  // can be rolled back by config, not by another store review.
+  production: { base: "https://mido11.com", label: "MIDO XI" },
   local: { base: "http://localhost:3100", label: "localhost:3100" },
 };
 

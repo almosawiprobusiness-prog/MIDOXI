@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Big_Shoulders, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { env } from "@/lib/env";
 import { ServiceWorkerRegister } from "@/components/shell/sw-register";
 
 const geistSans = Geist({
@@ -25,6 +26,13 @@ const bigShoulders = Big_Shoulders({
 });
 
 export const metadata: Metadata = {
+  /*
+    Absolute-URL base for OG images and social metadata. Reads the
+    same env var everything else reads (the extension allowlist, the
+    domain plan), so the canonical host lives in exactly one place —
+    mido11.com in production, localhost in dev.
+  */
+  metadataBase: new URL(env.appUrl),
   title: "MIDO XI — Football Performance OS",
   description:
     "A private football intelligence and performance environment. Study, prepare, train, review, and build your career.",

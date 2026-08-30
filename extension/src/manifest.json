@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "MIDO XI Capture",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Save football moments from YouTube or any streaming site directly to your MIDO XI Player OS.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyCK7mQI7oxJ8I/sJxqPeJZskD2FMa2JHeBdsx+pwUKECVE8JRA1ZqqLynEjZ71WriBL6HekEyYZa5cle9YyBqWbmCZVOIU04rGwHBSNQ5A6nYRk54lJSlXPIDC2OX3oz4hYZ8l36lSIiNBxQuSlwI1nb5ia5qwSan5VAls5mBzaRUeCujwebCfvC1+oBf1XkvB0v+7WLGPLQj0MMewSx79GEOZrKuiXlf6mIitU4CS2zULoTHvsVMx6JnVQNkopXTzHSG+WsMGvd1LMrnKEqzvz2Bi2kyjHjoONQCx9TAWtMkdQpcKCbPaP33qfLc9FenppfXe+P+C7sEpZZZU0tfQIDAQAB",
   "action": {
@@ -26,6 +26,7 @@
     "storage"
   ],
   "host_permissions": [
+    "https://mido11.com/*",
     "https://mido-xi.vercel.app/*",
     "http://localhost:3100/*",
     "http://localhost:3000/*"
