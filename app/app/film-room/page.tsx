@@ -7,6 +7,8 @@ import { listStudySessions } from "@/lib/data/study";
 import { listCaptures } from "@/lib/data/captures";
 import { listGoals } from "@/lib/data/development";
 import { listConceptThreads, filedCaptureRefs } from "@/lib/data/threads";
+import { priorObservations } from "@/lib/data/analyses";
+import { detectPatterns, patternEvidenceLine } from "@/lib/intelligence/patterns";
 import { concept } from "@/lib/knowledge/concepts";
 import { getDiscover } from "@/lib/data/discover";
 import { SavedMoments } from "@/components/film/saved-moments";
@@ -28,11 +30,12 @@ export default async function FilmRoomPage({
 }: {
   searchParams: Promise<{ moment?: string }>;
 }) {
-  const [{ moment }, videos, clips, collections, studySessions, discover, studyMoments, captures, goals, threads] =
+  const [{ moment }, videos, clips, collections, studySessions, discover, studyMoments, captures, goals, threads, observationRows] =
     await Promise.all([
       searchParams,
       listVideos(), listClips(), listCollections(), listStudySessions(), getDiscover(), listStudyMoments(),
       listCaptures(), listGoals(), listConceptThreads(),
+      priorObservations({ limit: 80 }).catch(() => []),
     ]);
   const filedIds = await filedCaptureRefs(captures.map((c) => c.id));
   const goalTitles = Object.fromEntries(goals.map((g) => [g.id, g.title]));
@@ -42,6 +45,18 @@ export default async function FilmRoomPage({
   const favourites = clips.filter((c) => c.favorite).length;
   const sentimentCount = (s: string) => clips.filter((c) => (c.sentiment ?? "review") === s).length;
   const totalSent = clips.length || 1;
+
+  /*
+    What MIDO has noticed but the player has not yet confirmed. Threads
+    below count FILED evidence — the record. This counts repetition in
+    the readings themselves, so a pattern surfaces before anyone files
+    it, and the card's job is to get it confirmed or trained. Concepts
+    already carried by a thread are left out: one surface per fact.
+  */
+  const threadConcepts = new Set(threads.map((t) => t.concept));
+  const noticed = detectPatterns(observationRows)
+    .filter((p) => !threadConcepts.has(p.concept))
+    .slice(0, 3);
 
   return (
     <div className="mx-auto max-w-[1100px] px-4 py-8 md:px-6">
@@ -126,6 +141,31 @@ export default async function FilmRoomPage({
         twice. This is the pattern surface the whole loop exists to
         produce, and it links straight to the goal carrying the thread.
       */}
+      {noticed.length > 0 && (
+        <section className="mb-8">
+          <SectionHeader label="MIDO has noticed · not yet on your record" />
+          <div className="grid gap-3 md:grid-cols-3">
+            {noticed.map((p) => (
+              <div key={p.concept} className="panel flex flex-col p-4">
+                <span className="text-sm font-medium text-text-hi">{p.name}</span>
+                <span className="mt-1 text-xs leading-relaxed text-text-dim">{patternEvidenceLine(p)}</span>
+                <span className="mt-2 flex flex-wrap gap-1.5">
+                  <Link
+                    href={`/app/training?focus=${encodeURIComponent(`film:${p.concept}`)}`}
+                    className="chip hover:border-signal-line hover:text-signal-bright"
+                  >
+                    Train this
+                  </Link>
+                  <Link href="/app/development" className="chip hover:border-signal-line hover:text-signal-bright">
+                    Add to a goal
+                  </Link>
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {threads.length > 0 && (
         <section className="mb-8">
           <SectionHeader label={`Threads · what keeps appearing`} />

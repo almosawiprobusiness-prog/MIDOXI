@@ -3,7 +3,8 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Scissors, Trash2, Target, Check, Undo2, Loader2, ChevronDown } from "lucide-react";
+import { Scissors, Trash2, Target, Check, Undo2, Loader2, ChevronDown, Dumbbell, GraduationCap } from "lucide-react";
+import { peopleForConcept } from "@/lib/knowledge/graph";
 import { observationToClip, removeAnalysis } from "@/app/app/film-room/analysis-actions";
 import {
   confirmObservation,
@@ -298,6 +299,35 @@ function ObservationRow({
           {meta.label}
         </span>
         {o.concept && <span className="chip">{o.concept.replace(/-/g, " ")}</span>}
+        {/*
+          The two arrows off a moment. TRAIN carries the concept into
+          the session brief as a citable focus; STUDY goes to the
+          curated person who embodies it — the graph decides, never a
+          famous name picked for being famous. Both only exist when the
+          observation names a concept: an arrow needs somewhere to point.
+        */}
+        {o.concept && (
+          <Link
+            href={`/app/training?focus=${encodeURIComponent(`film:${o.concept}`)}`}
+            className="chip shrink-0 hover:border-signal-line hover:text-signal-bright"
+            title="Build a training session around this"
+          >
+            <Dumbbell className="size-3" /> train
+          </Link>
+        )}
+        {o.concept &&
+          (() => {
+            const person = peopleForConcept(o.concept)[0];
+            return person ? (
+              <Link
+                href={`/app/study/${person.slug}`}
+                className="chip shrink-0 hover:border-signal-line hover:text-signal-bright"
+                title={`Study ${person.name} — ${o.concept.replace(/-/g, " ")}`}
+              >
+                <GraduationCap className="size-3" /> study
+              </Link>
+            ) : null;
+          })()}
       </div>
 
       {proposal && (

@@ -14,6 +14,8 @@ import { WatchStudyPanel } from "@/components/matches/watch-study-panel";
 import { buildPlayerContext } from "@/lib/intelligence/build-context";
 import { getProfileSettings } from "@/lib/data/profile";
 import { composeWatchFocus } from "@/lib/knowledge/watch-focus";
+import { priorObservations } from "@/lib/data/analyses";
+import { detectPatterns, composeMatchFocus } from "@/lib/intelligence/patterns";
 
 export const metadata = { title: "Matches — MIDO XI" };
 
@@ -44,12 +46,21 @@ function nextFixtureFrom(events: CalendarEvent[]): { event: CalendarEvent; daysO
 }
 
 export default async function MatchesPage() {
-  const [matches, events, watchContext, profile] = await Promise.all([
+  const [matches, events, watchContext, profile, observationRows] = await Promise.all([
     listMatches(),
     listEvents(),
     buildPlayerContext().catch(() => null),
     getProfileSettings().catch(() => null),
+    priorObservations({ limit: 80 }).catch(() => []),
   ]);
+
+  /*
+    One cue for the next match, maybe two — never fourteen coaching
+    points. Derived from the leading film pattern and phrased through
+    the curated concept's own cue; when nothing repeats on film there
+    is no focus, and the card simply doesn't render the line.
+  */
+  const matchFocus = composeMatchFocus(detectPatterns(observationRows));
 
   /*
     Watch with a job — the football the player already watches, given a
@@ -156,6 +167,17 @@ export default async function MatchesPage() {
                     <div className="label-tech mt-0.5">{next.daysOut === 1 ? "day out" : "days out"}</div>
                   </div>
                 </div>
+                {matchFocus && (
+                  <div className="relative mt-4 border-t border-line pt-3">
+                    <div className="label-tech mb-1.5">Match focus — from your film</div>
+                    {matchFocus.cues.map((cue) => (
+                      <p key={cue} className="font-display text-lg font-semibold uppercase tracking-tight text-text-hi">
+                        {cue}
+                      </p>
+                    ))}
+                    <p className="mt-1 text-xs text-text-dim">{matchFocus.because}</p>
+                  </div>
+                )}
               </div>
             </section>
           )}
