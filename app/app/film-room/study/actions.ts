@@ -33,8 +33,8 @@ export async function startStudySession(input: StudySessionInput): Promise<Resul
   if (!supabase || !userId) return { ok: false, error: "You must be signed in." };
 
   // Resolve the video source kind for the study_sessions row.
-  let sourceKind = "video";
-  if (input.videoId) {
+  let sourceKind: string = input.sourceKind ?? "video";
+  if (!input.sourceKind && input.videoId) {
     const { data: v } = await supabase.from("videos").select("source, external_url").eq("id", input.videoId).maybeSingle();
     if (v?.source === "youtube" || (v?.external_url && youtubeId(v.external_url as string))) sourceKind = "youtube";
   }

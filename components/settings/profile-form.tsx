@@ -24,6 +24,7 @@ export function ProfileForm({ profile }: { profile: ProfileSettings }) {
     weightKg: profile.weightKg,
     club: profile.club,
     league: profile.league,
+    favoriteClub: profile.favoriteClub,
     squadNumber: profile.squadNumber,
     season: profile.season,
     level: profile.level,
@@ -102,6 +103,22 @@ export function ProfileForm({ profile }: { profile: ProfileSettings }) {
           onChange={(league) => set({ league })}
           search={findLeagues}
           placeholder="Hampshire Sunday League Div 3"
+        />
+      </div>
+
+      {/*
+        Not fandom decoration. The club a player supports is the football
+        they already watch every week — naming it lets the Match Center
+        turn that watching into structured study with a focus question.
+      */}
+      <div className="mt-3">
+        <NameSuggest
+          label="Favorite club"
+          value={form.favoriteClub}
+          onChange={(favoriteClub) => set({ favoriteClub })}
+          search={findClubs}
+          placeholder="The club you watch every week"
+          hint="MIDO turns their matches into watch studies for your goals."
         />
       </div>
 

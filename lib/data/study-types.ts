@@ -23,6 +23,12 @@ export interface StudySessionInput {
   videoId?: string | null;
   title: string;
   goalId?: string | null;
+  /**
+   * 'watch' marks a session whose source is a live match the player
+   * watched, not a video in the library (migration 0036). Omitted, the
+   * kind is resolved from the video as before.
+   */
+  sourceKind?: "watch";
 }
 
 export interface StudySessionDetail {

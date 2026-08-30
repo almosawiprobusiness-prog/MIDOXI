@@ -20,6 +20,8 @@ export interface ProfileSettings {
   squadNumber: number | null;
   season: string;
   level: string;
+  /** The club they support and study — fixture watching becomes structured study through it. */
+  favoriteClub: string;
   /**
    * How to find this player in their own footage — "9, blue shirts, left
    * footed". Passed to video reading. Without it a read cannot claim to be
@@ -63,6 +65,7 @@ export interface ProfileFormInput {
   squadNumber: number | null;
   season: string;
   level: string;
+  favoriteClub: string;
   pitchIdentity: string;
   transfermarktUrl: string;
 }
@@ -89,6 +92,7 @@ export async function getProfileSettings(forUser?: string): Promise<ProfileSetti
       squadNumber: player.squadNumber,
       season: player.season,
       level: player.level,
+      favoriteClub: "Manchester City",
       pitchIdentity: `${player.squadNumber}, home kit`,
       transfermarktUrl: "",
       avatarUrl: "",
@@ -106,7 +110,7 @@ export async function getProfileSettings(forUser?: string): Promise<ProfileSetti
   const empty: ProfileSettings = {
     email: "", fullName: "", knownAs: "", dateOfBirth: "", nationality: "", foot: "Right",
     primaryPosition: "", secondaryPosition: "", heightCm: null, weightKg: null,
-    club: "", league: "", squadNumber: null, season: "", level: "", pitchIdentity: "",
+    club: "", league: "", squadNumber: null, season: "", level: "", favoriteClub: "", pitchIdentity: "",
     transfermarktUrl: "", avatarUrl: "", isPublic: false,
     handle: "", playStyle: "", favoritePlayers: [], strengths: [], achievements: "", socials: {},
   };
@@ -144,6 +148,7 @@ export async function getProfileSettings(forUser?: string): Promise<ProfileSetti
     squadNumber: pp?.squad_number ?? null,
     season: pp?.season ?? "",
     level: pp?.level ?? "",
+    favoriteClub: pp?.favorite_club ?? "",
     pitchIdentity: pp?.pitch_identity ?? "",
     transfermarktUrl: pp?.transfermarkt_url ?? "",
     avatarUrl: profile?.avatar_url ?? "",

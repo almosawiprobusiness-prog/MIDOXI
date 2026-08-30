@@ -69,6 +69,7 @@ export async function updateProfile(input: ProfileFormInput): Promise<Result> {
     squad_number: input.squadNumber ?? null,
     season: input.season || null,
     level: input.level || null,
+    favorite_club: input.favoriteClub?.trim() || null,
     pitch_identity: input.pitchIdentity?.trim() || null,
     transfermarkt_url: normaliseTransfermarkt(input.transfermarktUrl ?? ""),
   });

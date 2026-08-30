@@ -10,6 +10,10 @@ import { PageHeader, StatBand, FormPips } from "@/components/ui/kit";
 import { MatchFormDialog } from "@/components/matches/match-form-dialog";
 import { MatchList } from "@/components/matches/match-list";
 import { VoiceLog } from "@/components/matches/voice-log";
+import { WatchStudyPanel } from "@/components/matches/watch-study-panel";
+import { buildPlayerContext } from "@/lib/intelligence/build-context";
+import { getProfileSettings } from "@/lib/data/profile";
+import { composeWatchFocus } from "@/lib/knowledge/watch-focus";
 
 export const metadata = { title: "Matches — MIDO XI" };
 
@@ -40,7 +44,25 @@ function nextFixtureFrom(events: CalendarEvent[]): { event: CalendarEvent; daysO
 }
 
 export default async function MatchesPage() {
-  const [matches, events] = await Promise.all([listMatches(), listEvents()]);
+  const [matches, events, watchContext, profile] = await Promise.all([
+    listMatches(),
+    listEvents(),
+    buildPlayerContext().catch(() => null),
+    getProfileSettings().catch(() => null),
+  ]);
+
+  /*
+    Watch with a job — the football the player already watches, given a
+    focus from their own record. Null when the record points at nothing:
+    an invented focus would be homework, not study.
+  */
+  const watchFocus = watchContext
+    ? composeWatchFocus({
+        goalTitle: watchContext.goals[0]?.title ?? null,
+        filmConcepts: watchContext.filmConcepts.map((c) => c.concept),
+        favoriteClub: profile?.favoriteClub ?? null,
+      })
+    : null;
 
   /*
     The next fixture used to be a hardcoded seed object rendered unconditionally
@@ -86,6 +108,13 @@ export default async function MatchesPage() {
         is the first thing on the page.
       */}
       <VoiceLog />
+
+      {watchFocus && (
+        <WatchStudyPanel
+          focus={watchFocus}
+          goalId={watchContext?.goals[0]?.id ?? null}
+        />
+      )}
 
       {matches.length > 0 ? (
         <>
