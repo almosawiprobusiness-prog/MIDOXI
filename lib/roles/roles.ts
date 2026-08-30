@@ -27,6 +27,7 @@ import {
   Settings,
   Gift,
   Wallet,
+  Share2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -191,6 +192,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
       { label: "Memory", href: "/app/memory", icon: Brain, hint: "What MIDO knows about you", status: "live", group: "more" },
       { label: "Recovery", href: "/app/recovery", icon: HeartPulse, hint: "Readiness & sleep", status: "live", group: "more" },
       { label: "Performance", href: "/app/performance", icon: LineChart, hint: "Analytics", status: "live", group: "more" },
+      { label: "Publish", href: "/app/publish", icon: Share2, hint: "Share your progress", status: "live", group: "more" },
       calendar,
       /*
         Cut per docs/fable/PLAYER_OS_CUT_LIST.md, owner-approved 30 Aug:
