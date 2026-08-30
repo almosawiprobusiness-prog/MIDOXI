@@ -33,6 +33,15 @@ export type ProductEvent =
   | "study_completed"
   | "film_uploaded"
   | "film_analysis_completed"
+  /*
+    The Vision job pipeline: STARTED with the window count (how much
+    film players actually ask MIDO to read), FINISHED with the terminal
+    state — complete vs partial is the pipeline's health metric, and a
+    rising partial rate means a provider problem before anyone reports
+    it. Nothing about the footage travels.
+  */
+  | "vision_job_started"
+  | "vision_job_finished"
   | "match_logged"
   | "match_review_completed"
   | "training_completed"

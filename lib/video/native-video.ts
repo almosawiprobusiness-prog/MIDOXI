@@ -223,7 +223,7 @@ export const nativeVideo: VideoAnalysisProvider = {
     */
     const memory = memoryPromptBlock(await listMemory());
 
-    const res = await generateFromVideo<VideoAnswer>({
+    let res = await generateFromVideo<VideoAnswer>({
       system: memory ? `${SYSTEM}
 
 ${memory}` : SYSTEM,
@@ -261,6 +261,56 @@ ${memory}` : SYSTEM,
           : undefined,
       }),
     });
+
+    /*
+      Stale-handle recovery. A cached Gemini file handle can die inside
+      its 47-hour window (the provider's side, not ours), and a read
+      against a dead handle fails looking like a Vision failure. When
+      the handle came from the cache and the failure is not a stated
+      quota/busy refusal, the cache is forgotten, the source re-uploaded
+      once, and the same read retried — the player sees one slow read
+      instead of one broken one. `forgetFile` existed for exactly this
+      and nothing called it.
+    */
+    if (!res.ok && resolved.fromCache && !/try again|quota|busy|moment/i.test(res.error)) {
+      const { forgetFile } = await import("@/lib/data/video-files");
+      await forgetFile(request.videoId);
+      const fresh = await resolveSource(request);
+      if (fresh.ok) {
+        res = await generateFromVideo<VideoAnswer>({
+          system: memory ? `${SYSTEM}\n\n${memory}` : SYSTEM,
+          video: {
+            fileUri: fresh.fileUri,
+            mimeType: fresh.mimeType,
+            startSeconds: request.fromSeconds,
+            endSeconds: request.toSeconds,
+          },
+          schema: SCHEMA as unknown as Record<string, unknown>,
+          maxTokens: 6000,
+          prompt: JSON.stringify({
+            watch: `From ${mmss(request.fromSeconds)} to ${mmss(request.toSeconds)}.`,
+            lookingFor:
+              request.focus || "Anything useful about movement, body shape and decision-making.",
+            viewer: {
+              role: request.viewer.role,
+              position: request.viewer.position,
+              onThePitch:
+                request.viewer.identity ||
+                "NOT STATED — you do not know which player this is. Write about the passage and mark identity-dependent observations uncertain.",
+            },
+            curatedConcepts: concepts.map((c) => ({
+              slug: c.slug,
+              name: c.name,
+              looksLike: c.looksLike,
+              cues: c.cues,
+            })),
+            earlierObservations: prior.length
+              ? prior.map((p) => ({ on: p.on, concept: p.concept, said: p.title }))
+              : undefined,
+          }),
+        });
+      }
+    }
 
     const usage = res.ok ? res.value.usage : { input: 0, output: 0, thoughts: 0 };
     await logAiUsage({
@@ -428,7 +478,9 @@ function normaliseTimestamp(value: number, from: number, to: number): number {
 // Getting the film to the model
 // ---------------------------------------------------------------------------
 
-type Resolved = { ok: true; fileUri: string; mimeType: string } | { ok: false; error: string };
+type Resolved =
+  | { ok: true; fileUri: string; mimeType: string; fromCache?: boolean }
+  | { ok: false; error: string };
 
 /*
   Three source shapes, and only one of them costs anything.
@@ -451,7 +503,7 @@ async function resolveSource(request: AnalysisRequest): Promise<Resolved> {
   }
 
   const cached = await cachedFileFor(request.videoId);
-  if (cached) return { ok: true, fileUri: cached.uri, mimeType: cached.mimeType };
+  if (cached) return { ok: true, fileUri: cached.uri, mimeType: cached.mimeType, fromCache: true };
 
   const uploaded = await uploadFromUrl(url, request.source?.title ?? "MIDO clip");
   if (!uploaded.ok) return { ok: false, error: uploaded.error };
