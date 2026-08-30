@@ -156,6 +156,30 @@ export async function generateSession(
   }
 }
 
+/**
+ * Adapt a drafted session under one directive. Same contract as
+ * generateSession: nothing is written — the player confirms the
+ * adapted proposal (or keeps the original) before anything persists.
+ */
+export async function adaptGeneratedSession(
+  proposal: import("@/lib/intelligence/session-plan").SessionProposal,
+  directive: import("@/lib/intelligence/session-adapt").AdaptDirective,
+): Promise<
+  | { ok: true; proposal: import("@/lib/intelligence/session-plan").SessionProposal; sources: Record<string, string> }
+  | { ok: false; error: string }
+> {
+  try {
+    const { adaptSession } = await import("@/lib/ai/session-engine");
+    const { sourceLabel } = await import("@/lib/intelligence/session-plan");
+    const { proposal: adapted, context } = await adaptSession(proposal, directive);
+    const sources: Record<string, string> = {};
+    for (const b of adapted.blocks) sources[b.sourceKey] = sourceLabel(b.sourceKey, context);
+    return { ok: true, proposal: adapted, sources };
+  } catch {
+    return { ok: false, error: "MIDO could not adapt the session just now." };
+  }
+}
+
 export async function updateTraining(id: string, input: TrainingInput): Promise<Result> {
   if (!input.title?.trim()) return { ok: false, error: "Give the session a title." };
 

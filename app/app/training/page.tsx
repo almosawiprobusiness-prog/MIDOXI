@@ -8,6 +8,7 @@ import { PageHeader, StatBand, MiniBars } from "@/components/ui/kit";
 import { TrainingFormDialog } from "@/components/training/training-form-dialog";
 import { GenerateSessionDialog } from "@/components/training/generate-session-dialog";
 import { DeleteTrainingButton } from "@/components/training/delete-training-button";
+import { SessionRunner } from "@/components/training/session-runner";
 
 export const metadata = { title: "Training — MIDO XI" };
 
@@ -71,6 +72,7 @@ function SessionRow({ e }: { e: TrainingEntry }) {
         )}
       </div>
       <div className="flex shrink-0 items-center gap-1.5">
+        {e.plan?.length ? <SessionRunner entry={e} /> : null}
         <TrainingFormDialog mode="edit" entry={e} />
         <DeleteTrainingButton id={e.id} title={e.title} />
       </div>

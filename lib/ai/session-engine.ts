@@ -1,7 +1,14 @@
 import "server-only";
 import { generateJson, aiAvailable, aiStatus, modelFor } from "./anthropic";
-import { SESSION_DRAFT } from "./prompts";
+import { SESSION_DRAFT, SESSION_ADAPT } from "./prompts";
 import { sessionPayloadSchema, validateAi, type SessionPayload } from "./schemas";
+import {
+  adaptGuard,
+  adaptMeta,
+  deterministicAdapt,
+  validateAdaptation,
+  type AdaptDirective,
+} from "@/lib/intelligence/session-adapt";
 import { checkFeature } from "@/lib/billing/membership";
 import { refusalReason } from "@/lib/billing/gate-copy";
 import { consumeFeature, releaseFeature, logAiUsage } from "@/lib/billing/meter";
@@ -189,6 +196,119 @@ Write the session.`,
       kind: SESSION_KINDS.includes(payload.kind as SessionKind) ? (payload.kind as SessionKind) : "individual",
       durationMin: Math.min(120, Math.max(20, Math.round(payload.durationMin || base.durationMin))),
       objective: (payload.objective || base.objective).slice(0, 300),
+      blocks,
+      source: "mido",
+      note: null,
+    },
+    context,
+  };
+}
+
+/**
+ * Adapt a drafted session without losing what it is for. Safety gate
+ * first (deterministic, free, unarguable), then the cheapest path that
+ * honours the directive: code alone where code is honest, the metered
+ * model otherwise. The adapted session keeps the original objective by
+ * construction and may only cite what the original cited.
+ */
+export async function adaptSession(
+  original: SessionProposal,
+  directive: AdaptDirective,
+): Promise<DraftSessionResult> {
+  const context = await buildPlayerContext();
+  const meta = adaptMeta(directive);
+  if (!meta) return { proposal: { ...original, note: "MIDO does not know that adaptation." }, context };
+
+  const refusal = adaptGuard(directive, context);
+  if (refusal) return { proposal: { ...original, note: refusal }, context };
+
+  const codeOnly = deterministicAdapt(original, directive);
+
+  const gate = await checkFeature("ai_interactions");
+  const aiReachable = gate.allowed && aiAvailable() && (await withinAiBudget());
+  if (!aiReachable) {
+    if (codeOnly) return { proposal: codeOnly, context };
+    return {
+      proposal: {
+        ...original,
+        note: gate.allowed
+          ? "This adaptation needs MIDO's writing model, which is unavailable right now — the session stands as drafted."
+          : refusalReason(gate, "ai_interactions", "player"),
+      },
+      context,
+    };
+  }
+
+  if (!(await consumeFeature("ai_interactions"))) return { proposal: original, context };
+
+  const started = Date.now();
+  const res = await generateJson<SessionPayload>({
+    tier: SESSION_ADAPT.tier,
+    system: SESSION_ADAPT.system,
+    prompt: `THE CURRENT SESSION (adapt this, do not replace it):
+${JSON.stringify({ title: original.title, kind: original.kind, durationMin: original.durationMin, objective: original.objective, blocks: original.blocks })}
+
+DIRECTIVE: ${meta.label}. ${meta.instruction}
+
+${contextPromptBlock(context)}
+
+Rewrite the session under the directive. Keep every sourceKey exactly as given.`,
+    schema: SCHEMA as unknown as Record<string, unknown>,
+    maxTokens: 2500,
+    cacheSystem: false,
+  });
+
+  await logAiUsage({
+    feature: "ai_interactions",
+    tier: SESSION_ADAPT.tier,
+    model: modelFor(SESSION_ADAPT.tier),
+    inputTokens: res.ok ? res.usage.input : 0,
+    outputTokens: res.ok ? res.usage.output : 0,
+    cacheReadTokens: res.ok ? res.usage.cacheRead : 0,
+    cacheWriteTokens: res.ok ? res.usage.cacheWrite : 0,
+    latencyMs: Date.now() - started,
+    status: res.ok ? "ok" : "error",
+  });
+
+  if (!res.ok) {
+    await releaseFeature("ai_interactions");
+    if (codeOnly) return { proposal: codeOnly, context };
+    return { proposal: { ...original, note: "MIDO could not adapt the session just now — it stands as drafted." }, context };
+  }
+
+  const payload = validateAi(sessionPayloadSchema, res.data);
+  const blocks = payload ? validateBlocks(payload.blocks ?? [], context) : [];
+  const adapted = payload
+    ? {
+        durationMin: Math.min(120, Math.max(20, Math.round(payload.durationMin || original.durationMin))),
+        blocks,
+      }
+    : null;
+  const broken = !payload
+    ? "malformed"
+    : validateAdaptation(original, adapted!, directive);
+
+  if (!payload || broken) {
+    /*
+      The model ran and answered; what it answered failed the contract.
+      Same rule as a draft that could not be tied to the record: not
+      refunded, and the original survives untouched.
+    */
+    if (codeOnly) return { proposal: codeOnly, context };
+    return {
+      proposal: { ...original, note: "MIDO's adaptation did not hold the session's shape — it stands as drafted." },
+      context,
+    };
+  }
+
+  return {
+    proposal: {
+      title: (payload.title || original.title).slice(0, 120),
+      // The place directives are the only ones that move the kind.
+      kind: directive === "gym" ? "gym" : directive === "pitch" ? "individual" : original.kind,
+      durationMin: adapted!.durationMin,
+      // Preserved by construction — the model's echo is not trusted.
+      objective: original.objective,
       blocks,
       source: "mido",
       note: null,
