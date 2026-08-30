@@ -113,8 +113,29 @@ follow-on shape if a fee is ever added.
 1. ~~Apply migration 0037~~ — **applied and verified 30 Aug 2026**
    (`npm run verify:0037`, 10/10: tables exist, price/fee constraints
    reject out-of-bounds writes, anon gets 401 on all three).
-2. In the Stripe dashboard: enable Connect (Express) on the account,
-   and add `account.updated` to the webhook endpoint's events.
-3. Test-mode end-to-end with a test bank account and card 4242…:
-   onboard → create product → pay the link → purchase row flips to
-   paid → Stripe dashboard shows the application fee.
+2. ~~Enable Connect~~ — **done 30 Aug in the claimed test sandbox**
+   ("New business" under MIDO CO, acct_1UA1ZAIH2zlK5bOt): marketplace
+   model chosen, Express accounts creatable. For LIVE mode, Connect
+   still needs enabling on the production account the same way.
+3. ~~Test-mode end-to-end~~ — **RUN AND PASSED 30 Aug 2026**, every
+   layer verified:
+   - Express onboarding completed through the app's own Set up
+     payments → account link flow (test phone/SMS, test identity,
+     STRIPE TEST BANK ••••6789); `charges_enabled` /
+     `payouts_enabled` true, requirements empty; the Lab's mirror
+     flipped to the product form on reload.
+   - Product created in the Lab ($300 block); payment link generated
+     with the frozen fee stated: $6 (2%, 4 active athletes) + ~$9
+     processing; ledger row landed `pending`.
+   - Paid with 4242…: Checkout succeeded → /pay/done rendered →
+     `checkout.session.completed` forwarded by `stripe listen` →
+     row flipped `paid` with timestamp. Stripe's PI confirms
+     `application_fee_amount: 1500` and `transfer_data.destination`
+     = the trainer's account.
+   - Declined with 4000…0002: inline decline on Checkout, no event,
+     row stayed `pending` — nothing lies about money.
+   - Probe trainer torn down (auth delete, cascade, re-listed gone).
+   The remaining live-mode steps: enable Connect on the production
+   account, add `account.updated` (and
+   `checkout.session.async_payment_succeeded`) to the production
+   webhook's events.
