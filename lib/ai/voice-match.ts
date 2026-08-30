@@ -3,8 +3,12 @@ import { checkFeature } from "@/lib/billing/membership";
 import { consumeFeature, logAiUsage, releaseFeature } from "@/lib/billing/meter";
 import { withinAiBudget } from "@/lib/billing/budget";
 import { refusalReason } from "@/lib/billing/gate-copy";
-import { geminiConfigured, VIDEO_MODEL } from "@/lib/video/gemini";
-import { env } from "@/lib/env";
+import {
+  geminiConfigured,
+  generateContentEndpoint,
+  generateContentHeaders,
+  VIDEO_MODEL,
+} from "@/lib/video/gemini";
 import type { VoiceDraft } from "./voice-match-types";
 
 /*
@@ -129,11 +133,13 @@ export async function draftMatchFromVoice(
   }
 
   const started = Date.now();
+  // The endpoint comes from the shared backend switch (AI Studio or
+  // Vertex — see lib/video/gemini.ts); the dialect is identical.
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${VIDEO_MODEL}:generateContent`,
+    generateContentEndpoint()!,
     {
       method: "POST",
-      headers: { "x-goog-api-key": env.geminiKey, "content-type": "application/json" },
+      headers: generateContentHeaders({ "content-type": "application/json" }),
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: SYSTEM }] },
         contents: [

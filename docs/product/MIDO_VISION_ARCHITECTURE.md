@@ -68,6 +68,36 @@ Resilience properties, each pinned by a unit test:
 - the loop actions: observation → confirm → `development_evidence`
 - the moment card's four arrows: clip / file / train / study
 
+## The backend switch (Vertex migration, 2026-08-30)
+
+The Gemini client speaks two platforms through one dialect
+(`geminiBackend()` in `lib/video/gemini.ts`):
+
+| | studio (AI Studio) | vertex (Vertex AI / Agent Platform) |
+|---|---|---|
+| Terms | consumer — **bars under-18-directed services** | enterprise |
+| Endpoint | generativelanguage.googleapis.com | aiplatform.googleapis.com, project-bound |
+| Auth | `x-goog-api-key` | `x-goog-api-key` (Cloud API key) |
+| YouTube links | fileData passthrough | fileData passthrough |
+| Uploads | Files API (48h scratch, streamed) | **no Files API** — inline bytes ≤ `INLINE_MAX_BYTES` (12MB), honest refusal above with the YouTube alternative |
+| Handle cache | yes (+stale recovery) | not needed (no handles) |
+
+Vertex wins when `VERTEX_API_KEY` + `VERTEX_PROJECT_ID` (+ optional
+`VERTEX_LOCATION`, default `global`) are set; otherwise studio via
+`GEMINI_API_KEY`. **A deployment migrates by adding env vars and rolls
+back by removing them** — no code path changes. Voice logging rides
+the same switch. `scripts/verify-vertex.mjs` proves auth, endpoint,
+model existence, YouTube+videoMetadata, and the inline lane against
+the real project before any player traffic does.
+
+GCS-backed large uploads on vertex are deliberately unbuilt until the
+inline ceiling is genuinely hit in practice; the current product wall
+is the 50MB storage cap anyway, and match-length footage arrives as
+YouTube links. Note from the current docs: YouTube ingestion is
+documented as PUBLIC videos only (unlisted no longer listed as
+supported) — the in-product advice about unlisted links needs a live
+retest, tracked as an open item.
+
 ## Deliberately not built
 
 - Full-match single-call reads (research: density collapses; value is

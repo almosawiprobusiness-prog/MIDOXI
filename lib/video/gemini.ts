@@ -33,6 +33,110 @@ const BASE = "https://generativelanguage.googleapis.com";
  */
 export const VIDEO_MODEL = env.geminiVideoModel || "gemini-3.6-flash";
 
+/*
+  ── TWO BACKENDS, ONE DIALECT ──────────────────────────────────────
+  The same Gemini models are served by two platforms with different
+  TERMS: the consumer AI Studio API (whose terms bar services directed
+  at under-18s — disqualifying for a youth football product) and
+  Vertex AI / the Gemini Enterprise Agent Platform (enterprise terms).
+  The request and response bodies are the same dialect; what differs is
+  the host, the URL shape, and what exists around generateContent:
+
+    studio   generativelanguage.googleapis.com — has the Files API
+             (48h scratch uploads). The original backend.
+    vertex   aiplatform.googleapis.com, project-bound — NO Files API.
+             Video arrives as a YouTube URL or inline bytes; large
+             uploads would need a GCS bucket, which is deliberately
+             not built until something needs it.
+
+  Vertex wins when fully configured, so a deployment MIGRATES BY
+  ADDING env vars and rolls back by removing them. Nothing else in the
+  product knows which backend answered.
+*/
+export type GeminiBackend =
+  | { kind: "studio"; key: string }
+  | { kind: "vertex"; key: string; project: string; location: string };
+
+export function geminiBackend(): GeminiBackend | null {
+  if (env.vertexKey && env.vertexProject) {
+    return { kind: "vertex", key: env.vertexKey, project: env.vertexProject, location: env.vertexLocation };
+  }
+  if (env.geminiKey) return { kind: "studio", key: env.geminiKey };
+  return null;
+}
+
+/** The generateContent URL for the active backend. */
+export function generateContentEndpoint(model: string = VIDEO_MODEL): string | null {
+  const b = geminiBackend();
+  if (!b) return null;
+  if (b.kind === "studio") return `${BASE}/v1beta/models/${model}:generateContent`;
+  const host =
+    b.location === "global" ? "aiplatform.googleapis.com" : `${b.location}-aiplatform.googleapis.com`;
+  return `https://${host}/v1/projects/${b.project}/locations/${b.location}/publishers/google/models/${model}:generateContent`;
+}
+
+/** Auth headers for the active backend — both speak x-goog-api-key. */
+export function generateContentHeaders(extra: Record<string, string> = {}): Record<string, string> {
+  const b = geminiBackend();
+  return { "x-goog-api-key": b?.key ?? "", ...extra };
+}
+
+/**
+ * Whether the active backend has the Files API. Only studio does; on
+ * vertex an upload travels inline instead, under INLINE_MAX_BYTES.
+ */
+export function filesApiAvailable(): boolean {
+  return geminiBackend()?.kind === "studio";
+}
+
+/**
+ * The inline-bytes ceiling for the vertex lane. Conservative on
+ * purpose: base64 inflates by 4/3 and the whole request must clear the
+ * platform's request-size limit; 12MB of video becomes a ~16MB body.
+ * Raise only after a larger read has been PROVEN against the live
+ * endpoint, not because a docs page suggests more would fit.
+ */
+export const INLINE_MAX_BYTES = 12 * 1024 * 1024;
+
+/**
+ * Fetch an upload and return it as inline base64 for a vertex read.
+ * Refuses over the ceiling with the honest alternative, because the
+ * alternative genuinely works (YouTube links have no size ceiling).
+ */
+export async function inlineFromUrl(
+  sourceUrl: string,
+): Promise<GeminiOutcome<{ base64: string; mimeType: string }>> {
+  let source: Response;
+  try {
+    source = await fetch(sourceUrl);
+  } catch {
+    return { ok: false, error: "The video could not be read from storage." };
+  }
+  if (!source.ok) {
+    return { ok: false, error: `The video could not be read from storage (${source.status}).` };
+  }
+  const length = Number(source.headers.get("content-length") ?? 0);
+  if (!length) {
+    source.body?.cancel();
+    return { ok: false, error: "The video source did not report its size, so it cannot be read." };
+  }
+  if (length > INLINE_MAX_BYTES) {
+    source.body?.cancel();
+    return {
+      ok: false,
+      error: `That file is ${(length / 1024 / 1024).toFixed(0)}MB. On this deployment's video backend uploads up to ${INLINE_MAX_BYTES / 1024 / 1024}MB can be read directly — trim the clip, or add the footage as a YouTube link, which has no size ceiling.`,
+    };
+  }
+  const bytes = Buffer.from(await source.arrayBuffer());
+  return {
+    ok: true,
+    value: {
+      base64: bytes.toString("base64"),
+      mimeType: source.headers.get("content-type") || "video/mp4",
+    },
+  };
+}
+
 /**
  * Uploaded sources are fetched by the server and forwarded. That is fine for a
  * clip and impossible for a full match: a 4.5GB file will not move through a
@@ -45,9 +149,10 @@ export const MAX_SOURCE_BYTES = 200 * 1024 * 1024;
 export const FILE_TTL_HOURS = 47;
 
 export function geminiConfigured(): boolean {
-  return Boolean(env.geminiKey);
+  return geminiBackend() !== null;
 }
 
+/** Studio-only headers, for the Files API endpoints below. */
 function headers(extra: Record<string, string> = {}): Record<string, string> {
   return { "x-goog-api-key": env.geminiKey, ...extra };
 }
@@ -79,7 +184,11 @@ export async function uploadFromUrl(
   sourceUrl: string,
   displayName: string,
 ): Promise<GeminiOutcome<GeminiFile>> {
-  if (!geminiConfigured()) return { ok: false, error: "Video model is not configured." };
+  if (!filesApiAvailable()) {
+    // The vertex backend has no Files API — callers route uploads
+    // through inlineFromUrl instead. Reaching here is a caller bug.
+    return { ok: false, error: "Video model is not configured for file uploads." };
+  }
 
   let source: Response;
   try {
@@ -217,9 +326,14 @@ export interface GeminiUsage {
 }
 
 export interface VideoPart {
-  /** Either a Files API uri or, for YouTube, the watch URL itself. */
+  /**
+   * A Files API uri (studio), a YouTube watch URL (both backends), or
+   * empty when the video travels as `inlineBase64` (vertex uploads).
+   */
   fileUri: string;
   mimeType: string;
+  /** The video bytes themselves, base64 — the vertex upload lane. */
+  inlineBase64?: string;
   /** Whole seconds. Omit to read the entire video. */
   startSeconds?: number;
   endSeconds?: number;
@@ -243,9 +357,9 @@ export interface GenerateResult<T> {
 }
 
 function buildBody(input: GenerateInput, withRange: boolean): Record<string, unknown> {
-  const part: Record<string, unknown> = {
-    fileData: { fileUri: input.video.fileUri, mimeType: input.video.mimeType },
-  };
+  const part: Record<string, unknown> = input.video.inlineBase64
+    ? { inlineData: { mimeType: input.video.mimeType, data: input.video.inlineBase64 } }
+    : { fileData: { fileUri: input.video.fileUri, mimeType: input.video.mimeType } };
   if (withRange && input.video.startSeconds !== undefined && input.video.endSeconds !== undefined) {
     part.videoMetadata = {
       startOffset: `${Math.floor(input.video.startSeconds)}s`,
@@ -281,12 +395,13 @@ function buildBody(input: GenerateInput, withRange: boolean): Record<string, unk
  * which path it took, so a degraded read is never presented as a clean one.
  */
 export async function generateFromVideo<T>(input: GenerateInput): Promise<GeminiOutcome<GenerateResult<T>>> {
-  if (!geminiConfigured()) return { ok: false, error: "Video model is not configured." };
+  const endpoint = generateContentEndpoint();
+  if (!endpoint) return { ok: false, error: "Video model is not configured." };
 
   const attempt = async (withRange: boolean) =>
-    fetch(`${BASE}/v1beta/models/${VIDEO_MODEL}:generateContent`, {
+    fetch(endpoint, {
       method: "POST",
-      headers: headers({ "Content-Type": "application/json" }),
+      headers: generateContentHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(buildBody(input, withRange)),
     });
 

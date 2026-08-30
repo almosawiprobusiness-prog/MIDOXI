@@ -25,6 +25,18 @@ export const env = {
   // and it is genuinely optional: without this key the film room keeps its
   // frame reader and says plainly what the other one would add.
   geminiKey: clean(process.env.GEMINI_API_KEY),
+  /*
+    Vertex AI (Gemini Enterprise Agent Platform) — the compliance home
+    for the same Gemini models. The consumer AI Studio API's terms bar
+    services directed at under-18s; a youth football product belongs on
+    the enterprise platform's terms. All three set → the Gemini client
+    speaks Vertex; otherwise it keeps speaking AI Studio with
+    `geminiKey`, so a deployment migrates by ADDING env, never by
+    breaking.
+  */
+  vertexKey: clean(process.env.VERTEX_API_KEY),
+  vertexProject: clean(process.env.VERTEX_PROJECT_ID),
+  vertexLocation: clean(process.env.VERTEX_LOCATION) || "global",
 
   /*
     WHOOP. Both are needed before the integration offers itself —
@@ -95,7 +107,7 @@ export const features = {
   auth: isSupabaseConfigured,
   database: isSupabaseConfigured,
   ai: isSupabaseConfigured && Boolean(env.anthropicKey),
-  nativeVideo: Boolean(env.geminiKey),
+  nativeVideo: Boolean(env.geminiKey || (env.vertexKey && env.vertexProject)),
   youtube: Boolean(env.youtubeKey),
   billing: Boolean(env.stripeSecret && env.stripePublishable),
   email: hasEmail,

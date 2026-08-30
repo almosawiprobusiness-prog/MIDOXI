@@ -15,10 +15,13 @@ import {
   type VideoAnalysisProvider,
 } from "./provider";
 import {
+  INLINE_MAX_BYTES,
   MAX_SOURCE_BYTES,
   VIDEO_MODEL,
+  filesApiAvailable,
   geminiConfigured,
   generateFromVideo,
+  inlineFromUrl,
   isYouTube,
   uploadFromUrl,
   waitReady,
@@ -230,6 +233,7 @@ ${memory}` : SYSTEM,
       video: {
         fileUri: resolved.fileUri,
         mimeType: resolved.mimeType,
+        inlineBase64: resolved.inlineBase64,
         startSeconds: request.fromSeconds,
         endSeconds: request.toSeconds,
       },
@@ -282,6 +286,7 @@ ${memory}` : SYSTEM,
           video: {
             fileUri: fresh.fileUri,
             mimeType: fresh.mimeType,
+            inlineBase64: fresh.inlineBase64,
             startSeconds: request.fromSeconds,
             endSeconds: request.toSeconds,
           },
@@ -479,7 +484,7 @@ function normaliseTimestamp(value: number, from: number, to: number): number {
 // ---------------------------------------------------------------------------
 
 type Resolved =
-  | { ok: true; fileUri: string; mimeType: string; fromCache?: boolean }
+  | { ok: true; fileUri: string; mimeType: string; fromCache?: boolean; inlineBase64?: string }
   | { ok: false; error: string };
 
 /*
@@ -500,6 +505,17 @@ async function resolveSource(request: AnalysisRequest): Promise<Resolved> {
 
   if (isYouTube(url)) {
     return { ok: true, fileUri: url, mimeType: "video/mp4" };
+  }
+
+  /*
+    The vertex backend has no Files API, so an upload travels as inline
+    bytes inside each request — no handle, no cache, no staleness. The
+    size ceiling and its honest refusal live in inlineFromUrl.
+  */
+  if (!filesApiAvailable()) {
+    const inline = await inlineFromUrl(url);
+    if (!inline.ok) return { ok: false, error: inline.error };
+    return { ok: true, fileUri: "", mimeType: inline.value.mimeType, inlineBase64: inline.value.base64 };
   }
 
   const cached = await cachedFileFor(request.videoId);
@@ -529,5 +545,7 @@ export function nativeVideoConfigured(): boolean {
 
 export const NATIVE_LIMITS = {
   maxSeconds: CLIP_MAX_SECONDS,
-  maxUploadMb: MAX_SOURCE_BYTES / 1024 / 1024,
+  // The honest upload ceiling depends on the backend: studio streams
+  // through the Files API; vertex carries uploads inline.
+  maxUploadMb: (filesApiAvailable() ? MAX_SOURCE_BYTES : INLINE_MAX_BYTES) / 1024 / 1024,
 };
