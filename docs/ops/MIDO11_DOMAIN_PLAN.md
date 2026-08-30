@@ -1,9 +1,27 @@
 # MIDO11.COM — domain migration plan
 
-Written 2026-08-30. The product owns mido11.com; production currently
-lives at **mido-xi.vercel.app** and everything below is designed so the
-move is controlled, reversible, and never breaks the running
-deployment. Nothing in this plan has been executed.
+Written 2026-08-30. **EXECUTED the same day** — status per step below.
+The move was controlled, additive, and reversible throughout;
+mido-xi.vercel.app keeps serving.
+
+## Execution record (2026-08-30)
+
+| Step | Status |
+|---|---|
+| 1. Vercel domains | ✅ owner had already attached both; flipped canonical: apex → Production, www → 308 → apex |
+| 2. DNS | ✅ already valid (owner) |
+| 3. `NEXT_PUBLIC_APP_URL` | ✅ → https://mido11.com (recreated as the var type Vercel now requires for public prefixes) + redeploy |
+| 4. Supabase Auth | ✅ Site URL → mido11.com; redirect list carries BOTH `mido11.com/**` and `mido-xi.vercel.app/**` |
+| 5. Stripe | ✅ second endpoint `we_1UAHbiRca6fER0GRGj0uUQfE` → mido11.com/api/stripe/webhook, same six events; `STRIPE_WEBHOOK_SECRET` rotated to its signing secret; old endpoint disabled after deploy verification (one secret env → one verifying endpoint; the old one would 400 anyway) |
+| 6. Extension | ✅ 0.3.1: production base → mido11.com, host_permissions carries both origins; zips rebuilt; site download refreshed. Store upload = owner. Installed 0.3.0 users keep working against vercel.app until they update |
+| 7. WHOOP | ➖ moot — WHOOP env is not configured in production |
+| 8. vercel.app redirect | ⏳ deliberately NOT redirected yet (30 clean days; old share links + installed extensions) |
+| 9. metadataBase / robots / sitemap | ✅ shipped (`app/robots.ts`, `app/sitemap.ts`, metadataBase from `env.appUrl`) |
+| 10. Analytics | ✅ no domain assumptions in code; dashboards unaffected |
+
+Session-cookie note: auth cookies are per-domain. Players signed in on
+the vercel.app host stay signed in there; they sign in once on
+mido11.com. Nothing breaks — two live hosts, two sessions.
 
 ## Decision: canonical shape
 
