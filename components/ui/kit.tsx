@@ -50,7 +50,7 @@ export function PageHeader({
         <Icon className="size-5" />
       </span>
       <div className="min-w-0">
-        <h1 className="font-display text-2xl font-bold tracking-tight text-text-hi">{title}</h1>
+        <h1 className="font-display text-2xl font-bold uppercase tracking-tight text-text-hi">{title}</h1>
         {tagline && <p className="text-sm text-text-dim">{tagline}</p>}
       </div>
       {actions && <div className="ml-auto flex items-center gap-2">{actions}</div>}

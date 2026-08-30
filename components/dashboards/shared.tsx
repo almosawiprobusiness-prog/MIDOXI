@@ -26,7 +26,7 @@ export function DashboardHero({
       </div>
       <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
         <h1
-          className="rise-in font-display text-4xl font-bold tracking-tight text-text-hi md:text-5xl"
+          className="rise-in font-display text-4xl font-bold uppercase tracking-tight text-text-hi md:text-5xl"
           style={{ animationDelay: "60ms" }}
         >
           {title}

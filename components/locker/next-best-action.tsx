@@ -16,6 +16,7 @@ import {
 import type { SurfacedAction } from "@/lib/intelligence/next-actions";
 import { describeSource } from "@/lib/intelligence/recommendation-types";
 import type { ActionKind } from "@/lib/intelligence/next-best-action";
+import { Spotlight } from "@/components/marketing/locker-live";
 
 /*
   What to do next, at the top of the Locker.
@@ -137,9 +138,15 @@ export function NextBestAction({
     .filter((l): l is string => Boolean(l));
 
   return (
-    <div className="min-w-0 panel-raised overflow-hidden">
+    /*
+      The command surface. The landing's "next best action" treatment,
+      here on the real thing: signal border over a violet wash that
+      settles back into ink, and a cursor-tracked glow. The one panel on
+      the page allowed to speak in the elevated voice.
+    */
+    <Spotlight className="relative min-w-0 overflow-hidden rounded-xl border border-signal-line bg-gradient-to-b from-signal/10 via-ink-900 to-ink-900">
       <div className="flex items-baseline justify-between gap-3 border-b border-line px-5 py-3">
-        <span className="label-tech">Next</span>
+        <span className="label-tech !text-signal-bright">Next best action / 01</span>
         <span className="label-tech">MIDO suggests</span>
       </div>
 
@@ -155,7 +162,7 @@ export function NextBestAction({
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="font-display text-lg font-semibold text-text-hi">{primary.title}</h3>
+              <h3 className="font-display text-xl font-bold uppercase tracking-tight text-text-hi">{primary.title}</h3>
               {primary.minutes ? <span className="chip">{primary.minutes} min</span> : null}
             </div>
             <p className="mt-1 text-sm leading-relaxed text-text-dim">{primary.reason}</p>
@@ -283,6 +290,6 @@ export function NextBestAction({
           </ul>
         </>
       )}
-    </div>
+    </Spotlight>
   );
 }
