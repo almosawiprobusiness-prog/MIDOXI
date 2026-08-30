@@ -38,7 +38,8 @@ export function connectFeeBps(activeAthletes: number): number {
 }
 
 /**
- * The application fee for one payment, in cents.
+ * The PLATFORM's fee for one payment, in cents — the tier percentage
+ * and nothing else. This is MIDO XI's revenue on the payment.
  *
  * Rounded half-up; never negative; never the whole amount. Stripe
  * rejects an application fee >= the charge, so the cap is belt and
@@ -48,6 +49,40 @@ export function applicationFeeCents(amountCents: number, activeAthletes: number)
   if (!Number.isFinite(amountCents) || amountCents <= 0) return 0;
   const fee = Math.round((amountCents * connectFeeBps(activeAthletes)) / 10_000);
   return Math.min(Math.max(0, fee), Math.max(0, amountCents - 1));
+}
+
+/*
+  Card processing, passed through at cost.
+
+  On destination charges STRIPE'S PROCESSING FEE IS DEBITED FROM THE
+  PLATFORM, not the connected account — so an application fee smaller
+  than processing would have MIDO XI paying money to be paid. Stripe's
+  own Connect guidance (the connect-recommend skill's fee-economics
+  check) is explicit: application_fee_amount = platform fee + estimated
+  processing. The trainer still nets what a direct merchant would —
+  they'd pay processing either way — and the platform nets its tier.
+
+  Estimated at the standard US card rate. A non-standard card
+  (international, amex mix) can cost more than the estimate; that delta
+  is the platform's, accepted at beta scale and visible in the margin
+  report. The estimate is a floor-keeper, not an invoice.
+*/
+export const PROCESSING_ESTIMATE_BPS = 290;
+export const PROCESSING_ESTIMATE_FIXED_CENTS = 30;
+
+export function processingEstimateCents(amountCents: number): number {
+  if (!Number.isFinite(amountCents) || amountCents <= 0) return 0;
+  return Math.round((amountCents * PROCESSING_ESTIMATE_BPS) / 10_000) + PROCESSING_ESTIMATE_FIXED_CENTS;
+}
+
+/**
+ * What is actually sent as Stripe's `application_fee_amount`:
+ * platform tier fee + processing estimate, never the whole charge.
+ */
+export function totalApplicationFeeCents(amountCents: number, activeAthletes: number): number {
+  if (!Number.isFinite(amountCents) || amountCents <= 0) return 0;
+  const total = applicationFeeCents(amountCents, activeAthletes) + processingEstimateCents(amountCents);
+  return Math.min(total, Math.max(0, amountCents - 1));
 }
 
 /** "2%" — for the Lab's fee card and the payment-link confirmation. */

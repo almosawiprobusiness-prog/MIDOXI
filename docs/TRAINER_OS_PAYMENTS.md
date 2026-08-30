@@ -13,7 +13,19 @@ active-athlete count, frozen into each payment link at creation):
 
 Schedule lives in `lib/billing/connect-fee.ts` (pure, tested) and is
 rendered by the same module the charge reads, so the Lab can never
-advertise a rate the charge ignores. The first slice below is BUILT;
+advertise a rate the charge ignores.
+
+**Margin correction (30 Aug, from the Stripe plugin's connect-recommend
+fee-economics check):** on destination charges Stripe's processing fee
+is debited from the PLATFORM, so an application fee of 1–2% alone
+would have MIDO XI paying ~1–2% to be paid. Per Stripe's own guidance,
+`application_fee_amount` = platform tier fee + estimated processing
+(2.9% + 30¢), passed through at cost and never kept. The trainer nets
+what a direct merchant would; the platform nets its tier; non-standard
+cards can exceed the estimate — that delta is the platform's, accepted
+at beta scale and watched via the Dashboard margin report. Fulfillment
+is gated on `payment_status` and also handles
+`checkout.session.async_payment_succeeded`, per the same source. The first slice below is BUILT;
 what remains awaiting a user run is the Stripe-side setup and the
 test-mode end-to-end.
 

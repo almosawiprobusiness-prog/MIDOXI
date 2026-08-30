@@ -118,7 +118,13 @@ export function ProductForm() {
 export function ProductRow({ product, canCharge }: { product: TrainerProduct; canCharge: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState<"link" | "remove" | null>(null);
-  const [link, setLink] = useState<{ url: string; feeCents: number; feeBps: number } | null>(null);
+  const [link, setLink] = useState<{
+    url: string;
+    feeCents: number;
+    feeBps: number;
+    platformCents: number;
+    processingCents: number;
+  } | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -189,9 +195,10 @@ export function ProductRow({ product, canCharge }: { product: TrainerProduct; ca
             </button>
           </div>
           <p className="mt-1.5 text-[11px] text-text-faint">
-            Send it to your client. Platform fee frozen into this link:{" "}
-            {money(link.feeCents)} ({link.feeBps / 100}%) — you receive{" "}
-            {money(product.amountCents - link.feeCents)} minus Stripe&rsquo;s processing fee.
+            Send it to your client. Frozen into this link: MIDO XI fee{" "}
+            {money(link.platformCents)} ({link.feeBps / 100}%) + card processing ~
+            {money(link.processingCents)}, passed through at cost. Your client pays{" "}
+            {money(product.amountCents)}; {money(product.amountCents - link.feeCents)} settles to you.
           </p>
         </div>
       )}

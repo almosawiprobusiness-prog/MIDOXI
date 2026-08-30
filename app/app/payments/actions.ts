@@ -54,9 +54,15 @@ export async function deactivateProduct(id: string): Promise<Result> {
 }
 
 /** The Checkout URL the trainer sends, with the fee they saw frozen in. */
-export async function makePaymentLink(
-  productId: string,
-): Promise<Result<{ url: string; feeCents: number; feeBps: number }>> {
+export async function makePaymentLink(productId: string): Promise<
+  Result<{
+    url: string;
+    feeCents: number;
+    feeBps: number;
+    platformCents: number;
+    processingCents: number;
+  }>
+> {
   if (isDemoMode) {
     return { ok: false, error: "Demo mode never touches Stripe — links need a real account." };
   }

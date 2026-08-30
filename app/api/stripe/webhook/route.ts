@@ -185,8 +185,22 @@ export async function POST(req: Request) {
           const sub = await stripe.subscriptions.retrieve(subId);
           await upsertSubscription(sub);
         } else if (session.metadata?.kind === "trainer_product") {
-          // A trainer's payment link was paid — flip the frozen
-          // purchase row. Same throw-to-retry contract as above.
+          /*
+            Gated on payment_status, per Stripe's fulfillment rule: an
+            async payment method (bank debit) completes the SESSION
+            before the money moves. "paid" flips the row now; anything
+            else waits for async_payment_succeeded below. Same
+            throw-to-retry contract as above.
+          */
+          if (session.payment_status === "paid") {
+            await recordTrainerPurchasePaid(session);
+          }
+        }
+        break;
+      }
+      case "checkout.session.async_payment_succeeded": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        if (session.metadata?.kind === "trainer_product") {
           await recordTrainerPurchasePaid(session);
         }
         break;

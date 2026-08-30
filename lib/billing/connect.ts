@@ -4,7 +4,14 @@ import { env, features, isDemoMode } from "@/lib/env";
 import { getStripe } from "./stripe";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { listAthletes } from "@/lib/data/trainer";
-import { applicationFeeCents, connectFeeBps, PRODUCT_MAX_CENTS, PRODUCT_MIN_CENTS } from "./connect-fee";
+import {
+  applicationFeeCents,
+  connectFeeBps,
+  processingEstimateCents,
+  totalApplicationFeeCents,
+  PRODUCT_MAX_CENTS,
+  PRODUCT_MIN_CENTS,
+} from "./connect-fee";
 import { logEvent } from "@/lib/observability/log";
 
 /*
@@ -224,7 +231,18 @@ export async function activeAthleteCount(): Promise<number> {
  */
 export async function createPaymentLink(
   productId: string,
-): Promise<ConnectResult<{ url: string; feeCents: number; feeBps: number }>> {
+): Promise<
+  ConnectResult<{
+    url: string;
+    /** The whole application fee charged: platform + processing. */
+    feeCents: number;
+    feeBps: number;
+    /** MIDO XI's share (the tier). */
+    platformCents: number;
+    /** Card processing, passed through at cost (estimated). */
+    processingCents: number;
+  }>
+> {
   if (!features.billing) return { ok: false, error: "Payments are not configured on this deployment." };
   const stripe = getStripe();
   const admin = createAdminClient();
@@ -252,7 +270,16 @@ export async function createPaymentLink(
 
   const athletes = await activeAthleteCount();
   const feeBps = connectFeeBps(athletes);
-  const feeCents = applicationFeeCents(amount, athletes);
+  const platformCents = applicationFeeCents(amount, athletes);
+  const processingCents = processingEstimateCents(amount);
+  /*
+    What Stripe charges as the application fee: tier + processing
+    pass-through. On destination charges processing is debited from
+    the PLATFORM, so an application fee below it would mean paying to
+    be paid — Stripe's own fee-economics guidance. fee_cents records
+    this total (the money fact); fee_bps records the tier.
+  */
+  const feeCents = totalApplicationFeeCents(amount, athletes);
 
   const { data: purchase, error: purchaseErr } = await admin
     .from("trainer_purchases")
@@ -292,9 +319,13 @@ export async function createPaymentLink(
         purchase_id: purchase.id as string,
         trainer_id: userId,
       },
+      // Dashboard-side flow label, per current Stripe guidance.
+      integration_identifier: `midoxi-trainer-checkout-${Array.from({ length: 8 }, () =>
+        String.fromCharCode(97 + Math.floor(Math.random() * 26)),
+      ).join("")}`,
       success_url: `${env.appUrl}/pay/done`,
       cancel_url: `${env.appUrl}/pay/done?cancelled=1`,
-    });
+    } as Stripe.Checkout.SessionCreateParams);
 
     await admin
       .from("trainer_purchases")
@@ -302,7 +333,7 @@ export async function createPaymentLink(
       .eq("id", purchase.id as string);
 
     if (!session.url) return { ok: false, error: "Stripe returned no payment URL." };
-    return { ok: true, data: { url: session.url, feeCents, feeBps } };
+    return { ok: true, data: { url: session.url, feeCents, feeBps, platformCents, processingCents } };
   } catch (err) {
     // The pending row without a session id is inert; nothing was charged.
     logEvent("error", "connect.checkout_failed", { message: (err as Error).message });

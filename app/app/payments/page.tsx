@@ -60,7 +60,9 @@ export default async function PaymentsPage() {
         </div>
         <div className="flex items-end gap-3">
           <span className="stat-figure text-4xl">{feePercentLabel(athletes)}</span>
-          <span className="mb-1 text-sm text-text-dim">per payment, on top of Stripe&rsquo;s processing fee</span>
+          <span className="mb-1 text-sm text-text-dim">
+            MIDO XI&rsquo;s share per payment · card processing (2.9% + 30¢) is passed through at cost, never kept
+          </span>
         </div>
         {hint && (
           <p className="mt-2 flex items-center gap-1.5 text-sm text-positive">
@@ -149,7 +151,9 @@ export default async function PaymentsPage() {
                     <CircleDollarSign className="size-4 shrink-0 text-text-faint" />
                     <span className="min-w-0 flex-1 truncate text-text-hi">{p.productTitle ?? "Product removed"}</span>
                     <span className="data-mono text-text">{money(p.amountCents)}</span>
-                    <span className="data-mono text-xs text-text-faint">fee {money(p.feeCents)} ({p.feeBps / 100}%)</span>
+                    <span className="data-mono text-xs text-text-faint">
+                      fees {money(p.feeCents)} ({p.feeBps / 100}% + processing)
+                    </span>
                     <span
                       className="chip"
                       style={
