@@ -4,7 +4,9 @@ import { rankActions, hasEnoughToRecommend } from "./next-best-action";
 import { surfaceRecommendations } from "@/lib/data/recommendations";
 import { listMemory } from "@/lib/data/memory";
 import { coversSameGround } from "./next-best-action";
+import { suggestStudyFor } from "@/lib/knowledge/study-match";
 import type { Memory } from "@/lib/data/memory-types";
+import type { PlayerSignals } from "./next-best-action";
 import type { Recommendation } from "./recommendation-types";
 
 /*
@@ -29,6 +31,14 @@ export const SURFACED_LIMIT = 3;
  */
 export type SurfacedAction = Recommendation & {
   minutes?: number;
+  /**
+   * A specific destination in the curated library, when one genuinely
+   * serves this advice — "Study Haaland — near-post finishing" instead
+   * of a door marked Study. Re-derived each time like `minutes`: it is
+   * a property of the library and the current record, not of the advice
+   * as given.
+   */
+  target?: { href: string; label: string; because: string };
   /**
    * A memory of the player's that bears on this exact advice —
    * "already tried" or a constraint, matched by the same word overlap
@@ -82,6 +92,7 @@ export async function getNextActions(now: Date = new Date()): Promise<NextAction
       ...r,
       minutes: minutes.get(r.kind),
       heard: relevantMemory(r, memory),
+      target: r.kind === "study" ? studyTarget(signals) : undefined,
     }));
     return { items, informed: true };
   } catch {
@@ -89,6 +100,33 @@ export async function getNextActions(now: Date = new Date()): Promise<NextAction
     // at all. Everything below this call is secondary to the page.
     return { items: [], informed: false };
   }
+}
+
+/**
+ * The specific curated study behind a "study" recommendation.
+ *
+ * The scorer said "study your goal"; this names the library page that
+ * serves it, matched from the same signals — the top goal the scorer
+ * used, and the concepts the film has shown. When nothing in the
+ * library genuinely fits, there is no target and the card keeps its
+ * generic door: an invented match would send a player to study the
+ * wrong thing with MIDO's confidence behind it.
+ */
+function studyTarget(
+  signals: PlayerSignals,
+): { href: string; label: string; because: string } | undefined {
+  const goal = signals.activeGoals[0];
+  if (!goal) return undefined;
+  const suggestion = suggestStudyFor({
+    goalTitle: goal.title,
+    filmConcepts: (signals.filmObservations ?? []).map((o) => o.concept),
+  });
+  if (!suggestion) return undefined;
+  return {
+    href: `/app/study/${suggestion.slug}`,
+    label: `Study ${suggestion.name}`,
+    because: suggestion.because,
+  };
 }
 
 /**

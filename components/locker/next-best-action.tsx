@@ -168,6 +168,15 @@ export function NextBestAction({
             <p className="mt-1 text-sm leading-relaxed text-text-dim">{primary.reason}</p>
 
             {/*
+              The library page that serves this advice, named — matched
+              from the record, never invented, and absent when nothing
+              in the library genuinely fits.
+            */}
+            {primary.target && (
+              <p className="mt-1.5 text-sm leading-relaxed text-signal-bright">{primary.target.because}</p>
+            )}
+
+            {/*
               The player's own words, when they bear on this advice. Not
               a caveat added by a model — a memory they wrote, quoted
               back, so the recommendation reads as informed rather than
@@ -187,14 +196,14 @@ export function NextBestAction({
 
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <Link
-                href={meta(primary.kind).href}
+                href={primary.target?.href ?? meta(primary.kind).href}
                 onClick={() => {
                   // Fire-and-forget: navigation must not wait on a metric.
                   void trackRecommendationInteraction("opened", primary.kind);
                 }}
                 className="inline-flex h-9 items-center gap-2 rounded-full bg-signal px-4 text-sm font-medium text-white transition-colors hover:bg-signal-deep"
               >
-                Go <ArrowUpRight className="size-4" />
+                {primary.target?.label ?? "Go"} <ArrowUpRight className="size-4" />
               </Link>
               <button
                 onClick={() => act(primary.id, markRecommendationDone)}
@@ -277,7 +286,7 @@ export function NextBestAction({
                     <p className="mt-0.5 text-sm leading-relaxed text-text-dim">{r.reason}</p>
                   </div>
                   <Link
-                    href={meta(r.kind).href}
+                    href={r.target?.href ?? meta(r.kind).href}
                     onClick={() => void trackRecommendationInteraction("opened", r.kind)}
                     className="mt-0.5 inline-flex shrink-0 items-center gap-1 text-xs text-text-faint transition-colors hover:text-signal-bright"
                   >
