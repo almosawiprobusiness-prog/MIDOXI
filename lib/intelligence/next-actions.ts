@@ -92,7 +92,12 @@ export async function getNextActions(now: Date = new Date()): Promise<NextAction
       ...r,
       minutes: minutes.get(r.kind),
       heard: relevantMemory(r, memory),
-      target: r.kind === "study" ? studyTarget(signals) : undefined,
+      target:
+        r.kind === "study"
+          ? studyTarget(signals)
+          : r.kind === "training"
+            ? trainingTarget(signals)
+            : undefined,
     }));
     return { items, informed: true };
   } catch {
@@ -127,6 +132,39 @@ function studyTarget(
     label: `Study ${suggestion.name}`,
     because: suggestion.because,
   };
+}
+
+/**
+ * The door behind a "training" recommendation: the session engine,
+ * pre-focused on what the recommendation was scored FOR. The scorer
+ * said "train"; the target opens Build My Session around the evidence
+ * that put training top — the most-observed film concept serving the
+ * top goal, when there is one, or the plain generator when there is
+ * not. The engine re-validates the focus against the live context, so
+ * a stale key degrades to a normal draft rather than an error.
+ */
+function trainingTarget(
+  signals: PlayerSignals,
+): { href: string; label: string; because: string } | undefined {
+  const film = (signals.filmObservations ?? [])[0];
+  if (film) {
+    return {
+      href: `/app/training?focus=${encodeURIComponent(`film:${film.concept}`)}`,
+      label: "Build my session",
+      because: "MIDO drafts it around what your film showed.",
+    };
+  }
+  const goal = signals.activeGoals[0];
+  if (goal) {
+    return {
+      href: `/app/training?focus=${encodeURIComponent(`goal:${goal.id}`)}`,
+      label: "Build my session",
+      because: `MIDO drafts it around "${goal.title}".`,
+    };
+  }
+  // No film, no goal — the card keeps its generic door, the same
+  // honesty rule as studyTarget: no invented specificity.
+  return undefined;
 }
 
 /**
