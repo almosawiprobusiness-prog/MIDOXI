@@ -16,7 +16,7 @@ player) · **LATER** (accepted for beta, scheduled after).
 | One coherent world across screens | **PASS** | Fixed this session: one seeded season, one fixture clock, one day-counting function |
 | Locker prioritises rather than lists | **PASS** | NBA panel leads; briefing drops covered lines; visual weight uneven by design |
 | Every recommendation answers "why this?" | **PASS** | Sources in plain words; memory quoted when it bears |
-| Empty states sequence the first action | **FAIL** | NBA/Memory exemplary; several panels still say "nothing yet" without ordering. Not a blocker — new accounts get the NBA onboarding state |
+| Empty states sequence the first action | **PASS** (30 Aug) | Memory board's per-kind empties now show the kind's own example + effect; notification bell and page say what lands there and how to start it. Calendar/community/timeline already sequenced |
 | Nav breadth | **FAIL** | 18 destinations for a 6-section loop. See CUT_LIST. Cutting is a product decision, not done unilaterally |
 
 ## AI
@@ -139,6 +139,20 @@ RISK** (known, bounded, written down).
 - **Error observability is Vercel logs + client-error relay**, not an
   APM. Right-sized for 11 users; revisit at 100.
 - **Empty-state sequencing debt** on secondary panels.
+
+## Evolution pass — 30 August 2026
+
+The elite-roadmap phases (docs/ELITE_ROADMAP.md) landed on top of this
+gate without disturbing it: context selector + session engine (every
+generated block cites the record, verified in demo — the billing gate
+refuses honestly and the composed fallback renders), capture filing +
+concept threads, study targets in the NBA, favorite club + watch
+studies (migration 0036, fail-soft until run), opt-in sharing of loop
+artifacts, the match card (real numbers, name off by default), the
+trainer practice mark, and `npm run verify:parity` — which also
+established that 0031/0032 ARE applied in production. 728 tests.
+Mobile-checked: training page actions wrap at 375px; drafted-session
+dialog verified end-to-end in the demo preview.
 
 ## What changed since the previous gate
 

@@ -107,7 +107,7 @@ export default async function TrainingPage() {
         title="Training"
         tagline="Sessions, load and how you felt."
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <GenerateSessionDialog />
             <TrainingFormDialog mode="create" />
           </div>
