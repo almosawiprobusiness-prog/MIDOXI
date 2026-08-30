@@ -89,8 +89,8 @@ export default async function SessionsPage({ searchParams }: PageProps<"/app/ses
             <section className="mb-8">
               <SectionHeader label="Ahead" />
               <div className="space-y-2">
-                {upcoming.map((p) => (
-                  <PlanRow key={p.id} plan={p} />
+                {upcoming.map((p, i) => (
+                  <PlanRow key={p.id} plan={p} featured={i === 0} />
                 ))}
               </div>
             </section>
@@ -114,15 +114,26 @@ export default async function SessionsPage({ searchParams }: PageProps<"/app/ses
   );
 }
 
-function PlanRow({ plan }: { plan: Plan }) {
+function PlanRow({ plan, featured = false }: { plan: Plan; featured?: boolean }) {
   return (
     <Link
       href={`/app/sessions/${plan.id}`}
-      className="group panel flex flex-wrap items-center gap-3 p-4 transition-colors hover:border-signal-line"
+      className={`group flex flex-wrap items-center gap-3 p-4 transition-colors hover:border-signal-line ${
+        featured
+          ? "relative overflow-hidden rounded-xl border border-signal-line bg-gradient-to-b from-signal/10 via-ink-900 to-ink-900"
+          : "panel"
+      }`}
     >
+      {featured && <div className="label-tech w-full !text-signal-bright">Next session / 01</div>}
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="truncate text-sm font-medium text-text-hi">{plan.title}</span>
+          <span
+            className={`truncate text-sm text-text-hi ${
+              featured ? "font-display font-bold uppercase tracking-tight" : "font-medium"
+            }`}
+          >
+            {plan.title}
+          </span>
           <span className="label-tech" style={{ color: STATUS_COLOR[plan.status] }}>
             {plan.status}
           </span>

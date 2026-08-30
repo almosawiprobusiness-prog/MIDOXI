@@ -104,7 +104,8 @@ export default async function PerformancePage() {
           <div className="mb-8 grid gap-4 lg:grid-cols-2">
             <section className="min-w-0">
               <SectionHeader label={`Form · last ${Math.min(5, form.length)}`} />
-              <div className="min-w-0 panel flex flex-col gap-4 p-5">
+              <div className="relative min-w-0 overflow-hidden rounded-xl border border-signal-line bg-gradient-to-b from-signal/10 via-ink-900 to-ink-900 flex flex-col gap-4 p-5">
+                <div className="label-tech !text-signal-bright">Current form / 01</div>
                 <div className="flex items-center justify-between gap-3">
                   {form.length ? (
                     <FormPips results={form} />

@@ -114,8 +114,11 @@ export default async function TrainingPage() {
           </section>
 
           <div className="mb-6 grid gap-4 lg:grid-cols-2">
-            <section className="min-w-0 panel p-5">
-              <div className="label-tech mb-3">Load this week · minutes/day</div>
+            <section className="relative min-w-0 overflow-hidden rounded-xl border border-signal-line bg-gradient-to-b from-signal/10 via-ink-900 to-ink-900 p-5">
+              <div className="mb-3 flex items-baseline justify-between gap-3">
+                <span className="label-tech !text-signal-bright">Load this week / 01</span>
+                <span className="label-tech">minutes / day</span>
+              </div>
               <MiniBars data={dayLoad} className="h-28" />
             </section>
             <section className="panel p-5">

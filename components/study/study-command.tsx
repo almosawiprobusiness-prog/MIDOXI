@@ -25,9 +25,10 @@ export function StudyCommand({ role, openers }: { role: RoleId; openers: string[
   };
 
   return (
-    <div className="panel-raised relative overflow-hidden">
+    <div className="relative overflow-hidden rounded-xl border border-signal-line bg-gradient-to-b from-signal/10 via-ink-900 to-ink-900">
       <div className="field-glow absolute inset-0" aria-hidden />
       <div className="relative">
+        <div className="label-tech !text-signal-bright border-b border-line px-4 py-2.5">Study command / 01</div>
         <div className="flex items-center gap-3 px-4">
           <Search className="size-4 shrink-0 text-signal-bright" />
           <input

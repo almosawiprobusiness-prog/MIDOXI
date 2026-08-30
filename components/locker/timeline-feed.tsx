@@ -173,22 +173,50 @@ function Row({ entry }: { entry: TimelineEntry }) {
 export function TimelineFeed({ days }: { days: TimelineDay[] }) {
   return (
     <div className="space-y-6">
-      {days.map((day) => (
-        <section key={day.date}>
-          <div className="mb-2 flex items-baseline gap-3 px-1">
-            <h3 className="font-display text-sm font-semibold text-text">{dayLabel(day.date)}</h3>
-            <span className="h-px flex-1 bg-line" />
-            <span className="data-mono text-[10px] text-text-faint">
-              {day.entries.length} {day.entries.length === 1 ? "entry" : "entries"}
-            </span>
-          </div>
-          <div className="min-w-0 panel divide-y divide-line">
-            {day.entries.map((e) => (
-              <Row key={e.id} entry={e} />
-            ))}
-          </div>
-        </section>
-      ))}
+      {days.map((day, i) =>
+        i === 0 ? (
+          /*
+            The command surface: the most recent day, spoken in the elevated
+            voice. Its header moves inside the panel as a band; every older
+            day keeps the quiet treatment below.
+          */
+          <section key={day.date}>
+            <div className="relative min-w-0 overflow-hidden rounded-xl border border-signal-line bg-gradient-to-b from-signal/10 via-ink-900 to-ink-900">
+              <div className="flex items-baseline justify-between gap-3 border-b border-line px-4 py-3">
+                <div>
+                  <div className="label-tech !text-signal-bright">Most recent / 01</div>
+                  <h3 className="mt-1 font-display text-sm font-bold uppercase tracking-tight text-text-hi">
+                    {dayLabel(day.date)}
+                  </h3>
+                </div>
+                <span className="data-mono text-[10px] text-text-faint">
+                  {day.entries.length} {day.entries.length === 1 ? "entry" : "entries"}
+                </span>
+              </div>
+              <div className="divide-y divide-line">
+                {day.entries.map((e) => (
+                  <Row key={e.id} entry={e} />
+                ))}
+              </div>
+            </div>
+          </section>
+        ) : (
+          <section key={day.date}>
+            <div className="mb-2 flex items-baseline gap-3 px-1">
+              <h3 className="font-display text-sm font-semibold text-text">{dayLabel(day.date)}</h3>
+              <span className="h-px flex-1 bg-line" />
+              <span className="data-mono text-[10px] text-text-faint">
+                {day.entries.length} {day.entries.length === 1 ? "entry" : "entries"}
+              </span>
+            </div>
+            <div className="min-w-0 panel divide-y divide-line">
+              {day.entries.map((e) => (
+                <Row key={e.id} entry={e} />
+              ))}
+            </div>
+          </section>
+        ),
+      )}
     </div>
   );
 }

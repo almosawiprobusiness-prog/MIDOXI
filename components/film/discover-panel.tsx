@@ -45,16 +45,17 @@ export function DiscoverPanel({ result }: { result: DiscoverResult }) {
   const canGenerate = ai.isPro && ai.reachable && remaining > 0;
 
   return (
-    <div className="panel-raised relative mb-8 overflow-hidden p-5">
+    <div className="relative mb-8 overflow-hidden rounded-xl border border-signal-line bg-gradient-to-b from-signal/10 via-ink-900 to-ink-900 p-5">
       <div className="field-glow absolute inset-0" aria-hidden />
       <div className="relative">
+        <div className="label-tech !text-signal-bright mb-3">Study engine / 01</div>
         <div className="flex flex-wrap items-center gap-4">
           <span className="grid size-11 place-items-center rounded-lg border border-signal-line bg-signal/10 text-signal-bright">
             <Sparkles className="size-5" />
           </span>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <h2 className="font-display text-base font-semibold text-text-hi">Discover — Study Engine</h2>
+              <h2 className="font-display text-base font-bold uppercase tracking-tight text-text-hi">Discover — Study Engine</h2>
               {mode === "ai" ? <span className="chip chip-signal">AI · LIVE</span> : <span className="chip">SMART</span>}
             </div>
             <p className="mt-0.5 text-sm text-text-dim">

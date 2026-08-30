@@ -27,6 +27,8 @@ export default async function DevelopmentPage() {
   const achieved = goals.filter((g) => g.status === "achieved").length;
   const avgProgress = goals.length ? Math.round(goals.reduce((a, g) => a + g.progress, 0) / goals.length) : 0;
   const evidenceAll = goals.reduce((a, g) => a + evidenceTotal(g), 0);
+  // The one card allowed to speak in the elevated voice: the first goal still in play.
+  const primaryGoalId = (goals.find((g) => g.status === "active") ?? goals.find((g) => g.status !== "achieved"))?.id;
 
   return (
     <div className="mx-auto max-w-[1100px] px-4 py-8 md:px-6">
@@ -84,8 +86,18 @@ export default async function DevelopmentPage() {
               { icon: Swords, n: g.evidence.matches ?? 0, label: "matches" },
               { icon: MessageSquare, n: g.evidence.coachNotes, label: "coach" },
             ].filter((x) => x.n > 0);
+            const isPrimary = g.id === primaryGoalId;
             return (
-              <Link key={g.id} href={`/app/development/${g.id}`} className="group panel flex flex-col p-4 transition-colors hover:border-line-strong">
+              <Link
+                key={g.id}
+                href={`/app/development/${g.id}`}
+                className={`group flex flex-col p-4 transition-colors ${
+                  isPrimary
+                    ? "relative overflow-hidden rounded-xl border border-signal-line bg-gradient-to-b from-signal/10 via-ink-900 to-ink-900"
+                    : "panel hover:border-line-strong"
+                }`}
+              >
+                {isPrimary && <div className="label-tech !text-signal-bright mb-2">Active thread / 01</div>}
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-2">
                     <span className="size-1.5 rounded-full" style={{ background: c.color }} />
@@ -93,7 +105,7 @@ export default async function DevelopmentPage() {
                   </span>
                   <span className="chip" style={{ color: s.color, borderColor: s.color }}>{s.label}</span>
                 </div>
-                <h3 className="mt-2 font-display text-base font-semibold text-text-hi">{g.title}</h3>
+                <h3 className={`mt-2 font-display text-base text-text-hi ${isPrimary ? "font-bold uppercase tracking-tight" : "font-semibold"}`}>{g.title}</h3>
                 <p className="mt-1 line-clamp-2 flex-1 text-xs leading-relaxed text-text-dim">{g.why}</p>
 
                 <div className="mt-3">

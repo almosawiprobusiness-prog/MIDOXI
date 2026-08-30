@@ -93,14 +93,15 @@ export default async function MatchesPage() {
           {next && (
             <section className="mb-6">
               <SectionHeader label="Next fixture" action={{ label: "Calendar", href: "/app/calendar" }} />
-              <div className="min-w-0 panel-raised relative overflow-hidden p-5">
+              <div className="relative min-w-0 overflow-hidden rounded-xl border border-signal-line bg-gradient-to-b from-signal/10 via-ink-900 to-ink-900 p-5">
                 <div className="pitch-grid absolute inset-0 opacity-40" aria-hidden />
+                <div className="label-tech !text-signal-bright relative mb-3">Next match / 01</div>
                 <div className="relative flex flex-wrap items-center justify-between gap-4">
                   <div className="min-w-0">
                     {next.event.mdTag && (
                       <div className="chip chip-signal mb-2">{next.event.mdTag} · MATCHDAY</div>
                     )}
-                    <h3 className="font-display text-2xl font-bold text-text-hi">
+                    <h3 className="font-display text-2xl font-bold uppercase tracking-tight text-text-hi">
                       {next.event.title}
                     </h3>
                     <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-text-dim">

@@ -88,7 +88,7 @@ export default async function RecoveryPage({ searchParams }: PageProps<"/app/rec
         <>
           {/* Today */}
           <div className="mb-8 grid gap-4 lg:grid-cols-[320px_1fr]">
-            <section className="min-w-0 panel-raised relative flex items-center gap-5 overflow-hidden p-5">
+            <section className="relative min-w-0 flex items-center gap-5 overflow-hidden rounded-xl border border-signal-line bg-gradient-to-b from-signal/10 via-ink-900 to-ink-900 p-5">
               <div className="field-glow absolute inset-0" aria-hidden />
               <Radial
                 value={today.readiness ?? 0}
@@ -97,8 +97,8 @@ export default async function RecoveryPage({ searchParams }: PageProps<"/app/rec
                 size={128}
               />
               <div className="relative min-w-0">
-                <div className="label-tech">Last check-in</div>
-                <div className="mt-1 font-display text-2xl font-bold" style={{ color: meta.color }}>
+                <div className="label-tech !text-signal-bright">Last check-in / 01</div>
+                <div className="mt-1 font-display text-2xl font-bold uppercase tracking-tight" style={{ color: meta.color }}>
                   {meta.label}
                 </div>
                 <p className="mt-1 text-xs leading-relaxed text-text-dim">{meta.advice}</p>

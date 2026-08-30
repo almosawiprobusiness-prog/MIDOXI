@@ -143,10 +143,11 @@ export function CalendarWeek({
           const mdTag = tagged?.kind === "event" ? tagged.event.mdTag : undefined;
           const isMatch = dayItems.some((i) => i.kind === "event" && i.event.kind === "match");
           return (
-            <div key={key} className={`group flex min-h-[150px] flex-col bg-ink-900 p-2.5 ${isToday ? "bg-signal/5" : ""} ${isMatch ? "bg-ink-850" : ""}`}>
+            <div key={key} className={`group flex min-h-[150px] flex-col p-2.5 ${isToday ? "relative overflow-hidden rounded-xl border border-signal-line bg-gradient-to-b from-signal/10 via-ink-900 to-ink-900" : isMatch ? "bg-ink-850" : "bg-ink-900"}`}>
+              {isToday && <div className="label-tech mb-1 !text-signal-bright">Today / 01</div>}
               <div className="mb-2 flex items-center justify-between">
                 <div className="flex items-baseline gap-1.5">
-                  <span className={`font-display text-sm font-semibold ${isToday ? "text-signal-bright" : "text-text-dim"}`}>{DAY_NAMES[i]}</span>
+                  <span className={`font-display text-sm ${isToday ? "font-bold uppercase tracking-tight text-signal-bright" : "font-semibold text-text-dim"}`}>{DAY_NAMES[i]}</span>
                   <span className="data-mono text-[11px] text-text-faint">{d.getDate()}</span>
                 </div>
                 {mdTag && <span className={`md-tag ${isMatch ? "text-signal-bright" : "text-text-faint"}`}>{mdTag}</span>}
