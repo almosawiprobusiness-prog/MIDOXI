@@ -109,7 +109,11 @@ export function GenerateSessionDialog({ initialFocus }: { initialFocus?: string 
     opens itself once on mount.
   */
   useEffect(() => {
-    if (initialFocus) start();
+    if (!initialFocus) return;
+    // Deferred a tick so opening is an event of its own, not a state
+    // cascade inside the mount effect (and the lint rule agrees).
+    const t = setTimeout(start, 0);
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only by design
   }, []);
 
