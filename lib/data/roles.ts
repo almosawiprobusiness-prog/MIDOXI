@@ -126,6 +126,24 @@ export async function getCoachDashboard(): Promise<CoachDashboard> {
 
 // ── trainer ──────────────────────────────────────────────────
 
+/**
+ * The trainer's practice name — their brand, stamped on what leaves
+ * the Lab (program pages, and eventually shared plans and invoices).
+ * One reader so the dashboard and every output surface agree on it.
+ */
+export async function getTrainerPractice(): Promise<string> {
+  if (isDemoMode) return "Northgate Performance";
+  const user = await getCurrentUser();
+  const supabase = await createClient();
+  if (!user || !supabase) return "Your practice";
+  const { data: tp } = await supabase
+    .from("trainer_profiles")
+    .select("practice")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  return tp?.practice || "Your practice";
+}
+
 export async function getTrainerDashboard(): Promise<TrainerDashboard> {
   // The Trainer OS owns athletes, programs and assessments; the dashboard reads
   // over those modules rather than keeping a second dataset.
@@ -177,19 +195,7 @@ export async function getTrainerDashboard(): Promise<TrainerDashboard> {
     }
   }
 
-  let practice = isDemoMode ? "Northgate Performance" : "Your practice";
-  if (!isDemoMode) {
-    const user = await getCurrentUser();
-    const supabase = await createClient();
-    if (user && supabase) {
-      const { data: tp } = await supabase
-        .from("trainer_profiles")
-        .select("practice")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      practice = tp?.practice || "Your practice";
-    }
-  }
+  const practice = await getTrainerPractice();
 
   return {
     isDemo: isDemoMode,

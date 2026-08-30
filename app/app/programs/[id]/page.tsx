@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Calendar, Repeat, User, TrendingUp, ArrowDownRight, Info } from "lucide-react";
 import { getProgram, getAthlete, listAthletes } from "@/lib/data/trainer";
+import { getTrainerPractice } from "@/lib/data/roles";
 import { byWeek, intentMeta, programStatusMeta, slotMeta } from "@/lib/data/trainer-types";
 import { programRules } from "@/lib/data/trainer-compose";
 import { quality } from "@/lib/knowledge/physical";
@@ -21,9 +22,10 @@ export default async function ProgramPage({ params }: PageProps<"/app/programs/[
   if (!detail) notFound();
 
   const { program, sessions } = detail;
-  const [athlete, athletes] = await Promise.all([
+  const [athlete, athletes, practice] = await Promise.all([
     program.athleteId ? getAthlete(program.athleteId) : Promise.resolve(null),
     listAthletes(),
+    getTrainerPractice(),
   ]);
 
   const weeks = byWeek(sessions);
@@ -56,6 +58,12 @@ export default async function ProgramPage({ params }: PageProps<"/app/programs/[
           <h1 className="mt-1 font-display text-3xl font-bold tracking-tight text-text-hi">
             {program.title}
           </h1>
+          {/*
+            The trainer's mark. A program is the Lab's product — it
+            should carry the practice's name, not just the platform's,
+            because the practice is who the athlete is paying.
+          */}
+          <div className="label-tech mt-1.5">Prepared by {practice}</div>
           {athlete ? (
             <Link
               href={`/app/athletes/${athlete.id}`}
