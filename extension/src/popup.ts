@@ -344,6 +344,7 @@ function renderCapture(): void {
   thumb.addEventListener("error", () => thumb.remove());
   thumb.src = video.thumbnailUrl;
   const meta = el("div", { class: "video-meta" });
+  meta.append(el("div", { class: "label-tech video-eyebrow" }, "Current moment"));
   meta.append(el("div", { class: "video-title" }, video.title));
   if (video.channel) meta.append(el("div", { class: "video-channel" }, video.channel));
   const stampRow = el("div", { class: "stamp-row" });

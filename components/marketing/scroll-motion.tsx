@@ -64,6 +64,14 @@ export function ScrollZoomReveal({
     offset: ["start start", "end end"],
   });
 
+  /*
+    Width/height, NOT a derived clip-path. A combined function-transform
+    is JS-side, and Motion drives these scroll values through a native
+    scroll timeline the JS side never sees (same trap the caption note
+    below documents) — the composed value never updated and the reveal
+    sat frozen at its starting rectangle. Direct per-property transforms
+    are what Motion can drive natively.
+  */
   const width = useTransform(scrollYProgress, [0, 1], ["34vw", "100vw"]);
   const height = useTransform(scrollYProgress, [0, 1], ["24vh", "100vh"]);
 

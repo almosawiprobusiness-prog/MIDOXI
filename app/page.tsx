@@ -1,18 +1,14 @@
 import Link from "next/link";
-import {
-  Swords,
-  Clapperboard,
-  Dumbbell,
-  Target,
-  LineChart,
-  Sparkles,
-  ArrowRight,
-  ShieldCheck,
-  Users,
-} from "lucide-react";
+import { ArrowRight, ShieldCheck, Users } from "lucide-react";
 import { isDemoMode } from "@/lib/env";
 import { ROLES, ROLE_IDS } from "@/lib/roles/roles";
 import { HeroMotion, ScrollZoomReveal } from "@/components/marketing/scroll-motion";
+import { SmoothScroll, ScrollSyncedText } from "@/components/marketing/cinematic";
+import {
+  LockerShowcase,
+  ProductStory,
+  PocketStatement,
+} from "@/components/marketing/product-story";
 import { FaqAccordion } from "@/components/marketing/faq-accordion";
 import { FAQ } from "@/lib/marketing/faq";
 import { latestPosts } from "@/lib/blog/posts";
@@ -25,17 +21,12 @@ export const metadata = {
 
 const LOOP = ["Match", "Film", "Insight", "Study", "Training", "Match"];
 
-const PILLARS = [
-  { icon: Swords, title: "Matches", body: "A real match database with position-specific stats, self-review and coach feedback." },
-  { icon: Clapperboard, title: "Film Room", body: "Upload, clip, tag and study — a true analysis room, not a video dump." },
-  { icon: Dumbbell, title: "Training", body: "Football-specific sessions, load and a reusable drill library." },
-  { icon: Target, title: "Development", body: "Active objectives tracked by evidence — clips, sessions, notes. Never XP points." },
-  { icon: LineChart, title: "Performance", body: "Analytics where every chart answers a football question." },
-];
 
 export default function LandingPage() {
   return (
     <div className="relative min-h-screen overflow-x-clip">
+      {/* Lenis smooth scrolling — landing page only; the app keeps native scroll. */}
+      <SmoothScroll />
       {/*
         `overflow-x-clip`, not `overflow-hidden`. An ancestor with
         `overflow: hidden` establishes a scroll container and silently
@@ -43,8 +34,14 @@ export default function LandingPage() {
         the reveal section below as 400vh of nothing. `clip` contains
         the background glows the same way without creating one.
       */}
-      <div className="pitch-grid absolute inset-0 opacity-60" aria-hidden />
-      <div className="field-glow absolute inset-0" aria-hidden />
+      {/*
+        Capped, not inset-0: as full-page layers these were two
+        ~11,000px-tall gradient rasters repainted during scroll — a large
+        share of the raster budget for a texture that is only visible
+        near the top. The mask fades the grid out instead of cutting it.
+      */}
+      <div className="pitch-grid absolute inset-x-0 top-0 h-[240vh] opacity-60 [mask-image:linear-gradient(to_bottom,black_75%,transparent)]" aria-hidden />
+      <div className="field-glow absolute inset-x-0 top-0 h-[160vh]" aria-hidden />
 
       {/* Full-bleed cinematic hero */}
       <section className="relative min-h-[92vh] w-full overflow-hidden">
@@ -94,9 +91,21 @@ export default function LandingPage() {
           <div className="flex flex-1 items-center">
             <div className="mx-auto w-full max-w-6xl px-5 pb-24 pt-10">
               <div className="chip chip-signal mb-6">Football Performance OS</div>
-              <h1 className="max-w-2xl font-display text-5xl font-bold leading-[1.02] tracking-tight text-text-hi md:text-7xl [text-shadow:0_2px_30px_rgba(0,0,0,0.75)]">
-                Your entire football career.{" "}
-                <span className="text-signal">One system.</span>
+              <h1
+                aria-label="Your entire football career. One system."
+                className="max-w-3xl font-display text-5xl font-bold leading-[1.04] tracking-tight text-text-hi md:text-7xl [text-shadow:0_2px_30px_rgba(0,0,0,0.75)]"
+              >
+                {[
+                  <span key="l1">Your entire</span>,
+                  <span key="l2">football career.</span>,
+                  <span key="l3" className="text-signal">One system.</span>,
+                ].map((line, li) => (
+                  <span key={li} className="block overflow-hidden pb-[0.08em] -mb-[0.08em]">
+                    <span className="hero-line" style={{ animationDelay: `${0.15 + li * 0.09}s` }}>
+                      {line}
+                    </span>
+                  </span>
+                ))}
               </h1>
               <p className="mt-6 max-w-xl text-lg leading-relaxed text-text [text-shadow:0_1px_16px_rgba(0,0,0,0.8)]">
                 Every match, every clip, every lesson, every session. MIDO XI is the
@@ -131,24 +140,27 @@ export default function LandingPage() {
         at the top of the page.
       */}
       <ScrollZoomReveal
-        className="relative z-10"
-        src="/hero.mp4"
-        poster="/hero-poster.jpg"
-        caption={
-          <>
-            <p className="font-display text-3xl font-bold leading-tight tracking-tight text-text-hi md:text-5xl [text-shadow:0_2px_30px_rgba(0,0,0,0.8)]">
-              Watch it again. <span className="text-signal">Properly.</span>
-            </p>
-            <p className="mx-auto mt-4 max-w-xl text-base text-text [text-shadow:0_1px_16px_rgba(0,0,0,0.85)]">
-              Every clip tagged, every moment timestamped, every lesson kept — so
-              the same mistake stops being the same mistake.
-            </p>
-          </>
-        }
-      />
+          className="relative z-10"
+          src="/hero.mp4"
+          poster="/hero-poster.jpg"
+          caption={
+            <>
+              <p className="font-display text-3xl font-bold leading-tight tracking-tight text-text-hi md:text-5xl [text-shadow:0_2px_30px_rgba(0,0,0,0.8)]">
+                Watch it again. <span className="text-signal">Properly.</span>
+              </p>
+              <p className="mx-auto mt-4 max-w-xl text-base text-text [text-shadow:0_1px_16px_rgba(0,0,0,0.85)]">
+                Every clip tagged, every moment timestamped, every lesson kept — so
+                the same mistake stops being the same mistake.
+              </p>
+            </>
+          }
+        />
+
+      {/* The Locker — the product surface itself as the showpiece */}
+      <LockerShowcase />
 
       {/* Development loop */}
-      <section className="relative z-10 mx-auto max-w-6xl px-5 py-14">
+      <section className="cv-auto relative z-10 mx-auto max-w-6xl px-5 py-14">
         <div className="label-tech mb-6">The development loop</div>
         <div className="panel-raised flex flex-wrap items-center justify-center gap-x-2 gap-y-4 p-8">
           {LOOP.map((node, i) => (
@@ -176,51 +188,21 @@ export default function LandingPage() {
         </p>
       </section>
 
-      {/* Player system */}
-      <section className="relative z-10 mx-auto max-w-6xl px-5 py-14">
-        <div className="label-tech mb-6">The player system</div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {PILLARS.map((p) => {
-            const Icon = p.icon;
-            return (
-              <div key={p.title} className="min-w-0 panel p-5">
-                <span className="grid size-10 place-items-center rounded-lg border border-line bg-ink-850 text-signal-bright">
-                  <Icon className="size-5" />
-                </span>
-                <h3 className="mt-4 font-display text-lg font-semibold text-text-hi">
-                  {p.title}
-                </h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-text-dim">{p.body}</p>
-              </div>
-            );
-          })}
-
-          {/* AI study engine — highlighted */}
-          <div className="panel-raised relative overflow-hidden p-5">
-            <div className="field-glow absolute inset-0" aria-hidden />
-            <div className="relative">
-              <span className="grid size-10 place-items-center rounded-lg border border-signal-line bg-signal/10 text-signal-bright">
-                <Sparkles className="size-5" />
-              </span>
-              <div className="mt-4 flex items-center gap-2">
-                <h3 className="font-display text-lg font-semibold text-text-hi">
-                  MIDO AI Study Engine
-                </h3>
-                <span className="chip chip-signal">PRO</span>
-              </div>
-              <p className="mt-1.5 text-sm leading-relaxed text-text-dim">
-                Recommends real football film for your position, goals and recent
-                match issues — then turns what you learn into a training action.
-              </p>
-            </div>
-          </div>
-        </div>
+      {/* Manifesto — scroll ignites the words at the reader's own pace.
+          No cv-auto here: the animation needs stable geometry. */}
+      <section className="relative z-10 mx-auto max-w-4xl px-5 py-28 md:py-36">
+        <div className="label-tech mb-6">Why MIDO XI exists</div>
+        <ScrollSyncedText text="Most football careers are remembered in fragments. MIDO XI keeps every match, every clip, every lesson and every session connected — so nothing you learn is ever lost." />
       </section>
+
+      {/* Study → Film → Development → Match Center → Performance,
+          shown as slices of the real product rather than described. */}
+      <ProductStory />
 
       {/* Four operating systems — the product thesis, and the thing a visitor
           could not previously learn without signing up. Read from the same
           role registry the app uses, so this cannot drift from what ships. */}
-      <section className="relative z-10 mx-auto max-w-6xl px-5 py-14">
+      <section className="cv-auto relative z-10 mx-auto max-w-6xl px-5 py-14">
         <div className="mb-6 max-w-2xl">
           <div className="label-tech mb-2">One account · four systems</div>
           <h2 className="font-display text-3xl font-bold tracking-tight text-text-hi">
@@ -254,7 +236,7 @@ export default function LandingPage() {
       </section>
 
       {/* Honesty + privacy */}
-      <section className="relative z-10 mx-auto max-w-6xl px-5 py-14">
+      <section className="cv-auto relative z-10 mx-auto max-w-6xl px-5 py-14">
         <div className="grid gap-4 md:grid-cols-2">
           <div className="min-w-0 panel p-6">
             <ShieldCheck className="size-6 text-signal-bright" />
@@ -284,7 +266,7 @@ export default function LandingPage() {
       </section>
 
       {/* Blog */}
-      <section className="relative z-10 mx-auto max-w-6xl px-5 py-14">
+      <section className="cv-auto relative z-10 mx-auto max-w-6xl px-5 py-14">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
           <div>
             <div className="label-tech mb-2">From the blog</div>
@@ -322,7 +304,7 @@ export default function LandingPage() {
       </section>
 
       {/* FAQ */}
-      <section className="relative z-10 mx-auto max-w-3xl px-5 py-14">
+      <section className="cv-auto relative z-10 mx-auto max-w-3xl px-5 py-14">
         <div className="label-tech mb-2">Questions</div>
         <h2 className="mb-6 font-display text-2xl font-bold tracking-tight text-text-hi md:text-3xl">
           Before you ask
@@ -330,20 +312,25 @@ export default function LandingPage() {
         <FaqAccordion items={FAQ} />
       </section>
 
-      {/* CTA */}
-      <section className="relative z-10 mx-auto max-w-6xl px-5 py-20 text-center">
+      {/* The system in your pocket */}
+      <PocketStatement />
+
+      {/* CTA — bookend of the hero */}
+      <section className="cv-auto relative z-10 mx-auto max-w-6xl px-5 py-20 text-center">
+        <div className="label-tech mb-3">MIDO XI / The player system</div>
         <h2 className="mx-auto max-w-2xl font-display text-4xl font-bold tracking-tight text-text-hi md:text-5xl">
-          Build your football memory.
+          Your entire football career.{" "}
+          <span className="text-signal">One system.</span>
         </h2>
         <p className="mx-auto mt-4 max-w-md text-text-dim">
-          From academy level through professional football — one record, one
-          system, every season.
+          Every match, clip, lesson and session stays connected to what you do
+          next.
         </p>
         <Link
           href="/signup"
           className="group mt-8 inline-flex items-center gap-2 rounded-xl bg-signal px-6 py-3.5 font-medium text-white transition-colors hover:bg-signal-deep"
         >
-          Create your profile
+          Open your Locker
           <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
         </Link>
       </section>

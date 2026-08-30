@@ -184,6 +184,42 @@ body {
   color: var(--text-hi);
 }
 
+/*
+  Below-fold landing sections skip layout + raster until they approach
+  the viewport. Without this, a wheel scroll makes Chrome raster-ahead
+  the whole gradient-heavy page at once — on weaker GPUs that wedged the
+  compositor and everything after the hero painted black.
+*/
+.cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 700px;
+}
+
+/* Equaliser bars for the speaking "Ask MIDO" chip. */
+@keyframes mido-eq {
+  from { transform: scaleY(0.35); }
+  to { transform: scaleY(1); }
+}
+
+/*
+  Hero headline line reveal — pure CSS so the entrance survives with no
+  JS at all (a lesson learned: never gate the H1 on a chunk loading).
+*/
+.hero-line {
+  display: block;
+  transform: translateY(110%);
+  animation: hero-line 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes hero-line {
+  to { transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-line {
+    animation: none;
+    transform: none;
+  }
+}
+
 /* ---------- Surfaces ---------- */
 
 .panel {
