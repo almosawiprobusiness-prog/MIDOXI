@@ -9,9 +9,9 @@
 */
 
 @font-face {
-  font-family: "Space Grotesk";
-  src: url("fonts/space-grotesk.woff2") format("woff2");
-  font-weight: 300 700;
+  font-family: "Big Shoulders";
+  src: url("fonts/big-shoulders.woff2") format("woff2");
+  font-weight: 400 700;
   font-display: swap;
 }
 @font-face {
@@ -53,7 +53,7 @@
   --r-lg: 14px;
   --font-sans: "Geist", system-ui, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, monospace;
-  --font-display: "Space Grotesk", var(--font-sans);
+  --font-display: "Big Shoulders", var(--font-sans);
 }
 
 * { box-sizing: border-box; border-color: var(--line); margin: 0; padding: 0; }
