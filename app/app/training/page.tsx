@@ -6,6 +6,7 @@ import type { TrainingEntry } from "@/lib/data/training-types";
 import { SectionHeader } from "@/components/ui/primitives";
 import { PageHeader, StatBand, MiniBars } from "@/components/ui/kit";
 import { TrainingFormDialog } from "@/components/training/training-form-dialog";
+import { GenerateSessionDialog } from "@/components/training/generate-session-dialog";
 import { DeleteTrainingButton } from "@/components/training/delete-training-button";
 
 export const metadata = { title: "Training — MIDO XI" };
@@ -51,6 +52,17 @@ function SessionRow({ e }: { e: TrainingEntry }) {
             <Target className="size-3 text-text-faint" /> {e.objective}
           </div>
         ) : null}
+        {e.plan?.length ? (
+          <div className="mt-2 space-y-1 border-t border-line pt-2">
+            {e.plan.map((b, i) => (
+              <div key={i} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs">
+                <span className="text-text">{b.name}</span>
+                <span className="data-mono text-text-faint">{b.work}</span>
+                {b.source ? <span className="text-[10px] uppercase tracking-wide text-signal-bright">{b.source}</span> : null}
+              </div>
+            ))}
+          </div>
+        ) : null}
         {(e.improved || e.feltOff) && (
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 border-t border-line pt-2 text-xs">
             {e.improved ? <span className="text-positive">↑ {e.improved}</span> : null}
@@ -94,7 +106,12 @@ export default async function TrainingPage() {
         icon={Dumbbell}
         title="Training"
         tagline="Sessions, load and how you felt."
-        actions={<TrainingFormDialog mode="create" />}
+        actions={
+          <div className="flex items-center gap-2">
+            <GenerateSessionDialog />
+            <TrainingFormDialog mode="create" />
+          </div>
+        }
         photo="soloStrike"
         kicker="The work between matches"
       />

@@ -52,6 +52,11 @@ async function writeLog(supabase: NonNullable<Awaited<ReturnType<typeof createCl
   The payload carries the shape of the session, never its contents: kind,
   minutes, and whether an objective was written. The session itself is in
   `training_sessions` and is reachable by subjectId.
+
+  `concepts` rides along only when the session came from the session
+  engine — the film concepts the plan trained. It is what lets the loop
+  say "trained what the film showed" arithmetically, the way film
+  observations already carry their concept.
 */
 async function recordTraining(id: string, input: TrainingInput) {
   await track("training_completed", { kind: input.kind });
@@ -64,9 +69,34 @@ async function recordTraining(id: string, input: TrainingInput) {
       kind: input.kind,
       durationMin: input.durationMin ?? null,
       hasObjective: Boolean(input.objective?.trim()),
+      ...(input.concepts?.length ? { concepts: input.concepts.slice(0, 8) } : {}),
     },
     idempotencyKey: idempotencyKey(["training", "logged", id]),
   });
+}
+
+/*
+  The accepted plan, persisted where 0001 always intended plans to
+  live. Column mapping is documented in lib/data/training.ts. Failure
+  is swallowed on purpose: the session row is already saved and losing
+  the block detail must not fail the save the player just confirmed.
+*/
+async function writePlan(
+  supabase: NonNullable<Awaited<ReturnType<typeof createClient>>>,
+  sessionId: string,
+  input: TrainingInput,
+) {
+  if (!input.plan?.length) return;
+  await supabase.from("training_blocks").insert(
+    input.plan.slice(0, 8).map((b, i) => ({
+      session_id: sessionId,
+      name: b.name,
+      notes: b.detail,
+      rest: b.work,
+      distance: b.source || null,
+      position: i,
+    })),
+  );
 }
 
 export async function createTraining(input: TrainingInput): Promise<Result> {
@@ -97,9 +127,31 @@ export async function createTraining(input: TrainingInput): Promise<Result> {
   if (error) return { ok: false, error: error.message };
 
   await writeLog(supabase, data.id, input);
+  await writePlan(supabase, data.id, input);
   await recordTraining(data.id, input);
   revalidate();
   return { ok: true, id: data.id };
+}
+
+/**
+ * Draft a session from the player's record. Returns the proposal plus
+ * the resolved source labels — the player confirms before anything is
+ * written, the same contract as voice logging and film evidence.
+ */
+export async function generateSession(): Promise<
+  | { ok: true; proposal: import("@/lib/intelligence/session-plan").SessionProposal; sources: Record<string, string> }
+  | { ok: false; error: string }
+> {
+  try {
+    const { draftSession } = await import("@/lib/ai/session-engine");
+    const { sourceLabel } = await import("@/lib/intelligence/session-plan");
+    const { proposal, context } = await draftSession();
+    const sources: Record<string, string> = {};
+    for (const b of proposal.blocks) sources[b.sourceKey] = sourceLabel(b.sourceKey, context);
+    return { ok: true, proposal, sources };
+  } catch {
+    return { ok: false, error: "MIDO could not draft a session just now." };
+  }
 }
 
 export async function updateTraining(id: string, input: TrainingInput): Promise<Result> {

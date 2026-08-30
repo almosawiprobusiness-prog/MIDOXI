@@ -1,5 +1,19 @@
 import type { SessionKind } from "@/lib/types";
 
+/**
+ * One block of a planned session. Written by the session engine when a
+ * player accepts a generated session; `source` is the human label of
+ * the piece of their record the block exists because of ("Film: late
+ * scanning"), already resolved — the raw context key does not outlive
+ * the proposal.
+ */
+export interface PlanBlock {
+  name: string;
+  detail: string;
+  work: string;
+  source: string;
+}
+
 export interface TrainingInput {
   kind: SessionKind;
   title: string;
@@ -11,6 +25,13 @@ export interface TrainingInput {
   technicalFeel?: number | null;
   improved?: string;
   feltOff?: string;
+  /** The accepted plan, when this session came from the session engine. */
+  plan?: PlanBlock[];
+  /**
+   * Film concepts the plan trained, for the TRAINING_LOGGED payload —
+   * this is what lets reports say "trained what the film showed".
+   */
+  concepts?: string[];
 }
 
 export interface TrainingEntry extends TrainingInput {
