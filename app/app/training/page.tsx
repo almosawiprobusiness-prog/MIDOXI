@@ -1,4 +1,5 @@
-import { Dumbbell, Clock, Target, Plus, Gauge } from "lucide-react";
+import Link from "next/link";
+import { Dumbbell, Clock, Target, Plus, Gauge, FileText } from "lucide-react";
 import { listTraining } from "@/lib/data/training";
 import { isDemoMode } from "@/lib/env";
 import { trainingMeta, TRAINING_KINDS } from "@/lib/data/training-types";
@@ -73,6 +74,16 @@ function SessionRow({ e }: { e: TrainingEntry }) {
       </div>
       <div className="flex shrink-0 items-center gap-1.5">
         {e.plan?.length ? <SessionRunner entry={e} /> : null}
+        {e.plan?.length ? (
+          <Link
+            href={`/app/reports/session/${e.id}`}
+            aria-label={`Print the plan for ${e.title}`}
+            title="Session plan — print / save as PDF"
+            className="grid size-8 place-items-center rounded-md border border-line text-text-dim transition-colors hover:border-signal-line hover:text-signal-bright"
+          >
+            <FileText className="size-3.5" />
+          </Link>
+        ) : null}
         <TrainingFormDialog mode="edit" entry={e} />
         <DeleteTrainingButton id={e.id} title={e.title} />
       </div>

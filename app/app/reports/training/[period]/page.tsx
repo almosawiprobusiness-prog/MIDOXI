@@ -7,6 +7,7 @@ import { plural } from "@/lib/data/timeline-types";
 import { isPeriod, isFuture, nextPeriod, prevPeriod, periodLabel, periodRange } from "@/lib/reports/period";
 import { ReportShell, ReportSection, Stat } from "@/components/reports/report-shell";
 import { PrintButton } from "@/components/reports/print-button";
+import { ShareButton } from "@/components/reports/share-button";
 import { DemoNote } from "@/components/dashboards/shared";
 
 /*
@@ -102,6 +103,16 @@ export default async function TrainingReportPage({
         title="Training report"
         detail={`${periodLabel(period)}. Everything here is a session you logged — MIDO adds nothing.`}
       />
+
+      {/*
+        The share half of the half-wired feature: /r/[token] has
+        rendered training shares since 0022, but nothing could create
+        one. Training reports carry no sensitive fields, so the field
+        list is empty by construction rather than by choice.
+      */}
+      <div className="no-print -mt-3 mb-6 flex justify-end">
+        <ShareButton kind="training" refId={period} fields={[]} periodLabel={periodLabel(period)} />
+      </div>
 
       <ReportShell
         kind="Training report"

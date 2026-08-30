@@ -136,6 +136,15 @@ export default async function SharedReportPage({ params }: PageProps<"/r/[token]
     );
   }
 
+  /*
+    Only kinds with a renderer may fall through. "film" is declared in
+    ShareKind but has no creation UI and no renderer — before this
+    guard, a film token would have fed a videoId into periodRange()
+    and rendered a report of NaN. A token for an unrendered kind is
+    served the same NotValid as an expired one.
+  */
+  if (share.kind !== "monthly") return <NotValid />;
+
   // Development report — the one a coach is most likely to be sent.
   const report = await getMonthlyReport(share.ref, share.userId);
 

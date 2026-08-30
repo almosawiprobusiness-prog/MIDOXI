@@ -71,6 +71,12 @@ export async function getTraining(id: string): Promise<TrainingEntry | null> {
   if (!supabase) return null;
   const { data: session } = await supabase.from("training_sessions").select("*").eq("id", id).maybeSingle();
   if (!session) return null;
-  const { data: log } = await supabase.from("training_logs").select("*").eq("session_id", id).maybeSingle();
-  return merge(session, log ?? null);
+  // The plan travels with the single read too — the session-plan
+  // document renders from this, and a plan that listTraining shows but
+  // getTraining drops would make that document silently empty.
+  const [{ data: log }, { data: blocks }] = await Promise.all([
+    supabase.from("training_logs").select("*").eq("session_id", id).maybeSingle(),
+    supabase.from("training_blocks").select("*").eq("session_id", id).order("position", { ascending: true }),
+  ]);
+  return merge(session, log ?? null, (blocks ?? []).map(toPlanBlock));
 }
