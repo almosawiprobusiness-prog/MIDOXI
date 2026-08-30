@@ -159,3 +159,31 @@ describe("session brief", () => {
     expect(prep?.detail).toMatch(/moderate intensity only/);
   });
 });
+
+describe("study → training (the applied-focus arrow)", () => {
+  it("a well-formed focus key survives sanitising; a malformed one does not", () => {
+    expect(sanitizeBrief({ focusKey: "study:harry-kane" }).focusKey).toBe("study:harry-kane");
+    expect(sanitizeBrief({ focusKey: "film:Blindside movement" }).focusKey).toBe("film:Blindside movement");
+    expect(sanitizeBrief({ focusKey: "memory" }).focusKey).toBeUndefined();
+    expect(sanitizeBrief({ focusKey: "study:" }).focusKey).toBeUndefined();
+  });
+
+  it("the brief tells the model what leads today", () => {
+    expect(briefPromptBlock({ focusKey: "study:harry-kane" })).toContain("AROUND [study:harry-kane]");
+  });
+
+  it("the composed session closes the arrow too — an apply block, cited to the study", () => {
+    const ctx = selectPlayerContext(signals, null);
+    const plan = composeSessionPlan(ctx, { focusKey: "study:harry-kane" });
+    const apply = plan.blocks.find((b) => b.sourceKey === "study:harry-kane");
+    expect(apply).toBeDefined();
+    expect(apply!.name).toContain("Harry Kane");
+    expect(apply!.why).toMatch(/studied Harry Kane/i);
+  });
+
+  it("a focus the record cannot back produces no apply block", () => {
+    const ctx = selectPlayerContext({ ...signals, completedStudies: [] }, null);
+    const plan = composeSessionPlan(ctx, { focusKey: "study:harry-kane" });
+    expect(plan.blocks.some((b) => b.sourceKey === "study:harry-kane")).toBe(false);
+  });
+});

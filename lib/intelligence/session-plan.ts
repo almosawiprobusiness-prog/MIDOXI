@@ -75,6 +75,14 @@ export interface SessionBrief {
   location?: (typeof BRIEF_LOCATIONS)[number];
   mode?: (typeof BRIEF_MODES)[number];
   equipment?: string[];
+  /**
+   * A citation key the session should be built around — how "Apply
+   * this study" and "Train this film pattern" arrive. Validated twice:
+   * shape here, membership in the context's citation universe by the
+   * engine (a key the record cannot back is silently dropped, because
+   * a session must not be built around evidence that is not there).
+   */
+  focusKey?: string;
 }
 
 /** Keep only recognised values; an unknown chip never reaches a prompt. */
@@ -88,6 +96,9 @@ export function sanitizeBrief(raw: SessionBrief | null | undefined): SessionBrie
     const eq = raw.equipment.filter((e) => (BRIEF_EQUIPMENT as readonly string[]).includes(e));
     if (eq.length) brief.equipment = eq;
   }
+  if (typeof raw.focusKey === "string" && /^(goal|film|study):.{1,80}$/.test(raw.focusKey)) {
+    brief.focusKey = raw.focusKey;
+  }
   return brief;
 }
 
@@ -99,6 +110,9 @@ export function briefPromptBlock(brief: SessionBrief): string {
   if (brief.mode) lines.push(`- Mode: ${brief.mode}${brief.mode === "solo" ? " — no partner, no server, no group drills" : ""}.`);
   if (brief.equipment?.length) {
     lines.push(`- Equipment available, and nothing else: ${brief.equipment.join(", ")}.`);
+  }
+  if (brief.focusKey) {
+    lines.push(`- Build the session AROUND [${brief.focusKey}] — that evidence leads today, and most blocks should serve it.`);
   }
   return lines.length ? `SESSION BRIEF (the player's choices for today — the session must fit them):\n${lines.join("\n")}` : "";
 }
@@ -184,6 +198,25 @@ export function composeSessionPlan(ctx: PlayerContext, brief: SessionBrief = {})
       work: "4 x 4 reps · 45s rest",
       sourceKey: `film:${film.concept}`,
       why: `Your film showed this ${film.count} time(s) — training what the film showed, not a generic drill.`,
+    });
+  }
+
+  /*
+    "Apply this study" arrives as a focusKey. The composed path honours
+    it with a dedicated transfer block when the study is in the bounded
+    context — the deterministic session must close the arrow too, not
+    only the model one.
+  */
+  const focusedStudy = brief.focusKey?.startsWith("study:")
+    ? ctx.studies.find((s) => studyKey(s.subject) === brief.focusKey)
+    : undefined;
+  if (focusedStudy) {
+    blocks.push({
+      name: `Apply the study: ${focusedStudy.subject}`,
+      detail: `Recreate the principle you took from studying ${focusedStudy.subject} — slow walkthrough first, then at match speed, then inside a constraint.`,
+      work: lowReadiness ? "8 minutes, low intensity" : "10 minutes",
+      sourceKey: brief.focusKey!,
+      why: `You studied ${focusedStudy.subject} ${focusedStudy.daysAgo} day(s) ago — today it goes on grass.`,
     });
   }
 

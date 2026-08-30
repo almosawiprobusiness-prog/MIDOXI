@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Play, Pause, Plus, Trash2, Loader2, CheckCircle2, Clock, Target } from "lucide-react";
+import { Play, Pause, Plus, Trash2, Loader2, CheckCircle2, Clock, Target, Dumbbell } from "lucide-react";
+import { studyKey } from "@/lib/intelligence/context";
 import { addStudyNote, deleteStudyNote, completeStudySession } from "@/app/app/film-room/study/actions";
 import { NOTE_KINDS, noteMeta, type StudySession, type StudyNote, type StudyNoteKind } from "@/lib/data/study-types";
 import { fmtTime, type Video } from "@/lib/data/film-types";
@@ -190,6 +192,18 @@ export function StudySessionView({
             {goalTitle && session.summary?.trim() && (
               <p className="mt-2 text-xs text-text-dim">Saved as Insight on {goalTitle}.</p>
             )}
+            {/*
+              The DEVELOPMENT → STUDY → TRAINING arrow, closed where the
+              study ends: the link carries this study's citation key, and
+              the session engine builds around it — or drops it honestly
+              if the study has left the evidence window.
+            */}
+            <Link
+              href={`/app/training?focus=${encodeURIComponent(studyKey(session.title))}`}
+              className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-signal-line bg-signal/10 text-sm font-medium text-signal-bright transition-colors hover:bg-signal/20"
+            >
+              <Dumbbell className="size-4" /> Apply this — build training
+            </Link>
           </div>
         ) : completing ? (
           <div className="mt-4 panel p-4">

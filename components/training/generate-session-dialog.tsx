@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { X, Loader2, Check, Sparkles, RefreshCw } from "lucide-react";
@@ -62,7 +62,7 @@ function defaultWhen(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function GenerateSessionDialog() {
+export function GenerateSessionDialog({ initialFocus }: { initialFocus?: string | null } = {}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -92,13 +92,26 @@ export function GenerateSessionDialog() {
 
   const start = () => {
     const remembered = loadBrief();
-    setBrief(remembered);
+    // A focus arriving by link ("Apply this study") rides the brief;
+    // it is this visit's intent, so it is not remembered.
+    const withFocus = initialFocus ? { ...remembered, focusKey: initialFocus } : remembered;
+    setBrief(withFocus);
     setShowBrief(false);
     setOpen(true);
     setProposal(null);
     setWhen(defaultWhen());
-    void draft(remembered);
+    void draft(withFocus);
   };
+
+  /*
+    Arriving with ?focus= means the player just tapped "Build training"
+    somewhere upstream — opening is what they asked for, so the dialog
+    opens itself once on mount.
+  */
+  useEffect(() => {
+    if (initialFocus) start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only by design
+  }, []);
 
   const redraft = () => {
     saveBrief(brief);

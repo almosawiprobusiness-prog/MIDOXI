@@ -80,7 +80,12 @@ function SessionRow({ e }: { e: TrainingEntry }) {
   );
 }
 
-export default async function TrainingPage() {
+export default async function TrainingPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ focus?: string }>;
+}) {
+  const focus = (await searchParams)?.focus ?? null;
   const entries = await listTraining();
   const week = entries.filter((e) => isThisWeek(e.scheduledAt));
   const earlier = entries.filter((e) => !isThisWeek(e.scheduledAt));
@@ -110,7 +115,7 @@ export default async function TrainingPage() {
         tagline="Sessions, load and how you felt."
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <GenerateSessionDialog />
+            <GenerateSessionDialog initialFocus={focus} />
             <TrainingFormDialog mode="create" />
           </div>
         }

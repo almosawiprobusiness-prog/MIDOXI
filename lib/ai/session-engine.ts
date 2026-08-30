@@ -98,6 +98,12 @@ export interface DraftSessionResult {
 export async function draftSession(rawBrief?: SessionBrief): Promise<DraftSessionResult> {
   const context = await buildPlayerContext();
   const brief = sanitizeBrief(rawBrief);
+  /*
+    A focus the record cannot back is dropped before anything is built
+    around it — the key came from a link, and links outlive the
+    evidence windows they point into.
+  */
+  if (brief.focusKey && !validSourceKeys(context).has(brief.focusKey)) delete brief.focusKey;
   const base = composeSessionPlan(context, brief);
 
   const gate = await checkFeature("ai_interactions");
