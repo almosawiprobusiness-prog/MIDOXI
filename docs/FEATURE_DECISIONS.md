@@ -36,4 +36,4 @@ inherits every decision already recorded in
 |---|---|
 | Nav cut list execution (18 → ~7 destinations) | Phase 9 — cutting is a product decision, not done unilaterally |
 | `player_timeline` → event-log switch | Only after parity tooling (Phase 5) reports, and then only with sign-off |
-| Trainer OS pricing & Connect fee structure | Phase 8, before any live money |
+| ~~Trainer OS pricing & Connect fee structure~~ | **DECIDED 30 Aug 2026: Option B, volume-tiered downward** — 2% to 5 active athletes, 1.5% at 6, 1% at 16+. Growth shrinks the platform's slice. See `TRAINER_OS_PAYMENTS.md` |

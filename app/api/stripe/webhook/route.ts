@@ -5,6 +5,7 @@ import { getStripe, planIdForPrice } from "@/lib/billing/stripe";
 import { createAdminClient } from "@/lib/supabase/server";
 import { logEvent } from "@/lib/observability/log";
 import { tierOf } from "@/lib/billing/plans";
+import { recordAccountUpdated, recordTrainerPurchasePaid } from "@/lib/billing/connect";
 import { REWARD } from "@/lib/data/referral-types";
 
 /*
@@ -183,6 +184,10 @@ export async function POST(req: Request) {
             typeof session.subscription === "string" ? session.subscription : session.subscription.id;
           const sub = await stripe.subscriptions.retrieve(subId);
           await upsertSubscription(sub);
+        } else if (session.metadata?.kind === "trainer_product") {
+          // A trainer's payment link was paid — flip the frozen
+          // purchase row. Same throw-to-retry contract as above.
+          await recordTrainerPurchasePaid(session);
         }
         break;
       }
@@ -190,6 +195,12 @@ export async function POST(req: Request) {
       case "customer.subscription.updated":
       case "customer.subscription.deleted": {
         await upsertSubscription(event.data.object as Stripe.Subscription);
+        break;
+      }
+      case "account.updated": {
+        // A Connect account's capabilities changed (verification
+        // finished, payouts enabled). Mirror Stripe's answer.
+        await recordAccountUpdated(event.data.object as Stripe.Account);
         break;
       }
       default:

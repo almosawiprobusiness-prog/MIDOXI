@@ -26,6 +26,7 @@ import {
   Link2,
   Settings,
   Gift,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 
@@ -278,6 +279,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
       { label: "Assessments", href: "/app/assessments", icon: Gauge, hint: "Testing & progress", status: "live", group: "primary" },
       study,
       { label: "Sessions", href: "/app/training", icon: ClipboardList, hint: "Delivered work", status: "live", group: "more" },
+      { label: "Payments", href: "/app/payments", icon: Wallet, hint: "Products & payment links", status: "live", group: "more" },
       calendar,
       meetings,
       community,

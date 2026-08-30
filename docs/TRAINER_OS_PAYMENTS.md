@@ -1,9 +1,25 @@
 # Trainer OS — Payments Decision Brief
 
-**Status: DECISION REQUIRED before any code touches live money.**
-Per `FEATURE_DECISIONS.md`, the Connect fee structure is a
-decide-with-user stop point. This brief exists so the decision is made
-over a concrete design rather than an idea. Nothing here is wired.
+**Status: DECIDED — Option B, volume-tiered downward (30 Aug 2026).**
+The owner chose a small application fee that SHRINKS as the trainer
+onboards more players. Implemented as (basis points, from the live
+active-athlete count, frozen into each payment link at creation):
+
+| Active athletes | Fee |
+|---|---|
+| up to 5 | **2%** |
+| 6–15 | **1.5%** |
+| 16+ | **1%** |
+
+Schedule lives in `lib/billing/connect-fee.ts` (pure, tested) and is
+rendered by the same module the charge reads, so the Lab can never
+advertise a rate the charge ignores. The first slice below is BUILT;
+what remains awaiting a user run is the Stripe-side setup and the
+test-mode end-to-end.
+
+---
+
+The original brief follows, kept for the reasoning.
 
 ## Why payments at all
 
@@ -62,9 +78,31 @@ follow-on shape if a fee is ever added.
   (`getTrainerPractice()` in lib/data/roles.ts) — the brand the
   athlete would be paying, on the artifact they'd be paying for.
 
-## What is NOT built until you decide
+## Built (30 Aug 2026, after the decision)
 
-Everything in "The design". First implementation slice after the
-decision: `trainer_accounts` + Express onboarding + one product +
-Checkout, test mode end-to-end, using the `REAL_ACCOUNT_TEST.md`
-script pattern.
+- Migration `0037_trainer_connect.sql`: `trainer_accounts` (Connect
+  mirror, read-only to clients), `trainer_products` (owner-editable),
+  `trainer_purchases` (fee frozen in; service-role writes only). The
+  grant trap revoked both ways, as always. **Awaiting user run.**
+- `lib/billing/connect.ts`: Express account + Stripe-hosted onboarding
+  link, product payment links as destination charges with
+  `application_fee_amount` from the tier schedule, webhook handlers for
+  `checkout.session.completed` (kind=trainer_product) and
+  `account.updated`.
+- `/app/payments` in the Lab (trainer nav): fee card with the live
+  tier and the "N more athletes drops your fee" line, product CRUD,
+  payment-link generation showing the frozen fee, purchases list.
+  Demo mode is clearly simulated; missing keys degrade honestly.
+- `/pay/done`: the public landing after Checkout — outcome only, no
+  data, receipt comes from Stripe.
+
+## Awaiting user run
+
+1. ~~Apply migration 0037~~ — **applied and verified 30 Aug 2026**
+   (`npm run verify:0037`, 10/10: tables exist, price/fee constraints
+   reject out-of-bounds writes, anon gets 401 on all three).
+2. In the Stripe dashboard: enable Connect (Express) on the account,
+   and add `account.updated` to the webhook endpoint's events.
+3. Test-mode end-to-end with a test bank account and card 4242…:
+   onboard → create product → pay the link → purchase row flips to
+   paid → Stripe dashboard shows the application fee.

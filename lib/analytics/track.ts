@@ -74,7 +74,13 @@ export type ProductEvent =
     get revisited, it entered the development record. This is the
     conversion the extension ultimately exists to produce.
   */
-  | "capture_filed_as_evidence";
+  | "capture_filed_as_evidence"
+  /*
+    The Trainer OS money funnel — Connect onboarding begun, and a
+    payment link created (with its fee tier, never its amount).
+  */
+  | "trainer_onboarding_started"
+  | "trainer_payment_link_created";
 
 /**
  * Record one product action. Fire-and-forget by design.

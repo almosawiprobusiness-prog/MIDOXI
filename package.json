@@ -35,7 +35,8 @@
     "verify:extension": "node scripts/verify-extension-api.mjs",
     "ext:build": "npm --prefix extension run build",
     "verify:parity": "node scripts/timeline-parity.mjs",
-    "verify:0036": "node scripts/verify-0036.mjs"
+    "verify:0036": "node scripts/verify-0036.mjs",
+    "verify:0037": "node scripts/verify-0037.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",
