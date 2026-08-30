@@ -1,5 +1,23 @@
 # Player OS — Cut List
 
+**EXECUTED 30 August 2026, owner-approved.** Outcomes:
+- **Meetings** — removed from Player OS nav; route kept for
+  coach-shared links.
+- **Community** — removed from Player OS nav for beta; route kept
+  (the share doors on goals and studies still post to it).
+- **Referrals** — already living in ACCOUNT_NAV behind the identity
+  card by the time of execution; no nav slot to reclaim.
+- **Performance/Matches merge** — deferred per this doc's own call;
+  decide from real usage data.
+- **Assessments** — confirmed not surfaced in Player OS nav.
+- **Match Center paywall banner** — already gone by execution time;
+  only post-action gate copy remains, which is the correct shape.
+- Player OS football nav now: 6 Work (the loop) + 5 More (Timeline,
+  Memory, Recovery, Performance, Calendar), account items behind the
+  identity card. Verified in the running app.
+
+The original recommendations follow, kept for the reasoning.
+
 **Date:** 25 August 2026 · **Rule:** nothing here has been deleted.
 These are recommendations, each with the reason and the cost of keeping
 it. The bar a feature must clear is the product's own: does it serve

@@ -17,7 +17,7 @@ player) · **LATER** (accepted for beta, scheduled after).
 | Locker prioritises rather than lists | **PASS** | NBA panel leads; briefing drops covered lines; visual weight uneven by design |
 | Every recommendation answers "why this?" | **PASS** | Sources in plain words; memory quoted when it bears |
 | Empty states sequence the first action | **PASS** (30 Aug) | Memory board's per-kind empties now show the kind's own example + effect; notification bell and page say what lands there and how to start it. Calendar/community/timeline already sequenced |
-| Nav breadth | **FAIL** | 18 destinations for a 6-section loop. See CUT_LIST. Cutting is a product decision, not done unilaterally |
+| Nav breadth | **PASS** (30 Aug) | Cut list executed with owner approval: Meetings and Community out of the Player nav (routes kept), Refer already behind the identity card. Football nav is now 6 Work + 5 More, every item loop-serving |
 
 ## AI
 
