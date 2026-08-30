@@ -5,6 +5,7 @@ import { getStudySessionDetail } from "@/lib/data/study";
 import { getVideoWithClips } from "@/lib/data/film";
 import { listGoals } from "@/lib/data/development";
 import { StudySessionView } from "@/components/film/study-session";
+import { ShareArtifact } from "@/components/community/share-artifact";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -54,6 +55,20 @@ export default async function StudyModePage({ params }: { params: Promise<{ id: 
         <div className="relative px-4 pb-8 pt-10 md:px-6">
           <div className="label-tech">Study session · distraction-free</div>
           <h1 className="mt-1 font-display text-2xl font-bold tracking-tight text-text-hi md:text-3xl">{session.title}</h1>
+          {/*
+            Only once it is finished, and only by the player's hand:
+            a completed study may leave the record as a post, drafted
+            from their own summary and confirmed before anything moves.
+          */}
+          {session.completed && (
+            <div className="mt-3">
+              <ShareArtifact
+                label="Share this study"
+                tag="study"
+                draft={`Studied: ${session.title}.${session.summary ? `\n\nWhat I took from it: ${session.summary}` : ""}`}
+              />
+            </div>
+          )}
         </div>
       </div>
 

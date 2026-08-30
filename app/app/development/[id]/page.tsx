@@ -8,6 +8,7 @@ import { SavedMoments } from "@/components/film/saved-moments";
 import { GoalFormDialog } from "@/components/development/goal-form-dialog";
 import { DeleteGoalButton } from "@/components/development/delete-goal-button";
 import { GoalLoop } from "@/components/development/goal-loop";
+import { ShareArtifact } from "@/components/community/share-artifact";
 import type { DevelopmentGoal } from "@/lib/types";
 
 const statusStyle: Record<DevelopmentGoal["status"], { label: string; color: string }> = {
@@ -56,6 +57,20 @@ export default async function GoalDetailPage({ params }: { params: Promise<{ id:
               <div className="label-tech mt-1">Created {goal.createdLabel}</div>
             </div>
             <div className="flex items-center gap-2">
+              {/*
+                Opt-in per item: the record is private by default, and
+                this one goal leaves it only in the player's own words,
+                after they read and confirm the draft.
+              */}
+              <ShareArtifact
+                label={goal.status === "achieved" ? "Share this milestone" : "Share what I'm working on"}
+                tag="goal"
+                draft={
+                  goal.status === "achieved"
+                    ? `Reached a development goal: ${goal.title}.${goal.why ? `\n\nWhy it mattered: ${goal.why}` : ""}`
+                    : `Working on: ${goal.title} — ${goal.progress}% in.${goal.why ? `\n\nWhy: ${goal.why}` : ""}`
+                }
+              />
               <GoalFormDialog mode="edit" goal={goal} />
               <DeleteGoalButton id={goal.id} title={goal.title} />
             </div>
