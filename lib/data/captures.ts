@@ -39,6 +39,7 @@ function rowToCapture(r: Record<string, unknown>): StudyCapture {
     studyId: (r.study_id as string) ?? null,
     origin: (r.origin as StudyCapture["origin"]) ?? "chrome_extension",
     createdAt: (r.created_at as string) ?? new Date().toISOString(),
+    sourceType: (r.source_type as StudyCapture["sourceType"]) ?? "youtube",
   };
 }
 
@@ -75,6 +76,7 @@ export async function saveCapture(input: CaptureInput): Promise<SaveCaptureResul
       studyId: null,
       origin: "chrome_extension",
       createdAt: new Date().toISOString(),
+      sourceType: input.sourceType ?? "youtube",
     });
     return { ok: true, id };
   }
@@ -97,6 +99,7 @@ export async function saveCapture(input: CaptureInput): Promise<SaveCaptureResul
   const { data, error } = await supabase
     .from("study_captures")
     .insert({
+      source_type: input.sourceType ?? "youtube",
       video_id: input.videoId,
       source_url: input.sourceUrl,
       video_title: input.videoTitle.trim(),

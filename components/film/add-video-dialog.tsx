@@ -214,6 +214,12 @@ export function AddVideoDialog() {
                     {detected?.kind === "hls" && (
                       <span className="mt-1 block text-xs text-signal-bright">Detected: HLS stream</span>
                     )}
+                    {detected?.kind === "page" && (
+                      <span className="mt-1 block text-xs leading-relaxed text-signal-bright">
+                        Detected: a page on {detected.host}. MIDO will embed the site&rsquo;s own
+                        player — if the site allows it, which is checked when you add it.
+                      </span>
+                    )}
                     {detected?.kind === "unsupported" && (
                       <span className="mt-1 block text-xs leading-relaxed text-review">
                         {detected.reason} {LONG_FOOTAGE_ADVICE}

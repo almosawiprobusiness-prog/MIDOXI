@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
 import { demoStore } from "@/lib/data/store";
-import { videoUrlKind, LONG_FOOTAGE_ADVICE } from "@/lib/data/film-types";
+import { videoUrlKind, frameBlocksEmbedding, embedUrlFor, LONG_FOOTAGE_ADVICE } from "@/lib/data/film-types";
 import type { ClipInput } from "@/lib/data/film-types";
 import { emitMidoEvent } from "@/lib/events/emit";
 import { idempotencyKey } from "@/lib/events/types";
@@ -52,7 +52,7 @@ async function recordVideoAdded(id: string, title: string, source: string) {
 // ---------- videos ----------
 
 export async function addVideo(input: { title: string; url: string; matchId?: string | null }): Promise<Result> {
-  const url = input.url.trim();
+  let url = input.url.trim();
   if (!input.title?.trim()) return { ok: false, error: "Give the video a title." };
   if (!url) return { ok: false, error: "Paste a video URL." };
 
@@ -65,6 +65,48 @@ export async function addVideo(input: { title: string; url: string; matchId?: st
   const detected = videoUrlKind(url);
   if (detected.kind === "unsupported") {
     return { ok: false, error: `${detected.reason} ${LONG_FOOTAGE_ADVICE}` };
+  }
+
+  /*
+    A page URL (sport.video, Veo, a club stream) is playable only by
+    embedding the page itself — and whether a site permits that is a
+    claim only a request can verify. So it is verified HERE, before
+    anything is saved as ready: the same lesson this action already
+    carries about asserting the unverified.
+  */
+  if (detected.kind === "page") {
+    /*
+      Some services keep a separate embeddable player (Vimeo); the
+      rewrite happens before the probe so the URL saved is the URL
+      that was actually verified frameable.
+    */
+    url = embedUrlFor(url);
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 8000);
+      const res = await fetch(url, {
+        redirect: "follow",
+        signal: controller.signal,
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; MIDO XI film room)" },
+      });
+      clearTimeout(timer);
+      // Headers are all that matters; the body is not read.
+      const blocked = frameBlocksEmbedding(
+        res.headers.get("x-frame-options"),
+        res.headers.get("content-security-policy"),
+      );
+      if (blocked) {
+        return {
+          ok: false,
+          error: `${blocked} Open it on ${detected.host} and log the moments with MIDO XI Capture or a study session instead.`,
+        };
+      }
+      if (!res.ok) {
+        return { ok: false, error: `${detected.host} answered ${res.status} for that link — check it opens in a normal tab first.` };
+      }
+    } catch {
+      return { ok: false, error: `MIDO could not reach ${detected.host} to check that link. Try again, or check the address.` };
+    }
   }
 
   const yt = detected.kind === "youtube" ? detected.id : null;

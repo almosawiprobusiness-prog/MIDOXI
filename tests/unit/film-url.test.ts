@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { videoUrlKind, youtubeId, isHlsUrl, UPLOAD_MAX_MB } from "../../lib/data/film-types";
+import { videoUrlKind, frameBlocksEmbedding, youtubeId, isHlsUrl, UPLOAD_MAX_MB } from "../../lib/data/film-types";
 
 /*
   The film room used to call every non-YouTube link a "Direct video",
@@ -12,18 +12,21 @@ import { videoUrlKind, youtubeId, isHlsUrl, UPLOAD_MAX_MB } from "../../lib/data
   complete confidence.
 */
 
-describe("the link that broke it", () => {
+describe("the link that broke it — now the link that works", () => {
   const REAL = "https://watch.sport.video/3liga/iii-liga-stred/tj-banik-kalinovo-vs-ftc-filakovo-201775?game=5094";
 
-  it("is refused, not called a direct video", () => {
+  /*
+    History of this exact URL: first saved blindly as a "direct video"
+    (black player, 0:00 timeline), then refused with an honest reason,
+    now a capability — the page is EMBEDDED, and whether the site
+    permits framing is verified by the server before saving. The
+    classifier's job shrank to naming what the link is; the honesty
+    moved into the request that checks the frame policy.
+  */
+  it("is classified as a page, with its host", () => {
     const got = videoUrlKind(REAL);
-    expect(got.kind).toBe("unsupported");
-  });
-
-  it("names the host, so the person knows their link is a page and not broken", () => {
-    const got = videoUrlKind(REAL);
-    if (got.kind !== "unsupported") throw new Error("expected unsupported");
-    expect(got.reason).toContain("watch.sport.video");
+    expect(got.kind).toBe("page");
+    if (got.kind === "page") expect(got.host).toBe("watch.sport.video");
   });
 });
 
@@ -95,17 +98,21 @@ describe("the upload limit", () => {
   });
 });
 
-describe("what is refused", () => {
-  it("refuses a page on a video platform", () => {
-    for (const url of [
-      "https://vimeo.com/123456789",
-      "https://app.veo.co/matches/some-match/",
-      "https://www.hudl.com/video/3/123/456",
-    ]) {
-      expect(videoUrlKind(url).kind, url).toBe("unsupported");
+describe("pages become the embed lane", () => {
+  it("classifies video-platform pages as pages, host attached", () => {
+    for (const [url, host] of [
+      ["https://vimeo.com/123456789", "vimeo.com"],
+      ["https://app.veo.co/matches/some-match/", "app.veo.co"],
+      ["https://www.hudl.com/video/3/123/456", "www.hudl.com"],
+    ] as const) {
+      const got = videoUrlKind(url);
+      expect(got.kind, url).toBe("page");
+      if (got.kind === "page") expect(got.host).toBe(host);
     }
   });
+});
 
+describe("what is refused", () => {
   it("refuses something that is not a web address at all", () => {
     expect(videoUrlKind("not a url").kind).toBe("unsupported");
     expect(videoUrlKind("").kind).toBe("unsupported");
@@ -118,11 +125,37 @@ describe("what is refused", () => {
   });
 
   it("always explains why, never just says no", () => {
-    for (const url of ["https://vimeo.com/1", "not a url", "file:///x.mp4"]) {
+    for (const url of ["not a url", "file:///x.mp4"]) {
       const got = videoUrlKind(url);
       if (got.kind !== "unsupported") throw new Error(`expected unsupported for ${url}`);
       expect(got.reason.length, url).toBeGreaterThan(10);
     }
+  });
+});
+
+describe("frameBlocksEmbedding — the truth table the probe relies on", () => {
+  it("blocks DENY and SAMEORIGIN, in any casing", () => {
+    expect(frameBlocksEmbedding("DENY", null)).toBeTruthy();
+    expect(frameBlocksEmbedding("sameorigin", null)).toBeTruthy();
+    expect(frameBlocksEmbedding("SameOrigin", null)).toBeTruthy();
+  });
+
+  it("blocks frame-ancestors that names anyone but everyone", () => {
+    expect(frameBlocksEmbedding(null, "frame-ancestors 'none'")).toBeTruthy();
+    expect(frameBlocksEmbedding(null, "frame-ancestors 'self' https://trusted.example")).toBeTruthy();
+  });
+
+  it("allows a page with no frame policy — the sport.video case", () => {
+    expect(frameBlocksEmbedding(null, null)).toBeNull();
+    expect(frameBlocksEmbedding("", "")).toBeNull();
+  });
+
+  it("allows frame-ancestors *", () => {
+    expect(frameBlocksEmbedding(null, "frame-ancestors *")).toBeNull();
+  });
+
+  it("ignores unrelated CSP directives", () => {
+    expect(frameBlocksEmbedding(null, "default-src 'self'; img-src *")).toBeNull();
   });
 });
 

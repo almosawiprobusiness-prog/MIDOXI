@@ -279,7 +279,7 @@ function renderNotYoutube() {
   wrap.append(
     tile,
     el("h2", {}, "MIDO XI Capture"),
-    el("p", {}, "Open a YouTube football video and capture the moments that matter."),
+    el("p", {}, "Open football on any site — YouTube, sport.video, Veo, your club’s stream — and capture the moments that matter."),
   );
   const actions = el("div", { class: "actions" });
   const yt = el("button", { class: "btn-primary", type: "button" }, "Open YouTube");
@@ -314,7 +314,8 @@ function buildInput(): CaptureInput | null {
     sourceUrl: state.video.url,
     videoTitle: state.video.title,
     channelName: state.video.channel,
-    thumbnailUrl: state.video.thumbnailUrl,
+    thumbnailUrl: state.video.thumbnailUrl || null,
+    sourceType: state.video.sourceType,
     timestampSeconds: state.video.seconds,
     observation: state.observation.trim(),
     category: (state.category as CaptureInput["category"]) ?? null,
@@ -342,7 +343,8 @@ function renderCapture(): void {
   // a broken-image box in the card.
   const thumb = el("img", { class: "video-thumb", alt: "" });
   thumb.addEventListener("error", () => thumb.remove());
-  thumb.src = video.thumbnailUrl;
+  if (video.thumbnailUrl) thumb.src = video.thumbnailUrl;
+  else thumb.remove(); // web captures carry no thumbnail — no broken box
   const meta = el("div", { class: "video-meta" });
   meta.append(el("div", { class: "label-tech video-eyebrow" }, "Current moment"));
   meta.append(el("div", { class: "video-title" }, video.title));
@@ -629,6 +631,7 @@ async function saveLocal(button?: HTMLButtonElement): Promise<void> {
     updatedAt: null,
     syncState: "local",
     origin: "chrome_extension",
+    sourceType: input.sourceType ?? "youtube",
   };
   const result = await addToLibrary(capture);
   state.saving = false;

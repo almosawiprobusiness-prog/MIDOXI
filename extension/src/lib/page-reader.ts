@@ -10,7 +10,7 @@
   persistent content script would have to defend against simply does
   not exist here.
 */
-import { youtubeIdFromUrl } from "../../../lib/data/capture-types";
+import { youtubeIdFromUrl, webVideoIdFromUrl } from "../../../lib/data/capture-types";
 
 export interface VideoContext {
   videoId: string;
@@ -19,8 +19,11 @@ export interface VideoContext {
   channel: string | null;
   seconds: number;
   paused: boolean;
+  /** Empty for web captures — thumbnails are a YouTube affordance. */
   thumbnailUrl: string;
   isShorts: boolean;
+  /** Where the footage lives: YouTube's rich path, or any other site's player. */
+  sourceType: "youtube" | "web";
 }
 
 export type PageRead =
@@ -83,7 +86,15 @@ export async function readCurrentPage(): Promise<PageRead> {
     return { kind: "no-tab" };
   }
   if (!tab?.id || !tab.url) return { kind: "no-tab" };
-  if (!isYoutubeVideoUrl(tab.url)) return { kind: "not-youtube" };
+
+  /*
+    Any http(s) page can hold football now — sport.video, Veo, Hudl, a
+    club stream — because every one of them ultimately renders an HTML5
+    <video>, and that element's clock is readable the same way
+    YouTube's is. Non-web schemes (chrome://, the new-tab page) are the
+    only pages with nothing to read.
+  */
+  if (!/^https?:\/\//.test(tab.url)) return { kind: "not-youtube" };
 
   let result: ReturnType<typeof readPlayerState> | null = null;
   try {
@@ -100,23 +111,59 @@ export async function readCurrentPage(): Promise<PageRead> {
   // The URL from the PAGE, not the tab record: after SPA navigation the
   // page's location is the truth the player state was read against.
   const url = typeof result.href === "string" ? result.href : tab.url;
-  const videoId = youtubeIdFromUrl(url);
-  if (!videoId) return { kind: "not-youtube" };
   if (result.seconds == null) return { kind: "no-video" };
 
   const title = (result.title || "Untitled video").slice(0, 300);
+  const seconds = Math.max(0, Math.floor(result.seconds));
+  const paused = Boolean(result.paused);
+
+  const ytId = isYoutubeVideoUrl(url) ? youtubeIdFromUrl(url) : null;
+  if (ytId) {
+    return {
+      kind: "video",
+      tabId: tab.id,
+      context: {
+        videoId: ytId,
+        url,
+        title,
+        channel: result.channel ? result.channel.slice(0, 200) : null,
+        seconds,
+        paused,
+        thumbnailUrl: `https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`,
+        isShorts: url.includes("/shorts/"),
+        sourceType: "youtube",
+      },
+    };
+  }
+
+  /*
+    A web capture's identity is the hash of its page URL — computed
+    here AND recomputed by the server, so the two must agree exactly
+    as a YouTube id must match its URL. The hostname stands in for the
+    channel: "watch.sport.video" tells the library where the football
+    lives, which is what the channel line is for.
+  */
+  const webId = webVideoIdFromUrl(url);
+  if (!webId) return { kind: "not-youtube" };
+  let host = "";
+  try {
+    host = new URL(url).hostname;
+  } catch {
+    return { kind: "not-youtube" };
+  }
   return {
     kind: "video",
     tabId: tab.id,
     context: {
-      videoId,
+      videoId: webId,
       url,
       title,
-      channel: result.channel ? result.channel.slice(0, 200) : null,
-      seconds: Math.max(0, Math.floor(result.seconds)),
-      paused: Boolean(result.paused),
-      thumbnailUrl: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-      isShorts: url.includes("/shorts/"),
+      channel: host,
+      seconds,
+      paused,
+      thumbnailUrl: "",
+      isShorts: false,
+      sourceType: "web",
     },
   };
 }

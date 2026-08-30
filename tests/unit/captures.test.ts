@@ -5,6 +5,8 @@ import {
   TIMESTAMP_MAX_SECONDS,
   captureCategoryLabel,
   captureIssue,
+  timestampedSourceUrl,
+  webVideoIdFromUrl,
   formatTimestamp,
   isCaptureCategory,
   isYoutubeVideoId,
@@ -185,5 +187,80 @@ describe("captureIssue", () => {
     expect(captureIssue({ ...VALID, videoTitle: "x".repeat(301) })?.field).toBe("videoTitle");
     expect(captureIssue({ ...VALID, channelName: "x".repeat(201) })?.field).toBe("channelName");
     expect(captureIssue({ ...VALID, clientKey: "x".repeat(65) })?.field).toBe("clientKey");
+  });
+});
+
+describe("web captures — any streaming site", () => {
+  const PAGE =
+    "https://watch.sport.video/3liga/iii-liga-stred/tj-banik-kalinovo-vs-ftc-filakovo-201775?game=5088";
+
+  it("derives a stable id from the page URL, query string included", () => {
+    const a = webVideoIdFromUrl(PAGE);
+    const b = webVideoIdFromUrl(PAGE);
+    expect(a).toBe(b);
+    expect(a).toMatch(/^web-[0-9a-f]{16}$/);
+    // The query selects WHICH recording of the match — different game,
+    // different identity.
+    expect(webVideoIdFromUrl(PAGE.replace("game=5088", "game=5094"))).not.toBe(a);
+    // The hash fragment is presentation, not identity.
+    expect(webVideoIdFromUrl(`${PAGE}#t=120`)).toBe(a);
+  });
+
+  it("refuses non-http schemes", () => {
+    expect(webVideoIdFromUrl("file:///C:/match.mp4")).toBeNull();
+    expect(webVideoIdFromUrl("not a url")).toBeNull();
+  });
+
+  const webInput = () => ({
+    sourceType: "web" as const,
+    videoId: webVideoIdFromUrl(PAGE)!,
+    sourceUrl: PAGE,
+    videoTitle: "TJ Baník Kalinovo vs. FTC Fiľakovo",
+    channelName: "watch.sport.video",
+    thumbnailUrl: null,
+    timestampSeconds: 754,
+    observation: "Their 9 checks his shoulder twice before the ball leaves the CB.",
+    category: "scanning" as const,
+    goalId: null,
+    clientKey: "e2e-test-key",
+  });
+
+  it("accepts a well-formed web capture", () => {
+    expect(captureIssue(webInput())).toBeNull();
+  });
+
+  it("binds the id to the URL — a swapped URL is rejected", () => {
+    const bad = { ...webInput(), sourceUrl: "https://watch.sport.video/other-match" };
+    expect(captureIssue(bad)?.field).toBe("sourceUrl");
+  });
+
+  it("rejects a thumbnail on a web capture", () => {
+    const bad = { ...webInput(), thumbnailUrl: "https://i.ytimg.com/vi/x/hq.jpg" };
+    expect(captureIssue(bad)?.field).toBe("thumbnailUrl");
+  });
+
+  it("a V1 payload with no sourceType still validates as YouTube", () => {
+    const yt = {
+      videoId: "dQw4w9WgXcQ",
+      sourceUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      videoTitle: "A video",
+      timestampSeconds: 10,
+      observation: "A thing happened.",
+      tags: [],
+    } as unknown as Parameters<typeof captureIssue>[0];
+    expect(captureIssue(yt)).toBeNull();
+  });
+
+  it("watch links: YouTube seeks with &t=, web opens the page with #t=", () => {
+    expect(
+      timestampedSourceUrl({ videoId: "dQw4w9WgXcQ", sourceUrl: "x", timestampSeconds: 90 }),
+    ).toContain("t=90s");
+    const web = timestampedSourceUrl({
+      sourceType: "web",
+      videoId: webVideoIdFromUrl(PAGE)!,
+      sourceUrl: PAGE,
+      timestampSeconds: 754,
+    });
+    expect(web).toBe(`${PAGE}#t=754`);
   });
 });

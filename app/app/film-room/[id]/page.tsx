@@ -6,8 +6,10 @@ import { listAnalyses } from "@/lib/data/analyses";
 import { listAnnotations } from "@/lib/data/annotations";
 import { listGoals } from "@/lib/data/development";
 import { FilmStudio } from "@/components/film/film-studio";
+import { EmbeddedStage } from "@/components/film/embedded-stage";
 import { DeleteVideoButton } from "@/components/film/delete-video-button";
 import { StartStudyButton } from "@/components/film/start-study-button";
+import { videoUrlKind } from "@/lib/data/film-types";
 
 /*
   A real title per video.
@@ -56,13 +58,28 @@ export default async function StudyPage({ params }: { params: Promise<{ id: stri
         </div>
       </div>
 
-      <FilmStudio
-        video={detail.video}
-        clips={detail.clips}
-        goals={goals}
-        analyses={analyses}
-        annotations={annotations}
-      />
+      {(() => {
+        /*
+          A page URL (sport.video, Veo, a club stream) gets the embedded
+          stage — the site's own player framed here, moments logged by
+          the player's clock. Everything else keeps the full studio.
+          Only `source: "url"` can be a page; uploads resolve to storage
+          URLs and never take this branch.
+        */
+        const detectedKind =
+          detail.video.source === "url" ? videoUrlKind(detail.video.url) : null;
+        return detectedKind?.kind === "page" ? (
+          <EmbeddedStage video={detail.video} clips={detail.clips} host={detectedKind.host} />
+        ) : (
+          <FilmStudio
+            video={detail.video}
+            clips={detail.clips}
+            goals={goals}
+            analyses={analyses}
+            annotations={annotations}
+          />
+        );
+      })()}
     </div>
   );
 }

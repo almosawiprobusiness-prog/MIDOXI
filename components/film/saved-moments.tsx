@@ -6,7 +6,7 @@ import { Check, FilePlus2, Loader2, Play, Target } from "lucide-react";
 import {
   captureCategoryLabel,
   formatTimestamp,
-  timestampedYoutubeUrl,
+  timestampedSourceUrl,
   type StudyCapture,
 } from "@/lib/data/capture-types";
 import { CONCEPTS } from "@/lib/knowledge/concepts";
@@ -42,11 +42,9 @@ interface Props {
 function watch(capture: StudyCapture) {
   // Fire-and-forget: the revisit metric must never delay the revisit.
   void markCaptureOpened(capture.id);
-  window.open(
-    timestampedYoutubeUrl(capture.videoId, capture.timestampSeconds),
-    "_blank",
-    "noopener,noreferrer",
-  );
+  // YouTube seeks precisely; a web capture opens its page with a
+  // best-effort #t= fragment. Either way, the original site plays it.
+  window.open(timestampedSourceUrl(capture), "_blank", "noopener,noreferrer");
 }
 
 /*

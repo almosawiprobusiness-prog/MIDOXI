@@ -247,7 +247,63 @@ export type VideoUrlKind =
   | { kind: "youtube"; id: string }
   | { kind: "direct" }
   | { kind: "hls" }
+  /**
+   * A web page about a video rather than a video file — a sport.video
+   * match page, a Veo link, a club stream. Playable only by embedding
+   * the page itself, which the server verifies (frame policy) before
+   * anything is saved as ready.
+   */
+  | { kind: "page"; host: string }
   | { kind: "unsupported"; reason: string };
+
+/**
+ * The URL actually framed, for services whose watch page differs from
+ * their embeddable player. Vimeo is the known case: vimeo.com/<id>
+ * pages are cluttered (and historically frame-hostile) while
+ * player.vimeo.com/video/<id> exists precisely to be embedded. Unknown
+ * services pass through untouched — the frame-policy probe is the
+ * judge of those, not a list.
+ */
+export function embedUrlFor(url: string): string {
+  try {
+    const u = new URL(url);
+    const vimeo = u.hostname.replace(/^www\./, "") === "vimeo.com" && u.pathname.match(/^\/(\d+)(?:\/|$)/);
+    if (vimeo) return `https://player.vimeo.com/video/${vimeo[1]}`;
+  } catch {
+    /* not a URL; the classifier already refused it */
+  }
+  return url;
+}
+
+/**
+ * Does this response's frame policy forbid embedding the page?
+ *
+ * Returns the human reason when embedding is blocked, null when it is
+ * allowed. Pure so the truth table is testable; the fetch lives in the
+ * server action. Conservative on CSP: a `frame-ancestors` that names
+ * specific origins blocks us just as surely as 'none', because MIDO XI
+ * will never be on that list.
+ */
+export function frameBlocksEmbedding(
+  xFrameOptions: string | null,
+  contentSecurityPolicy: string | null,
+): string | null {
+  const xfo = (xFrameOptions ?? "").trim().toLowerCase();
+  if (xfo.includes("deny") || xfo.includes("sameorigin")) {
+    return "This site refuses to be shown inside another app (X-Frame-Options).";
+  }
+
+  const csp = contentSecurityPolicy ?? "";
+  const m = csp.match(/frame-ancestors\s+([^;]+)/i);
+  if (m) {
+    const sources = m[1].trim().toLowerCase();
+    if (!sources.split(/\s+/).includes("*")) {
+      return "This site only allows specific apps to embed it (frame-ancestors).";
+    }
+  }
+
+  return null;
+}
 
 export function videoUrlKind(raw: string): VideoUrlKind {
   const url = raw.trim();
@@ -271,15 +327,13 @@ export function videoUrlKind(raw: string): VideoUrlKind {
   if (PLAYABLE_EXT.test(parsed.pathname)) return { kind: "direct" };
 
   /*
-    Named rather than lumped into "invalid", because the difference
-    matters to the person pasting: their link is not broken, it is a page
-    about a video rather than the video. Telling them that is what points
-    them at the fix instead of leaving them retrying the same paste.
+    A page about a video rather than the video. This used to be refused
+    outright; now it is its own lane — the page can be EMBEDDED in the
+    film room when its frame policy allows it, which the server checks
+    before saving. The classifier only names what the link is; whether
+    it can actually be framed is a claim only a request can verify.
   */
-  return {
-    kind: "unsupported",
-    reason: `${parsed.hostname} gives a page to watch on, not a video file MIDO can open.`,
-  };
+  return { kind: "page", host: parsed.hostname };
 }
 
 /**

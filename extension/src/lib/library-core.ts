@@ -32,6 +32,8 @@ export interface LocalCapture {
   syncState: "local" | "synced";
   midoId?: string;
   origin: "chrome_extension";
+  /** Absent on V1 rows = 'youtube'; 'web' for any other streaming site. */
+  sourceType?: "youtube" | "web";
 }
 
 /**
@@ -156,6 +158,7 @@ export function toCaptureInput(c: LocalCapture): CaptureInput {
     category: c.category,
     goalId: null,
     clientKey: c.id,
+    sourceType: c.sourceType ?? "youtube",
   };
 }
 

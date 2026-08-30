@@ -65,6 +65,17 @@ export const CLIENT_KEY_MAX_CHARS = 64;
 /** 12 hours. Longer than any football broadcast; shorter than nonsense. */
 export const TIMESTAMP_MAX_SECONDS = 43200;
 
+/**
+ * Where a capture's footage lives.
+ *
+ * 'youtube' — the V1 contract, identity is the 11-char video id.
+ * 'web'     — any other streaming page (sport.video, Veo, Hudl, a club
+ *             stream): identity is a hash of the page URL, computed by
+ *             `webVideoIdFromUrl` on BOTH sides so the server can bind
+ *             the id to the URL the same way it binds a YouTube id.
+ */
+export type CaptureSourceType = "youtube" | "web";
+
 /** The wire shape the extension sends and the API validates. */
 export interface CaptureInput {
   videoId: string;
@@ -77,6 +88,8 @@ export interface CaptureInput {
   category?: CaptureCategory | null;
   goalId?: string | null;
   clientKey?: string | null;
+  /** Absent means 'youtube' — every V1 client predates this field. */
+  sourceType?: CaptureSourceType;
 }
 
 /** A saved capture, as the Player OS reads it. */
@@ -94,6 +107,44 @@ export interface StudyCapture {
   studyId: string | null;
   origin: "chrome_extension" | "web";
   createdAt: string;
+  sourceType?: CaptureSourceType;
+}
+
+/**
+ * The stable identity of a non-YouTube video page.
+ *
+ * FNV-1a over the URL minus its hash fragment, run twice with different
+ * offsets for 16 hex characters, prefixed 'web-'. Deterministic and
+ * dependency-free so the extension, the API and the app all derive the
+ * SAME id from the same URL — which is what lets the server verify that
+ * a web capture's id and URL agree, exactly as it does for YouTube.
+ * The query string stays: on sites like sport.video it selects which
+ * recording of the match you were watching.
+ */
+export function webVideoIdFromUrl(url: string): string | null {
+  let normalized: string;
+  try {
+    const u = new URL(url);
+    if (u.protocol !== "http:" && u.protocol !== "https:") return null;
+    u.hash = "";
+    normalized = u.toString();
+  } catch {
+    return null;
+  }
+  const fnv = (seed: number): string => {
+    let h = seed >>> 0;
+    for (let i = 0; i < normalized.length; i++) {
+      h ^= normalized.charCodeAt(i);
+      h = Math.imul(h, 0x01000193) >>> 0;
+    }
+    return h.toString(16).padStart(8, "0");
+  };
+  return `web-${fnv(0x811c9dc5)}${fnv(0x1000193)}`;
+}
+
+/** True for the 'web-' + 16 hex shape webVideoIdFromUrl produces. */
+export function isWebVideoId(v: unknown): v is string {
+  return typeof v === "string" && /^web-[0-9a-f]{16}$/.test(v);
 }
 
 /** A YouTube video id: exactly 11 URL-safe characters. */
@@ -123,6 +174,27 @@ export function timestampedYoutubeUrl(videoId: string, seconds: number): string 
     : `https://www.youtube.com/watch?v=${videoId}`;
 }
 
+/**
+ * Where "watch this moment" goes, for any capture.
+ *
+ * YouTube seeks precisely via &t=. A web capture opens its page with a
+ * best-effort #t= media fragment — some players honour it, and the ones
+ * that don't still land on the right footage with the logged clock in
+ * the note. Never a promise of a seek the site may not perform.
+ */
+export function timestampedSourceUrl(c: {
+  sourceType?: CaptureSourceType;
+  videoId: string;
+  sourceUrl: string;
+  timestampSeconds: number;
+}): string {
+  if ((c.sourceType ?? "youtube") === "youtube") {
+    return timestampedYoutubeUrl(c.videoId, c.timestampSeconds);
+  }
+  const t = Math.max(0, Math.floor(c.timestampSeconds));
+  return t > 0 ? `${c.sourceUrl}#t=${t}` : c.sourceUrl;
+}
+
 /** 2057 → "34:17"; 7317 → "2:01:57". Display only — storage is numeric. */
 export function formatTimestamp(seconds: number): string {
   const s = Math.max(0, Math.floor(Number.isFinite(seconds) ? seconds : 0));
@@ -144,16 +216,40 @@ export type CaptureIssue = { field: string; message: string };
  * that the URL and the video id agree with each other.
  */
 export function captureIssue(input: CaptureInput): CaptureIssue | null {
-  if (!isYoutubeVideoId(input.videoId)) {
-    return { field: "videoId", message: "Not a YouTube video id." };
+  const sourceType: CaptureSourceType = input.sourceType ?? "youtube";
+  if (sourceType !== "youtube" && sourceType !== "web") {
+    return { field: "sourceType", message: "Unknown source type." };
   }
 
   if (typeof input.sourceUrl !== "string" || input.sourceUrl.length > URL_MAX_CHARS) {
     return { field: "sourceUrl", message: "Source URL is missing or too long." };
   }
-  const urlId = youtubeIdFromUrl(input.sourceUrl);
-  if (!urlId || urlId !== input.videoId) {
-    return { field: "sourceUrl", message: "URL and video id do not match." };
+
+  /*
+    Identity binding, per lane. A YouTube capture's id must be derivable
+    from its URL; a web capture's id must be the hash of its URL. Either
+    way, nothing the client asserts about identity is believed — it is
+    recomputed from the URL and compared.
+  */
+  if (sourceType === "youtube") {
+    if (!isYoutubeVideoId(input.videoId)) {
+      return { field: "videoId", message: "Not a YouTube video id." };
+    }
+    const urlId = youtubeIdFromUrl(input.sourceUrl);
+    if (!urlId || urlId !== input.videoId) {
+      return { field: "sourceUrl", message: "URL and video id do not match." };
+    }
+  } else {
+    if (!isWebVideoId(input.videoId)) {
+      return { field: "videoId", message: "Not a web video id." };
+    }
+    if (webVideoIdFromUrl(input.sourceUrl) !== input.videoId) {
+      return { field: "sourceUrl", message: "URL and video id do not match." };
+    }
+    // Thumbnails are a YouTube affordance; a web capture claims none.
+    if (input.thumbnailUrl != null && input.thumbnailUrl !== "") {
+      return { field: "thumbnailUrl", message: "Web captures carry no thumbnail." };
+    }
   }
 
   const title = typeof input.videoTitle === "string" ? input.videoTitle.trim() : "";
