@@ -93,7 +93,7 @@ export default function LandingPage() {
               <div className="chip chip-signal mb-6">Football Performance OS</div>
               <h1
                 aria-label="Your entire football career. One system."
-                className="max-w-3xl font-display text-5xl font-bold leading-[1.04] tracking-tight text-text-hi md:text-7xl [text-shadow:0_2px_30px_rgba(0,0,0,0.75)]"
+                className="max-w-3xl font-display text-6xl font-bold uppercase leading-[0.98] tracking-tight text-text-hi md:text-8xl [text-shadow:0_2px_30px_rgba(0,0,0,0.75)]"
               >
                 {[
                   <span key="l1">Your entire</span>,
@@ -318,7 +318,7 @@ export default function LandingPage() {
       {/* CTA — bookend of the hero */}
       <section className="cv-auto relative z-10 mx-auto max-w-6xl px-5 py-20 text-center">
         <div className="label-tech mb-3">MIDO XI / The player system</div>
-        <h2 className="mx-auto max-w-2xl font-display text-4xl font-bold tracking-tight text-text-hi md:text-5xl">
+        <h2 className="mx-auto max-w-2xl font-display text-4xl font-bold uppercase tracking-tight text-text-hi md:text-6xl">
           Your entire football career.{" "}
           <span className="text-signal">One system.</span>
         </h2>

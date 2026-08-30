@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowUpRight, Check, X, Loader2, Swords, HeartPulse, GraduationCap,
-  Dumbbell, ClipboardList, Target, Film, Sparkles, Quote,
+  Dumbbell, ClipboardList, Target, Film, Sparkles,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -162,7 +162,7 @@ export function NextBestAction({
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="font-display text-xl font-bold uppercase tracking-tight text-text-hi">{primary.title}</h3>
+              <h3 className="font-display text-2xl font-bold uppercase tracking-tight text-text-hi md:text-3xl">{primary.title}</h3>
               {primary.minutes ? <span className="chip">{primary.minutes} min</span> : null}
             </div>
             <p className="mt-1 text-sm leading-relaxed text-text-dim">{primary.reason}</p>
@@ -175,15 +175,14 @@ export function NextBestAction({
               player believes MIDO heard them.
             */}
             {primary.heard && (
-              <p className="mt-2 flex items-start gap-2 rounded-lg border border-line bg-ink-850 px-3 py-2 text-xs leading-relaxed text-text-dim">
-                <Quote className="mt-0.5 size-3 shrink-0 text-text-faint" aria-hidden />
-                <span className="min-w-0">
-                  <span className="text-text-faint">
-                    {primary.heard.kind === "tried" ? "You told MIDO you tried this — " : "Worth knowing — you told MIDO: "}
-                  </span>
+              <div className="mt-3 rounded-lg border border-line bg-ink-950/60 px-3.5 py-2.5">
+                <p className="label-tech">
+                  {primary.heard.kind === "tried" ? "You told MIDO you tried this" : "Worth knowing — you told MIDO"}
+                </p>
+                <p className="mt-1 text-sm font-semibold leading-relaxed text-text-hi">
                   &ldquo;{primary.heard.body}&rdquo;
-                </span>
-              </p>
+                </p>
+              </div>
             )}
 
             <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -193,14 +192,14 @@ export function NextBestAction({
                   // Fire-and-forget: navigation must not wait on a metric.
                   void trackRecommendationInteraction("opened", primary.kind);
                 }}
-                className="inline-flex h-9 items-center gap-2 rounded-lg bg-signal px-3.5 text-sm font-medium text-white transition-colors hover:bg-signal-deep"
+                className="inline-flex h-9 items-center gap-2 rounded-full bg-signal px-4 text-sm font-medium text-white transition-colors hover:bg-signal-deep"
               >
                 Go <ArrowUpRight className="size-4" />
               </Link>
               <button
                 onClick={() => act(primary.id, markRecommendationDone)}
                 disabled={pending}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-line px-3 text-sm text-text-dim transition-colors hover:border-positive hover:text-positive disabled:opacity-50"
+                className="inline-flex h-9 items-center gap-1.5 rounded-full border border-line px-3.5 text-sm text-text-dim transition-colors hover:border-positive hover:text-positive disabled:opacity-50"
               >
                 {busyId === primary.id && pending ? (
                   <Loader2 className="size-3.5 animate-spin" />
@@ -212,7 +211,7 @@ export function NextBestAction({
               <button
                 onClick={() => act(primary.id, markRecommendationDismissed)}
                 disabled={pending}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-line px-3 text-sm text-text-faint transition-colors hover:border-line-strong hover:text-text-dim disabled:opacity-50"
+                className="inline-flex h-9 items-center gap-1.5 rounded-full border border-line px-3.5 text-sm text-text-faint transition-colors hover:border-line-strong hover:text-text-dim disabled:opacity-50"
               >
                 <X className="size-3.5" /> Not now
               </button>
