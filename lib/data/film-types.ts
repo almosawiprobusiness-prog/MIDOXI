@@ -371,9 +371,16 @@ export function videoUrlKind(raw: string): VideoUrlKind {
 /**
  * What to do instead — said once, in one place, so the dialog and the
  * player cannot drift into giving different advice about the same link.
+ *
+ * The split is measured, not guessed (2026-08-30): an unlisted link
+ * PLAYS fine (the YouTube embed doesn't care) but the enterprise
+ * video backend refuses to READ one — 403 "not owned by the user" —
+ * while public videos read perfectly. So the advice says exactly
+ * which half of the product each visibility buys, instead of
+ * promising analysis it cannot deliver.
  */
 export const LONG_FOOTAGE_ADVICE =
-  "For a full match, upload it to YouTube as unlisted and paste that link. It stays private to anyone without the link, there is no length limit, and MIDO can play and analyse it.";
+  "For a full match, upload it to YouTube as unlisted and paste that link — it stays private to anyone without the link, there is no length limit, and MIDO can play and clip it. For MIDO's video reading the video must be public; unlisted footage can still be read by uploading a short clip directly.";
 
 /*
   How large an uploaded file may be.

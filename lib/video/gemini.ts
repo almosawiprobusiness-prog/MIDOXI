@@ -420,6 +420,20 @@ export async function generateFromVideo<T>(input: GenerateInput): Promise<Gemini
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
+    /*
+      Measured on the vertex backend (2026-08-30): an UNLISTED YouTube
+      video returns 403 "Video <id> is not owned by the user", while
+      public videos read fine. The raw message reads like the player
+      did something wrong; the truth is a backend rule, so say the
+      rule and the two things that actually work.
+    */
+    if (res.status === 403 && /not owned by the user/i.test(text)) {
+      return {
+        ok: false,
+        error:
+          "This YouTube video is unlisted, and MIDO's video reader can only read public YouTube videos. It can still play and clip here — to have MIDO read the football, make the video public, or upload a short clip directly. Nothing was charged against your allowance.",
+      };
+    }
     if (res.status === 503) {
       // Seen in practice: the model reports high demand and refuses. Nothing
       // to do with the clip, and worth saying so rather than showing a raw

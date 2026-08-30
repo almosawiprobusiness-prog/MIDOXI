@@ -158,6 +158,13 @@ integrated this phase.**
    project, same models. Executed setup + rollback path in
    MIDO_VISION_ARCHITECTURE.md.
 2. Supabase Pro upgrade decision when clip volume warrants (>50MB uploads).
-3. Open retest: current docs say YouTube ingestion is PUBLIC videos
-   only — verify whether unlisted links still read, and update the
-   in-product advice if not.
+3. ~~Open retest: unlisted YouTube~~ **TESTED 2026-08-30 on the
+   owner's real channel videos.** Measured matrix: Vertex refuses
+   unlisted (403 "Video … is not owned by the user") and reads public
+   perfectly; the consumer API still reads unlisted (its own docs
+   notwithstanding). Product copy updated (`LONG_FOOTAGE_ADVICE`
+   splits play-and-clip from AI-read), and the 403 is mapped to honest
+   player copy in `lib/video/gemini.ts`. Also noted:
+   `gemini-2.5-flash` is refused to NEW users on the consumer API —
+   the rollback path would need `GEMINI_VIDEO_MODEL` reconsidered if
+   ever used.
