@@ -145,11 +145,24 @@ follow-on shape if a fee is ever added.
    - **Production code DONE.** `/pay/done` serves 200 on
      mido-xi.vercel.app; migration 0037 is applied to the production
      database; live Stripe keys are in Vercel.
-   - **ONE gate remains, and it is the owner's alone:** live Connect
-     is blocked on identity verification — Stripe requires a valid
-     identity document for Mohamed Almosawi before live connected
-     accounts can be created ("Get started" on Connected accounts →
-     upload the document; then finish the "confirm your integration"
-     prompt on the same page). The marketplace business model is
-     already chosen. The moment that verification clears, trainer
-     payments are live end to end with no further code or config.
+   - ~~ONE gate remains~~ — **CLEARED, 30 Aug 2026. LIVE.** The owner
+     uploaded the identity document ("Thanks for providing a valid
+     identity document"), and the integration-choices confirmation was
+     completed: marketplace model, buyers purchase from the platform /
+     sellers paid out individually, Stripe-hosted onboarding, Express
+     dashboard for sellers, and the liability acknowledgment —
+     **the platform (MIDO CO) is responsible for refunds, chargebacks,
+     loss liability and Radar fees on connected-account payments**,
+     exactly the destination-charge responsibility this doc's risk
+     notes already recorded. Dashboard now reads "Connect setup
+     complete". Go-live checklist: Verify your identity ✅, Confirm
+     your integration choices ✅.
+
+## LIVE as of 30 August 2026
+
+Trainer payments are enabled end to end in production: a trainer opens
+/app/payments → Express onboarding → products → payment links, with
+the tiered fee (2%/1.5%/1%) plus processing pass-through frozen into
+each link. First-real-payment advice stands: make the first live
+transaction a small one of your own before any trainer sends a link
+to a client, and watch the Dashboard margin report as volume arrives.
