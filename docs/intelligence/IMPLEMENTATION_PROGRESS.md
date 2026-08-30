@@ -1,6 +1,6 @@
 # Implementation Progress — Event Intelligence Foundation
 
-**Updated:** 25 August 2026 · **Tests:** 658 passing (was 575)
+**Updated:** 30 August 2026 · **Tests:** 728 passing
 
 The spec's implementation order, honestly marked. Nothing here is
 described as done unless it is built, typechecked, tested and building.
@@ -13,10 +13,10 @@ described as done unless it is built, typechecked, tested and building.
 | 4 | Recommendation model | **Done** — `lib/data/recommendations.ts`, migration `0032` |
 | 5 | Next Best Action scoring | **Done** — `lib/intelligence/next-best-action.ts` |
 | 6 | Locker integration | **Done** — panel, complete/dismiss, "why this?", briefing coexistence |
-| 7 | Context selector | **Not started** |
+| 7 | Context selector | **Done** — `lib/intelligence/context.ts` + `build-context.ts`: bounded, citable, one pipeline with the scorer. Feeds the session engine |
 | 8 | Readiness → training | **Done** — rule in the scorer, fed by live check-in data |
-| 9 | Fixture → preparation | **Done in production, dead in demo** — see below |
-| 10 | Timeline parity tooling | **Not started** |
+| 9 | Fixture → preparation | **Done** — the demo fixture clock was unified in the "one seeded world, one clock" pass; timing comes from the calendar seed only |
+| 10 | Timeline parity tooling | **Done** — `npm run verify:parity` (scripts/timeline-parity.mjs), read-only, run clean against production 30 Aug: 19 view rows all pre-instrumentation (expected), zero event-only rows. The switch itself remains stop-and-decide |
 
 Plus, not on the spec's list: a **development-only intelligence
 inspector** at `/app/dev/intelligence`, which shows the whole chain —
@@ -68,6 +68,11 @@ fixture from a demo anchor rather than stating both values. The inspector
 says so inline, so nobody loses an hour to it.
 
 ## Migration status
+
+**0031 and 0032 are applied in production** — verified 30 August by the
+parity script: `mido_events` exists and holds rows. The paragraph below
+described the state on 25 August and is kept for the failure-behaviour
+design it records.
 
 **Neither `0031_mido_events.sql` nor `0032_mido_recommendations.sql` has
 been run.** Until they are, both Supabase paths fail, log, and return

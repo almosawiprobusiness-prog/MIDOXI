@@ -33,7 +33,8 @@
     "verify:gemini": "node scripts/verify-gemini.mjs",
     "try:film": "node scripts/try-film-read.mjs",
     "verify:extension": "node scripts/verify-extension-api.mjs",
-    "ext:build": "npm --prefix extension run build"
+    "ext:build": "npm --prefix extension run build",
+    "verify:parity": "node scripts/timeline-parity.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

@@ -133,7 +133,15 @@ export function MemoryBoard({
 
             <div className="min-w-0 panel divide-y divide-line">
               {items.length === 0 && !isAdding && (
-                <p className="px-4 py-3 text-sm text-text-faint">Nothing yet.</p>
+                /*
+                  The empty state sequences the first action: what a good
+                  entry looks like, and what MIDO would do with it — the
+                  kind's own metadata, not a generic "nothing yet".
+                */
+                <p className="px-4 py-3 text-sm leading-relaxed text-text-faint">
+                  e.g. &ldquo;{meta.example}&rdquo;
+                  <span className="mt-0.5 block text-xs">{meta.effect}</span>
+                </p>
               )}
 
               {items.map((m) => (

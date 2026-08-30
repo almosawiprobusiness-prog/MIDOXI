@@ -19,7 +19,11 @@ export default async function NotificationsPage() {
           <span className="mx-auto grid size-11 place-items-center rounded-lg border border-line bg-ink-850 text-text-faint">
             <BellOff className="size-5" />
           </span>
-          <p className="mt-3 text-sm text-text-dim">Nothing yet.</p>
+          <p className="mt-3 text-sm text-text-dim">Quiet — nobody needs you right now.</p>
+          <p className="mx-auto mt-1 max-w-sm text-sm leading-relaxed text-text-faint">
+            Coach feedback, meeting invites, replies and shares land here the moment
+            somebody else acts. Connect with your coach or squad and this page starts working.
+          </p>
         </div>
       ) : (
         <NotificationList items={items} showMarkAll />

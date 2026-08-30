@@ -102,7 +102,9 @@ export function NotificationBell({ initial, initialUnread }: { initial: Notifica
           </div>
 
           {items.length === 0 ? (
-            <p className="px-2 py-6 text-center text-sm text-text-dim">Nothing yet.</p>
+            <p className="px-2 py-6 text-center text-sm text-text-dim">
+              Quiet. When a coach, teammate or share needs you, it lands here.
+            </p>
           ) : (
             <div className="max-h-[70vh] overflow-y-auto">
               <NotificationList items={items.slice(0, 8)} onNavigate={() => setOpen(false)} />
