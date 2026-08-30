@@ -7,6 +7,7 @@ import { getProfileSettings } from "@/lib/data/profile";
 import { fmtTime } from "@/lib/data/film-types";
 import { MatchFormDialog } from "@/components/matches/match-form-dialog";
 import { DeleteMatchButton } from "@/components/matches/delete-match-button";
+import { MatchCardGraphic } from "@/components/matches/match-card-graphic";
 import { StatsForm } from "@/components/matches/stats-form";
 import { ReviewForm } from "@/components/matches/review-form";
 import { SectionHeader, sentimentStyle } from "@/components/ui/primitives";
@@ -113,6 +114,9 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
           </div>
         </div>
       </div>
+
+      {/* The card this match can leave the app as — real numbers only */}
+      <MatchCardGraphic match={match} ownClub={ownClub} knownAs={profile.knownAs || profile.fullName} />
 
       {/* Player line */}
       <div className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-5">
