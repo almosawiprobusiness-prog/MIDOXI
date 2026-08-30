@@ -64,14 +64,16 @@ export async function CoachTouchline() {
           {d.nextMatch ? (
             <Link
               href={`/app/opposition/${d.nextMatch.reportId}`}
-              className="group panel-raised relative block overflow-hidden p-5 transition-colors hover:border-signal-line"
+              className="group relative block overflow-hidden rounded-xl border border-signal-line bg-gradient-to-b from-signal/10 via-ink-900 to-ink-900 p-5 transition-shadow hover:shadow-[0_0_24px_rgba(123,97,255,0.15)]"
             >
               <div className="pitch-grid absolute inset-0 opacity-40" aria-hidden />
               <div className="relative">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="label-tech">{d.nextMatch.home ? "Home" : "Away"}</div>
-                    <h3 className="mt-1 font-display text-2xl font-semibold text-text-hi">
+                    <div className="label-tech !text-signal-bright">
+                      Next fixture / {d.nextMatch.home ? "Home" : "Away"}
+                    </div>
+                    <h3 className="mt-1 font-display text-2xl font-bold uppercase tracking-tight text-text-hi">
                       {d.nextMatch.opponent}
                     </h3>
                     <p className="mt-0.5 text-sm text-text-dim">

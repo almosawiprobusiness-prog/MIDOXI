@@ -141,8 +141,8 @@ export async function ClubHQ() {
             })}
           </div>
 
-          <div className="panel-raised relative mt-3 overflow-hidden p-4">
-            <div className="field-glow absolute inset-0" aria-hidden />
+          <div className="relative mt-3 overflow-hidden rounded-xl border border-signal-line bg-gradient-to-b from-signal/10 via-ink-900 to-ink-900 p-4">
+            <div className="label-tech mb-2 !text-signal-bright">Club intelligence / 01</div>
             <div className="relative flex items-start gap-3">
               <Sparkles className="mt-0.5 size-4 shrink-0 text-signal-bright" />
               <p className="text-xs leading-relaxed text-text-dim">

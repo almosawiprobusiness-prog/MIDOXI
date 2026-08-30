@@ -67,7 +67,14 @@ export async function TrainerLab() {
         <section className="rise-in min-w-0 xl:col-span-5">
           <SectionHeader label="This week" action={{ label: "Programs", href: "/app/programs" }} />
           {d.thisWeek.length ? (
-            <div className="panel divide-y divide-line overflow-hidden">
+            <div className="min-w-0 overflow-hidden rounded-xl border border-signal-line bg-gradient-to-b from-signal/10 via-ink-900 to-ink-900">
+              <div className="flex items-baseline justify-between gap-3 border-b border-line px-4 py-2.5">
+                <span className="label-tech !text-signal-bright">This week / 01</span>
+                <span className="label-tech">
+                  {delivered}/{d.thisWeek.length} delivered
+                </span>
+              </div>
+              <div className="divide-y divide-line">
               {d.thisWeek.map((s, i) => (
                 <Link
                   key={`${s.programId}-${i}`}
@@ -92,6 +99,7 @@ export async function TrainerLab() {
                   )}
                 </Link>
               ))}
+              </div>
             </div>
           ) : (
             <EmptyState
