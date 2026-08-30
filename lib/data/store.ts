@@ -128,17 +128,20 @@ function seedGoals(): DevelopmentGoal[] {
 }
 
 function seedEvidence(): EvidenceEntry[] {
-  const e = (id: string, goalId: string, kind: EvidenceEntry["kind"], note: string, day: string): EvidenceEntry => ({
-    id, goalId, kind, note, createdAt: `2026-08-${day}T12:00:00`,
+  const e = (id: string, goalId: string, kind: EvidenceEntry["kind"], note: string, day: string, concept?: string): EvidenceEntry => ({
+    id, goalId, kind, note, createdAt: `2026-08-${day}T12:00:00`, concept: concept ?? null,
   });
+  // Concepts only where the note genuinely is an example of the curated
+  // concept — they are what the Threads panel counts, so a decorative
+  // slug here would be a fabricated pattern.
   return [
     e("e1", "g1", "match", "vs Halton — cut back at the near post instead of finishing early.", "09"),
-    e("e2", "g1", "film", "41:02 near-post arrival — right zone, wrong choice.", "10"),
+    e("e2", "g1", "film", "41:02 near-post arrival — right zone, wrong choice.", "10", "near-post-finishing"),
     e("e3", "g1", "insight", "Attack the front zone: commit to the early finish across the keeper.", "10"),
-    e("e4", "g1", "training", "Near-post finishing — 30 reps, first-time across the front zone.", "11"),
-    e("e5", "g2", "film", "12:48 late first press — reacted to the pass, not the touch.", "09"),
+    e("e4", "g1", "training", "Near-post finishing — 30 reps, first-time across the front zone.", "11", "near-post-finishing"),
+    e("e5", "g2", "film", "12:48 late first press — reacted to the pass, not the touch.", "09", "pressing-triggers"),
     e("e6", "g2", "insight", "Trigger = the CB's open body shape before the ball arrives.", "10"),
-    e("e7", "g2", "training", "Pressing shadow drill — curve the run to lock the inside.", "11"),
+    e("e7", "g2", "training", "Pressing shadow drill — curve the run to lock the inside.", "11", "pressing-triggers"),
     e("e8", "g3", "match", "67:14 run in behind for the goal — waited for the CB to check the ball.", "09"),
     e("e9", "g3", "insight", "Start outside the defender's field of vision before the switch.", "10"),
   ];
@@ -395,9 +398,21 @@ export const demoStore = {
     db.evidence = db.evidence.filter((e) => e.goalId !== id);
     return db.goals.length < before;
   },
+  listAllEvidence(): EvidenceEntry[] {
+    return [...db.evidence];
+  },
+
   addEvidence(goalId: string, input: EvidenceInput): string {
     const id = `e_${crypto.randomUUID().slice(0, 8)}`;
-    db.evidence.push({ id, goalId, kind: input.kind, note: input.note, createdAt: new Date().toISOString() });
+    db.evidence.push({
+      id,
+      goalId,
+      kind: input.kind,
+      note: input.note,
+      createdAt: new Date().toISOString(),
+      concept: input.concept ?? null,
+      refId: input.refId ?? null,
+    });
     return id;
   },
   deleteEvidence(id: string): boolean {

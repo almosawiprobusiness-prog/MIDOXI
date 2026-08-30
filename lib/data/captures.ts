@@ -155,6 +155,15 @@ export async function listCapturesForGoal(goalId: string, limit = 20): Promise<S
   return (data ?? []).map(rowToCapture);
 }
 
+/** One capture, for filing it onward. RLS scopes it to the owner. */
+export async function getCapture(id: string): Promise<StudyCapture | null> {
+  if (isDemoMode) return demoDB.captures.find((c) => c.id === id) ?? null;
+  const supabase = await createClient();
+  if (!supabase) return null;
+  const { data } = await supabase.from("study_captures").select("*").eq("id", id).maybeSingle();
+  return data ? rowToCapture(data) : null;
+}
+
 export async function deleteCapture(id: string): Promise<boolean> {
   if (isDemoMode) {
     const before = demoDB.captures.length;

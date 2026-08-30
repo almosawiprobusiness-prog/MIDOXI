@@ -68,7 +68,13 @@ export type ProductEvent =
   */
   | "extension_opened"
   | "capture_saved"
-  | "capture_opened_in_mido";
+  | "capture_opened_in_mido"
+  /*
+    The fourth leg of the capture funnel: a saved moment did not just
+    get revisited, it entered the development record. This is the
+    conversion the extension ultimately exists to produce.
+  */
+  | "capture_filed_as_evidence";
 
 /**
  * Record one product action. Fire-and-forget by design.

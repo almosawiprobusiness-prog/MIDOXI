@@ -6,6 +6,8 @@ import { listCollections } from "@/lib/data/collections";
 import { listStudySessions } from "@/lib/data/study";
 import { listCaptures } from "@/lib/data/captures";
 import { listGoals } from "@/lib/data/development";
+import { listConceptThreads, filedCaptureRefs } from "@/lib/data/threads";
+import { concept } from "@/lib/knowledge/concepts";
 import { getDiscover } from "@/lib/data/discover";
 import { SavedMoments } from "@/components/film/saved-moments";
 import { isDemoMode } from "@/lib/env";
@@ -26,13 +28,15 @@ export default async function FilmRoomPage({
 }: {
   searchParams: Promise<{ moment?: string }>;
 }) {
-  const [{ moment }, videos, clips, collections, studySessions, discover, studyMoments, captures, goals] =
+  const [{ moment }, videos, clips, collections, studySessions, discover, studyMoments, captures, goals, threads] =
     await Promise.all([
       searchParams,
       listVideos(), listClips(), listCollections(), listStudySessions(), getDiscover(), listStudyMoments(),
-      listCaptures(), listGoals(),
+      listCaptures(), listGoals(), listConceptThreads(),
     ]);
+  const filedIds = await filedCaptureRefs(captures.map((c) => c.id));
   const goalTitles = Object.fromEntries(goals.map((g) => [g.id, g.title]));
+  const openGoals = goals.filter((g) => g.status !== "achieved").map((g) => ({ id: g.id, title: g.title }));
   const videoMap = Object.fromEntries(videos.map((v) => [v.id, v.title]));
   const clipCount = (vid: string) => clips.filter((c) => c.videoId === vid).length;
   const favourites = clips.filter((c) => c.favorite).length;
@@ -104,7 +108,51 @@ export default async function FilmRoomPage({
       {captures.length > 0 && (
         <section className="mb-8" id="moments">
           <SectionHeader label={`Saved moments · ${captures.length}`} />
-          <SavedMoments captures={captures} goalTitles={goalTitles} focusId={moment ?? null} />
+          <SavedMoments
+            captures={captures}
+            goalTitles={goalTitles}
+            focusId={moment ?? null}
+            openGoals={openGoals}
+            filedIds={[...filedIds]}
+          />
+        </section>
+      )}
+
+      {/*
+        Threads — the arithmetic behind "the fourth time this appears".
+
+        Counted from filed evidence rows, never generated: each card is
+        a concept the player has confirmed onto their record at least
+        twice. This is the pattern surface the whole loop exists to
+        produce, and it links straight to the goal carrying the thread.
+      */}
+      {threads.length > 0 && (
+        <section className="mb-8">
+          <SectionHeader label={`Threads · what keeps appearing`} />
+          <div className="grid gap-3 md:grid-cols-3">
+            {threads.map((t) => {
+              const c = concept(t.concept);
+              const goalId = t.goalIds[0];
+              return (
+                <Link
+                  key={t.concept}
+                  href={goalId ? `/app/development/${goalId}` : "/app/development"}
+                  className="group panel flex items-start gap-3 p-4 transition-colors hover:border-signal-line"
+                >
+                  <span className="data-mono mt-0.5 shrink-0 text-lg font-semibold text-signal-bright">
+                    {t.count}×
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-medium text-text-hi">{c?.name ?? t.concept}</span>
+                    <span className="label-tech mt-1 block">
+                      Filed {t.count} times{goalId && goalTitles[goalId] ? ` · ${goalTitles[goalId]}` : ""}
+                    </span>
+                  </span>
+                  <ArrowUpRight className="size-3.5 shrink-0 text-text-faint transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                </Link>
+              );
+            })}
+          </div>
         </section>
       )}
 

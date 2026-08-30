@@ -149,7 +149,14 @@ export async function confirmObservation(input: {
             progress: 0,
           })
         : input.goalId;
-    const evidenceId = demoStore.addEvidence(goalId, { kind: "film", note });
+    const evidenceId = demoStore.addEvidence(goalId, {
+      kind: "film",
+      note,
+      concept: obs.concept ?? null,
+      atSeconds: obs.atSeconds,
+      refId: obs.analysisId,
+      source: "mido",
+    });
     revalidate(obs.videoId, goalId);
     return { ok: true, goalId, evidenceId, demo: true };
   }
