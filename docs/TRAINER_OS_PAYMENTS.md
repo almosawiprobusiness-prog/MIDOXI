@@ -135,7 +135,21 @@ follow-on shape if a fee is ever added.
    - Declined with 4000…0002: inline decline on Checkout, no event,
      row stayed `pending` — nothing lies about money.
    - Probe trainer torn down (auth delete, cascade, re-listed gone).
-   The remaining live-mode steps: enable Connect on the production
-   account, add `account.updated` (and
-   `checkout.session.async_payment_succeeded`) to the production
-   webhook's events.
+   ~~The remaining live-mode steps~~ — **live-mode pass, 30 Aug:**
+   - **Production webhook DONE.** The live "MIDO XI" endpoint
+     (`we_1U7KBERca6fER0GRf28F4qw6` →
+     https://mido-xi.vercel.app/api/stripe/webhook, Active, 0% error
+     rate) now listens to all six events — the original four plus
+     `account.updated` and `checkout.session.async_payment_succeeded`.
+     Verified on the endpoint page after saving.
+   - **Production code DONE.** `/pay/done` serves 200 on
+     mido-xi.vercel.app; migration 0037 is applied to the production
+     database; live Stripe keys are in Vercel.
+   - **ONE gate remains, and it is the owner's alone:** live Connect
+     is blocked on identity verification — Stripe requires a valid
+     identity document for Mohamed Almosawi before live connected
+     accounts can be created ("Get started" on Connected accounts →
+     upload the document; then finish the "confirm your integration"
+     prompt on the same page). The marketplace business model is
+     already chosen. The moment that verification clears, trainer
+     payments are live end to end with no further code or config.
