@@ -83,3 +83,28 @@ with correct attribution retained where the kit is genuinely unique.**
 - **BEST PRODUCTION ROUTING:** Quick read = 3.7-flash; Deep read =
   2.5-pro (2 film reads, honest fallback to quick); identity ceiling and the
   new identity-level surface on both. Implemented exactly so.
+
+## Final-routing rerun (§16) — all four passages, production configuration
+
+Quick (3.7-flash, both lanes) + Deep (2.5-pro) with prompt v2, 2026-08-31:
+
+| Passage | Final quick (yt) | Final quick (upload) | Final deep |
+|---|---|---|---|
+| p1 build-up | run-into-depth read + **scene cut called at 0:27, identity not carried** | cut called; basis none, couldMatchOthers 10 → abstains on the mixed clip | press-trigger read + cut called |
+| p2 set piece | wall/strike/goal, coherent | white attacks, four-man wall, goal into top of net | abstains on identity (numbers illegible), describes set piece |
+| p3 referee trap | **explicit abstention naming the official** | **explicit abstention** ("no outfield player is wearing royal blue") | explicit abstention |
+| p4 finish | goal ✓ | goal ✓ — "underside of the crossbar and bounces down across the goal line" (matches frame f163) | goal ✓ (from earlier v2 run) |
+
+BEFORE (baseline A/B): 2 invented outcomes on p4, 1 false attribution, no
+scene-cut awareness. AFTER: 0 false attributions, 0 invented outcomes,
+scene cuts detected on every lane. Improvement is material, not cosmetic.
+
+## Benchmark leakage (§1)
+
+The title card (0:00–0:10) names the player and number. Every benchmark
+passage starts at 18.0s or later, so no benchmark configuration ever saw
+it; identity reached the model only via the per-config structured string.
+(Production reads of this particular highlight CAN include the card if the
+player selects a window covering 0:00 — that is footage reality, not
+benchmark leakage, and the deep read handled it honestly: it reported the
+card as its source and still refused to call numbers legible in play.)
