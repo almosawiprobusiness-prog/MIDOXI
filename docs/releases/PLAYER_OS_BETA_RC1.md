@@ -7,7 +7,7 @@ here was VERIFIED against the live system, not assumed.
 
 | | |
 |---|---|
-| Release commit | the commit tagged by this file's merge (parent: `6e99780` stabilization + this RC instrumentation commit) |
+| Release commit | `7887e96` (RC1 instrumentation, on `6e99780` stabilization) |
 | Production domain | https://mido11.com (canonical; www 308s to apex; vercel.app kept, unredirected, through ~30 Sep) |
 | Database | Supabase project ckhrphzxteygblmirakf; migrations 0001–0041 applied; verify:migrations 94/94 relations, verify:db/security/access/feed all green 2026-08-31 |
 | AI routing | Claude: haiku-4.5 fast / sonnet-5 standard / opus-5 deep. Vision quick: gemini-3.7-flash; Vision deep: gemini-2.5-pro (2 film reads, fallback→quick+refund). Prompt video_read v2. Vertex backend, location global |
