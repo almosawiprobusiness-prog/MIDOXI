@@ -4,11 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Play, Pause, Rewind, FastForward, ChevronLeft, ChevronRight,
-  Scissors, Star, Trash2, Loader2, Flag, Film, TriangleAlert, PenLine, X, Repeat, Download, ListVideo,
+  Scissors, Star, Trash2, Loader2, Flag, Film, TriangleAlert, PenLine, X, Repeat, Download, ListVideo, Send, Sparkles,
 } from "lucide-react";
 import {
   createClip, deleteClip, toggleClipFavorite,
 } from "@/app/app/film-room/actions";
+import { createPost } from "@/app/app/community/feed-actions";
 import {
   createAnnotation, removeAnnotation,
 } from "@/app/app/film-room/annotation-actions";
@@ -26,7 +27,7 @@ import { FilmReading } from "./film-reading";
 import { Telestration, TelestrationTools } from "./telestration";
 import { useFilmPlayer } from "./use-film-player";
 import { YouTubeStage } from "./youtube-stage";
-import { exportBoard, boardFilename, saveBlob } from "./capture";
+import { exportBoard, exportMidoFrame, boardFilename, saveBlob } from "./capture";
 import type { ClipAnalysis } from "@/lib/data/analyses";
 
 const SPEEDS = [0.5, 1, 1.5, 2];
@@ -124,12 +125,42 @@ export function FilmStudio({
   */
   const [drawing, setDrawing] = useState(false);
   const [shapes, setShapes] = useState<Shape[]>([]);
+  /*
+    What undo removed, so redo can put it back. Any NEW mark clears it —
+    the branch that was undone and then drawn over no longer exists,
+    which is how every drawing tool resolves that fork.
+  */
+  const [redoStack, setRedoStack] = useState<Shape[]>([]);
   const [tool, setTool] = useState<ToolKind>("arrow");
   const [penColor, setPenColor] = useState<AnnotationColor>("correction");
+  /** The word the text tool stamps on the frame. */
+  const [cueText, setCueText] = useState("");
   const [drawNote, setDrawNote] = useState("");
   const [drawBusy, setDrawBusy] = useState(false);
   const [drawError, setDrawError] = useState<string | null>(null);
   const [viewing, setViewing] = useState<Annotation | null>(null);
+  /** Posting the board to the community — its own lane, its own message. */
+  const [posting, setPosting] = useState(false);
+  const [posted, setPosted] = useState<string | null>(null);
+
+  const changeShapes = (next: Shape[]) => {
+    setShapes(next);
+    setRedoStack([]);
+  };
+  const undoShape = () => {
+    setShapes((s) => {
+      if (s.length === 0) return s;
+      setRedoStack((r) => [...r, s[s.length - 1]]);
+      return s.slice(0, -1);
+    });
+  };
+  const redoShape = () => {
+    setRedoStack((r) => {
+      if (r.length === 0) return r;
+      setShapes((s) => [...s, r[r.length - 1]]);
+      return r.slice(0, -1);
+    });
+  };
 
   // Saving a board to disk, and looping the marked range.
   const [saving, setSaving] = useState(false);
@@ -401,14 +432,17 @@ export function FilmStudio({
     player().pause();
     setViewing(null);
     setShapes([]);
+    setRedoStack([]);
     setDrawNote("");
     setDrawError(null);
+    setPosted(null);
     setDrawing(true);
   };
 
   const stopDrawing = () => {
     setDrawing(false);
     setShapes([]);
+    setRedoStack([]);
     setDrawNote("");
     setDrawError(null);
   };
@@ -475,7 +509,8 @@ export function FilmStudio({
         // Undo the last mark, matching every drawing tool ever made.
         if (drawing && e.key.toLowerCase() === "z") {
           e.preventDefault();
-          setShapes((s) => s.slice(0, -1));
+          if (e.shiftKey) redoShape();
+          else undoShape();
         }
         return;
       }
@@ -589,6 +624,79 @@ export function FilmStudio({
     }
   };
 
+  /*
+    The branded lane. Same frame, same marks, dressed as a MIDO artifact
+    at the feed's native 1080×1350 — the version a player posts, where
+    the clean export is the version a coach files.
+  */
+  const saveMidoFrame = async (atSeconds: number, marks: Shape[], caption: string | null) => {
+    if (isYouTube) {
+      setSaveError("A YouTube frame cannot be read out of the embed, so there is nothing to dress up.");
+      return;
+    }
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const blob = await exportMidoFrame({
+        videoUrl: video.url,
+        title: video.title,
+        atSeconds,
+        shapes: marks,
+        note: caption,
+      });
+      saveBlob(blob, boardFilename(video.title, atSeconds).replace(/\.png$/, "-mido.png"));
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : "The image could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /*
+    Frame → feed, in one step. The board (frame + marks + caption strip)
+    becomes a community post with kind "film" — the exact content the
+    community exists for: player thinking, visible.
+  */
+  const postBoard = async (atSeconds: number, marks: Shape[], caption: string | null) => {
+    if (isYouTube) {
+      setSaveError("A YouTube frame cannot be read out of the embed, so it cannot be posted as an image.");
+      return;
+    }
+    setPosting(true);
+    setSaveError(null);
+    setPosted(null);
+    try {
+      const blob = await exportBoard({
+        videoUrl: video.url,
+        title: video.title,
+        atSeconds,
+        shapes: marks,
+        note: caption,
+      });
+      const bmp = await createImageBitmap(blob);
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(r.result as string);
+        r.onerror = () => reject(new Error("The image could not be read back."));
+        r.readAsDataURL(blob);
+      });
+      const res = await createPost({
+        caption: caption?.trim() || "",
+        media: dataUrl,
+        mediaWidth: bmp.width,
+        mediaHeight: bmp.height,
+        kind: "film",
+        tags: ["film"],
+      });
+      if (!res.ok) setSaveError(res.error);
+      else setPosted("Posted to the community.");
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : "The post could not be created.");
+    } finally {
+      setPosting(false);
+    }
+  };
+
   const dropAnnotation = async (a: Annotation) => {
     if (viewing?.id === a.id) setViewing(null);
     await removeAnnotation(a.id, video.id);
@@ -668,7 +776,7 @@ export function FilmStudio({
               {(drawing || viewing) && (
                 <Telestration
                   shapes={drawing ? shapes : viewing!.shapes}
-                  onChange={drawing ? setShapes : undefined}
+                  onChange={drawing ? changeShapes : undefined}
                   tool={tool}
                   color={penColor}
                   readOnly={!drawing}
@@ -904,8 +1012,12 @@ export function FilmStudio({
                   setTool={setTool}
                   color={penColor}
                   setColor={setPenColor}
-                  onUndo={() => setShapes((s) => s.slice(0, -1))}
-                  onClear={() => setShapes([])}
+                  onUndo={undoShape}
+                  onRedo={redoShape}
+                  canRedo={redoStack.length > 0}
+                  onClear={() => changeShapes([])}
+                  label={cueText}
+                  setLabel={setCueText}
                   count={shapes.length}
                 />
 
@@ -918,6 +1030,7 @@ export function FilmStudio({
 
                 {drawError && <p className="mt-2 text-sm text-correction">{drawError}</p>}
                 {saveError && <p className="mt-2 text-sm text-correction">{saveError}</p>}
+                {posted && <p className="mt-2 text-sm text-positive">{posted}</p>}
 
                 <div className="mt-3 flex items-center gap-3">
                   <button
@@ -946,6 +1059,32 @@ export function FilmStudio({
                   >
                     {saving ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
                     Save image
+                  </button>
+                  <button
+                    onClick={() => saveMidoFrame(current, shapes, drawNote)}
+                    disabled={saving || isYouTube}
+                    title={
+                      isYouTube
+                        ? "A YouTube frame cannot be read out of the embed"
+                        : "Save a branded MIDO artifact of this frame — 1080×1350, ready to post anywhere"
+                    }
+                    className="flex h-10 items-center gap-2 rounded-lg border border-line px-3 text-sm text-text-dim transition-colors hover:border-signal-line hover:text-text disabled:opacity-40"
+                  >
+                    <Sparkles className="size-4" />
+                    MIDO frame
+                  </button>
+                  <button
+                    onClick={() => postBoard(current, shapes, drawNote)}
+                    disabled={posting || isYouTube}
+                    title={
+                      isYouTube
+                        ? "A YouTube frame cannot be read out of the embed"
+                        : "Post this frame and drawing to the MIDO community"
+                    }
+                    className="flex h-10 items-center gap-2 rounded-lg border border-line px-3 text-sm text-text-dim transition-colors hover:border-signal-line hover:text-text disabled:opacity-40"
+                  >
+                    {posting ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+                    Post to community
                   </button>
                   <button
                     onClick={stopDrawing}

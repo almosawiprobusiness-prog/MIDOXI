@@ -193,6 +193,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
       { label: "Recovery", href: "/app/recovery", icon: HeartPulse, hint: "Readiness & sleep", status: "live", group: "more" },
       { label: "Performance", href: "/app/performance", icon: LineChart, hint: "Analytics", status: "live", group: "more" },
       { label: "Publish", href: "/app/publish", icon: Share2, hint: "Share your progress", status: "live", group: "more" },
+      community,
       calendar,
       /*
         Cut per docs/fable/PLAYER_OS_CUT_LIST.md, owner-approved 30 Aug:
@@ -202,11 +203,11 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
         for coach-shared links; if meetings ever matter to players,
         they arrive as calendar entries, not a section.
 
-        COMMUNITY — the one section with no connection to the loop,
-        and a half-empty feed at founding scale makes the whole
-        product feel quieter. The route stays (share doors on goals
-        and studies still post to it); revisit for the nav when there
-        are enough players for it to be alive on day one.
+        COMMUNITY — was cut with the same 30 Aug decision, with an
+        explicit re-entry condition. The owner exercised it in the
+        social refinement directive (30 Aug): Community returns as a
+        first-class player surface, redesigned media-first — see
+        docs/fable/SOCIAL_REFINEMENT.md.
       */
     ],
     quickActions: [

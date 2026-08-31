@@ -37,6 +37,9 @@ async function identity(): Promise<PublishIdentity> {
     position: p.primaryPosition || "",
     club: p.club || "",
     squadNumber: p.squadNumber,
+    // The one image on a card: the player's own public avatar. Still a
+    // whitelist — the URL points at the public avatars bucket, nothing else.
+    avatarUrl: p.avatarUrl || null,
   };
 }
 

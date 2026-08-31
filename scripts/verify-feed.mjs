@@ -88,6 +88,9 @@ for (const [table, columns] of [
   ["follows", "follower_id, following_id, created_at"],
   ["user_blocks", "blocker_id, blocked_id, created_at"],
   ["post_reports", "id, post_id, reporter_id, reason, detail, reviewed_at, created_at"],
+  // 0040's — private saves, and posts that know their kind.
+  ["post_saves", "post_id, user_id, created_at"],
+  ["community_posts", "id, kind"],
 ]) {
   const res = await rest(`${table}?select=${encodeURIComponent(columns)}&limit=0`);
   if (res.ok) ok(table, `(${columns.split(",").length} columns)`);

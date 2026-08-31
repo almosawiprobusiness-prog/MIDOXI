@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { AvatarUpload } from "@/components/settings/avatar-upload";
 import { ArrowRight, ArrowLeft, Check, Loader2, Plus, X } from "lucide-react";
 import { completeOnboarding, type OnboardingPayload } from "./actions";
 import { ROLES, roleDef, type RoleId } from "@/lib/roles/roles";
@@ -292,6 +293,17 @@ export function OnboardingWizard({ initialName }: { initialName: string }) {
         {/* ── STEP 3 — complete ── */}
         {step === 3 && def && (
           <Section label="Step 04 · Complete" title="You&rsquo;re set">
+            {/*
+              The photo, offered at the door but never demanded — a face
+              makes every post, comment and profile feel like a person,
+              and skipping it costs nothing (initials carry the account
+              until Settings). The uploader saves immediately, so there
+              is no extra state to carry through submit.
+            */}
+            <div className="panel mb-4 p-4">
+              <div className="label-tech mb-3">Profile photo — optional</div>
+              <AvatarUpload url="" name={form.knownAs || form.fullName || "M"} />
+            </div>
             <div className="panel p-4">
               <div className="flex items-center gap-3">
                 <div className="grid size-11 place-items-center rounded-lg bg-gradient-to-br from-signal to-signal-deep font-display text-lg font-bold text-white">

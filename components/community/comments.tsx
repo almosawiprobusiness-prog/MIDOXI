@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, Send, Trash2 } from "lucide-react";
 import { addComment, deleteComment } from "@/app/app/community/actions";
 import { displayHandle, timeAgo } from "@/lib/data/feed-types";
+import { Avatar } from "@/components/ui/avatar";
 import { FormError } from "@/components/forms/ui";
 
 /*
@@ -62,17 +63,18 @@ export function Comments({
           : `${comments.length} ${comments.length === 1 ? "reply" : "replies"}`}
       </h2>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         {comments.map((c) => (
           <div key={c.id} className="group flex gap-2.5">
+            <Avatar url={null} name={c.name} size={28} />
             <div className="min-w-0 flex-1">
-              <p className="text-sm leading-relaxed text-text">
-                <span className="font-medium text-text-hi">
-                  {displayHandle({ handle: c.handle, name: c.name })}
-                </span>{" "}
-                {c.body}
-              </p>
-              <span className="text-[11px] text-text-faint">{timeAgo(c.createdAt)}</span>
+              <div className="flex items-baseline gap-2">
+                <span className="truncate text-sm font-medium text-text-hi">{c.name}</span>
+                <span className="data-mono shrink-0 text-[10px] uppercase tracking-wider text-text-faint">
+                  {displayHandle({ handle: c.handle, name: c.name })} · {timeAgo(c.createdAt)}
+                </span>
+              </div>
+              <p className="mt-0.5 text-sm leading-relaxed text-text">{c.body}</p>
             </div>
             {(c.mine || canModerate) && (
               <button

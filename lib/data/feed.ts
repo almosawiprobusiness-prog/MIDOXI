@@ -1,7 +1,7 @@
 import "server-only";
 import { createClient, createAdminClient, getAuthUser } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
-import type { MediaKind, Post, ProfileSummary, Visibility } from "./feed-types";
+import type { MediaKind, Post, PostKind, ProfileSummary, Visibility } from "./feed-types";
 
 /*
   Reading the feed.
@@ -20,7 +20,12 @@ import type { MediaKind, Post, ProfileSummary, Visibility } from "./feed-types";
   join, which matters more than a query plan nobody is measuring.
 */
 
-function rowToPost(r: Record<string, unknown>, me: string | null, liked: Set<string>): Post {
+function rowToPost(
+  r: Record<string, unknown>,
+  me: string | null,
+  liked: Set<string>,
+  saved: Set<string>,
+): Post {
   const mediaUrl = (r.media_url as string) ?? null;
   const kind = (r.media_kind as MediaKind) ?? null;
 
@@ -59,11 +64,13 @@ function rowToPost(r: Record<string, unknown>, me: string | null, liked: Set<str
         }
       : null,
     tags: ((r.tags as string[]) ?? []),
+    kind: ((r.kind as PostKind) ?? null),
     visibility: ((r.visibility as Visibility) ?? "public"),
     createdAt: String(r.created_at),
     likes: Number((r.reaction_count as number) ?? 0),
     comments: Number((r.comment_count as number) ?? 0),
     likedByMe: liked.has(String(r.id)),
+    savedByMe: saved.has(String(r.id)),
     mine: me === String(r.user_id),
   };
 }
@@ -72,7 +79,7 @@ const SELECT =
   "id, user_id, author_name, author_handle, author_position, author_avatar, " +
   "title, body, caption, media_url, media_kind, media_width, media_height, " +
   "clip_title, clip_start, clip_tags, clip_sentiment, video_source, video_external_id, " +
-  "tags, visibility, created_at";
+  "tags, kind, visibility, created_at";
 
 /*
   Who this reader has blocked, and who has blocked them.
@@ -113,6 +120,10 @@ export interface FeedQuery {
   followingOnly?: boolean;
   /** One author's posts, for a profile grid. */
   authorId?: string;
+  /** Only posts about one thing — the feed's filter row. */
+  kind?: PostKind;
+  /** Only posts this reader has saved. The private "Saved" view. */
+  savedOnly?: boolean;
   limit?: number;
 }
 
@@ -134,19 +145,24 @@ export async function listFeed(q: FeedQuery = {}): Promise<Post[]> {
     .limit(limit * 2); // room to drop blocked authors without a short page
 
   if (q.authorId) query = query.eq("user_id", q.authorId);
+  if (q.kind) query = query.eq("kind", q.kind);
 
-  const [{ data: rows }, blocked, following, liked] = await Promise.all([
+  const [{ data: rows }, blocked, following, liked, saved] = await Promise.all([
     query,
     blockedEitherWay(supabase, me),
     followingIds(supabase, me),
     likedPostIds(supabase, me),
+    savedPostIds(supabase, me),
   ]);
 
   // PostgREST types a failed select as an error object rather than rows; the
   // cast keeps that from becoming a runtime surprise in the mapper.
   let posts = ((rows ?? []) as unknown as Record<string, unknown>[]).map((r) =>
-    rowToPost(r, me, liked),
+    rowToPost(r, me, liked, saved),
   );
+
+  // The private Saved view — the reader's own bookmarks, nobody else's.
+  if (q.savedOnly) posts = posts.filter((p) => saved.has(p.id));
 
   // Blocking, both ways — see `blockedEitherWay`. Never their posts to me,
   // and never mine to them.
@@ -184,6 +200,14 @@ async function likedPostIds(
   me: string,
 ): Promise<Set<string>> {
   const { data } = await supabase.from("post_reactions").select("post_id").eq("user_id", me);
+  return new Set((data ?? []).map((r) => String(r.post_id)));
+}
+
+async function savedPostIds(
+  supabase: NonNullable<Awaited<ReturnType<typeof createClient>>>,
+  me: string,
+): Promise<Set<string>> {
+  const { data } = await supabase.from("post_saves").select("post_id").eq("user_id", me);
   return new Set((data ?? []).map((r) => String(r.post_id)));
 }
 
@@ -231,15 +255,16 @@ export async function getProfileSummary(handleOrId: string): Promise<ProfileSumm
   const me = user?.id ?? null;
 
   const isUuid = /^[0-9a-f-]{36}$/i.test(handleOrId);
+  const PROFILE_SELECT = "user_id, handle, primary_position, club, squad_number, play_style, bio, is_public";
   const { data: pp } = isUuid
     ? await supabase
         .from("player_profiles")
-        .select("user_id, handle, primary_position, club, bio, is_public")
+        .select(PROFILE_SELECT)
         .eq("user_id", handleOrId)
         .maybeSingle()
     : await supabase
         .from("player_profiles")
-        .select("user_id, handle, primary_position, club, bio, is_public")
+        .select(PROFILE_SELECT)
         .eq("handle", handleOrId.replace(/^@/, ""))
         .maybeSingle();
 
@@ -262,6 +287,8 @@ export async function getProfileSummary(handleOrId: string): Promise<ProfileSumm
     handle: (pp.handle as string) ?? null,
     position: (pp.primary_position as string) ?? null,
     club: (pp.club as string) ?? null,
+    squadNumber: (pp.squad_number as number) ?? null,
+    playStyle: (pp.play_style as string) ?? null,
     avatar: (profile?.avatar_url as string) ?? null,
     bio: (pp.bio as string) ?? null,
     posts: (posts.data ?? []).length,
@@ -295,11 +322,13 @@ function demoPosts(): Post[] {
       media: { kind: "youtube", url: "aqz-KE-bpKQ", width: null, height: null },
       clip: null,
       tags: ["finishing", "movement"],
+      kind: "film",
       visibility: "public",
       createdAt: ago(4),
       likes: 6,
       comments: 2,
       likedByMe: false,
+      savedByMe: false,
       mine: true,
     },
     {
@@ -309,11 +338,13 @@ function demoPosts(): Post[] {
       media: null,
       clip: null,
       tags: ["scanning"],
+      kind: "training",
       visibility: "public",
       createdAt: ago(20),
       likes: 3,
       comments: 0,
       likedByMe: true,
+      savedByMe: true,
       mine: false,
     },
   ];
@@ -335,6 +366,8 @@ function demoProfile(handleOrId: string): ProfileSummary {
     handle: mine ? "mido9" : "ade6",
     position: mine ? "CF" : "6",
     club: "Northgate FC",
+    squadNumber: mine ? 9 : 6,
+    playStyle: mine ? "Arriving later in the box" : null,
     avatar: null,
     bio: mine ? "Direct forward — runs in behind, presses from the front." : null,
     posts: demoPosts().filter((p) => (mine ? p.mine : !p.mine)).length,
@@ -369,13 +402,14 @@ export async function getPost(
   const { data: row } = await supabase.from("community_posts").select(SELECT).eq("id", id).maybeSingle();
   if (!row) return null;
 
-  const [blocked, following, liked] = await Promise.all([
+  const [blocked, following, liked, saved] = await Promise.all([
     blockedEitherWay(supabase, me),
     followingIds(supabase, me),
     likedPostIds(supabase, me),
+    savedPostIds(supabase, me),
   ]);
 
-  const post = rowToPost(row as unknown as Record<string, unknown>, me, liked);
+  const post = rowToPost(row as unknown as Record<string, unknown>, me, liked, saved);
 
   // The same two rules the feed applies. A blocked author's post is not
   // reachable by id either.

@@ -1,38 +1,48 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { ImagePlus, Loader2, MonitorPlay, Send, X } from "lucide-react";
+import { ImagePlus, Loader2, MonitorPlay, Plus, Send, X } from "lucide-react";
 import { createPost } from "@/app/app/community/feed-actions";
 import {
   CAPTION_MAX,
   PHOTO_PX,
   PHOTO_TYPES,
+  POST_KINDS,
   mediaIssue,
   postIssue,
   youtubeId,
+  type PostKind,
 } from "@/lib/data/feed-types";
 import { FormError } from "@/components/forms/ui";
 import { cn } from "@/lib/utils";
 
 /*
-  Making a post.
+  Making a post — the Framer-designed flow.
 
-  Media first, caption second — the opposite of the forum composer this
-  replaces, which asked for a title before anything else and got a discussion
-  board as a result.
+  WHAT ARE YOU SHARING? → six quiet chips → if it is something MIDO
+  already knows about, a FROM MIDO strip offers the player's own recent
+  record and pre-fills the facts (duration, focus, opponent) so nothing
+  MIDO knows is ever re-typed → media → ADD A THOUGHT → post.
 
-  Photos are resized in the browser to 1440px on the long edge before they are
-  sent. A phone photo is 4-5MB and 4000px wide; the same picture at 1440 is
-  around 200KB and indistinguishable in a feed. Doing it here means the upload
-  is instant on a bad connection and storage does not fill with originals.
-
-  Video is NOT resized, because that needs transcoding the browser cannot do.
-  So the limit is stated up front rather than discovered at the end of a long
-  upload — and the honest advice is given with it: full match footage belongs
-  in the film room, and a post is the moment.
+  Photos are resized in the browser to 1440px on the long edge before
+  they are sent — a phone photo is 4-5MB and 4000px wide; the same
+  picture at 1440 is ~200KB and indistinguishable in a feed. Video is
+  NOT resized (that needs transcoding a browser cannot do), so its
+  limit is stated up front rather than discovered after a long upload.
 */
+
+/** One thing MIDO already knows, offered to the composer. */
+export interface FromMido {
+  kind: PostKind;
+  /** "TRAINING · 42 MIN" — the strip line. */
+  label: string;
+  /** "Blindside movement" — what it was about. */
+  detail: string;
+  /** The caption the facts pre-fill. The player's thought goes after it. */
+  caption: string;
+}
 
 async function shrink(file: File, px = PHOTO_PX): Promise<{ dataUrl: string; w: number; h: number }> {
   const bitmap = await createImageBitmap(file);
@@ -59,9 +69,18 @@ const readAsDataUrl = (file: File) =>
     r.readAsDataURL(file);
   });
 
-export function Composer() {
+export function Composer({
+  fromMido = [],
+  onPosted,
+  autoFocus = false,
+}: {
+  fromMido?: FromMido[];
+  onPosted?: () => void;
+  autoFocus?: boolean;
+}) {
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
+  const [kind, setKind] = useState<PostKind | null>(null);
   const [caption, setCaption] = useState("");
   const [media, setMedia] = useState<{ dataUrl: string; w: number | null; h: number | null; isVideo: boolean } | null>(null);
   const [youtube, setYoutube] = useState("");
@@ -102,6 +121,8 @@ export function Composer() {
   const issue = postIssue({ caption, hasMedia: Boolean(media || yt) });
   const busy = working || pending;
 
+  const offered = kind ? fromMido.filter((f) => f.kind === kind) : [];
+
   const post = () =>
     start(async () => {
       setError(null);
@@ -111,18 +132,68 @@ export function Composer() {
         mediaWidth: media?.w ?? null,
         mediaHeight: media?.h ?? null,
         youtubeUrl: yt ? youtube : null,
+        kind,
       });
       if (res.ok) {
+        setKind(null);
         setCaption("");
         setMedia(null);
         setYoutube("");
         setShowYoutube(false);
+        onPosted?.();
         router.refresh();
       } else setError(res.error);
     });
 
   return (
-    <div className="panel mb-6 p-4">
+    <div className="panel p-4">
+      {/* WHAT ARE YOU SHARING? — the six quiet chips. */}
+      <div className="mb-3">
+        <div className="label-tech mb-2">What are you sharing?</div>
+        <div className="flex flex-wrap gap-1.5">
+          {POST_KINDS.map((k) => (
+            <button
+              key={k.value}
+              onClick={() => setKind((cur) => (cur === k.value ? null : k.value))}
+              aria-pressed={kind === k.value}
+              className={cn(
+                "data-mono h-7 rounded-md border px-2.5 text-[11px] uppercase tracking-wider transition-colors",
+                kind === k.value
+                  ? "border-signal-line bg-signal/10 text-signal-bright"
+                  : "border-line text-text-dim hover:border-signal-line hover:text-text",
+              )}
+            >
+              {k.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/*
+        FROM MIDO — the player's own recent record, one tap to pre-fill.
+        The player never re-types a duration, focus or opponent MIDO
+        already holds; they add the thought, which is the only part
+        MIDO cannot write.
+      */}
+      {offered.length > 0 && (
+        <div className="mb-3 space-y-1.5">
+          <div className="label-tech">From MIDO</div>
+          {offered.map((f, i) => (
+            <button
+              key={i}
+              onClick={() => setCaption((c) => (c.trim() ? c : f.caption))}
+              className="flex w-full items-baseline justify-between gap-3 rounded-lg border border-line bg-ink-850 px-3 py-2 text-left transition-colors hover:border-signal-line"
+            >
+              <span className="data-mono shrink-0 text-[11px] uppercase tracking-wider text-signal-bright">
+                {f.label}
+              </span>
+              <span className="min-w-0 flex-1 truncate text-sm text-text">{f.detail}</span>
+              <span className="data-mono shrink-0 text-[10px] text-text-faint">use</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {media ? (
         <div className="relative mb-3 overflow-hidden rounded-lg border border-line bg-ink-850">
           {media.isVideo ? (
@@ -181,7 +252,8 @@ export function Composer() {
         onChange={(e) => setCaption(e.target.value)}
         rows={media || yt ? 3 : 2}
         maxLength={CAPTION_MAX}
-        placeholder="What happened? What did you see?"
+        autoFocus={autoFocus}
+        placeholder="Add a thought — what happened? What did you see?"
         className="w-full resize-none rounded-lg border border-line bg-ink-850 px-3 py-2.5 text-sm text-text-hi placeholder:text-text-faint focus:border-signal-line focus:outline-none"
       />
 
@@ -234,5 +306,91 @@ export function Composer() {
 
       <FormError error={error} />
     </div>
+  );
+}
+
+/*
+  The CREATE doors — the header button on desktop and the pinned
+  floating action on the phone, both opening the same composer as an
+  overlay so the feed itself stays pure reading.
+
+  `?compose=1` opens it too, which is how the empty state's editorial
+  prompts land somebody directly in the right flow.
+*/
+export function CreateDoors({ fromMido = [] }: { fromMido?: FromMido[] }) {
+  const params = useSearchParams();
+  const composeParam = Boolean(params.get("compose"));
+  const [open, setOpen] = useState(composeParam);
+  /*
+    `?compose=1` opens the overlay on client-side navigation too — the
+    empty state's prompts link within this page. Adjusted during render
+    (React's sanctioned derived-state form) rather than in an effect,
+    which would set state synchronously after every params change.
+  */
+  const [lastParam, setLastParam] = useState(composeParam);
+  if (composeParam !== lastParam) {
+    setLastParam(composeParam);
+    if (composeParam) setOpen(true);
+  }
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="hidden h-9 items-center gap-2 rounded-lg bg-signal px-4 text-sm font-medium text-white transition-colors hover:bg-signal-deep sm:flex"
+      >
+        <Plus className="size-4" /> Create
+      </button>
+
+      {/* The phone's pinned door — quiet purple, always in thumb's reach. */}
+      <button
+        onClick={() => setOpen(true)}
+        aria-label="Create a post"
+        className="fixed bottom-20 right-4 z-30 grid size-12 place-items-center rounded-full bg-signal text-white shadow-lg shadow-black/40 transition-colors hover:bg-signal-deep sm:hidden"
+      >
+        <Plus className="size-5" />
+      </button>
+
+      {open && (
+        <div
+          className="fixed inset-0 z-40 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-6"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setOpen(false);
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Create a post"
+            className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-t-2xl border border-line bg-ink-925 sm:rounded-2xl"
+          >
+            <div className="flex items-center justify-between border-b border-line px-4 py-3">
+              <span className="font-display text-lg font-bold uppercase tracking-wide text-text-hi">
+                Create
+              </span>
+              <button
+                onClick={() => setOpen(false)}
+                aria-label="Close"
+                className="grid size-8 place-items-center rounded-lg text-text-dim transition-colors hover:text-text"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+            <div className="p-2">
+              <Composer fromMido={fromMido} autoFocus onPosted={() => setOpen(false)} />
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

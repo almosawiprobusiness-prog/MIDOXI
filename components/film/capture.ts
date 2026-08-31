@@ -238,6 +238,120 @@ export async function exportBoard(input: BoardExport): Promise<Blob> {
   }
 }
 
+/**
+ * The MIDO frame — the same annotated frame, dressed as an artifact.
+ *
+ * 1080×1350 portrait (the social feed's native shape): ink canvas,
+ * FILM ROOM header with the timestamp, the frame large in the middle,
+ * the focus line under it in the display voice, mido11.com in the
+ * corner. Branding never covers the football — the frame is letterboxed
+ * whole, not cropped under a logo.
+ *
+ * Same taint rules as `exportBoard`; callers refuse YouTube first.
+ */
+export async function exportMidoFrame(input: BoardExport & { playerName?: string | null }): Promise<Blob> {
+  const video = await loadCapturableVideo(input.videoUrl);
+  try {
+    await seekTo(video, input.atSeconds);
+
+    const W = 1080;
+    const H = 1350;
+    const pad = 64;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("This browser cannot export images.");
+
+    // Ground.
+    ctx.fillStyle = "#08090b";
+    ctx.fillRect(0, 0, W, H);
+
+    // Header — the room and the moment.
+    const display = '700 44px "Big Shoulders", "Arial Narrow", sans-serif';
+    ctx.font = display;
+    ctx.fillStyle = "#f3f5f8";
+    ctx.fillText("FILM ROOM", pad, pad + 40);
+    ctx.font = '600 26px ui-monospace, SFMono-Regular, Menlo, monospace';
+    ctx.fillStyle = "#9d88ff";
+    const stamp = atLabel(input.atSeconds);
+    ctx.textAlign = "right";
+    ctx.fillText(stamp, W - pad, pad + 36);
+    ctx.textAlign = "left";
+    ctx.font = "500 20px ui-sans-serif, system-ui, sans-serif";
+    ctx.fillStyle = "#838d99";
+    ctx.fillText(wrap(ctx, input.title.toUpperCase(), W - pad * 2, 1)[0] ?? "", pad, pad + 76);
+
+    // The frame — whole, centered, as large as the middle band allows.
+    const bandTop = pad + 116;
+    const bandBottom = H - 300;
+    const ratio =
+      video.videoWidth && video.videoHeight ? video.videoHeight / video.videoWidth : 0.5625;
+    let fw = W - pad * 2;
+    let fh = Math.round(fw * ratio);
+    if (fh > bandBottom - bandTop) {
+      fh = bandBottom - bandTop;
+      fw = Math.round(fh / ratio);
+    }
+    const fx = Math.round((W - fw) / 2);
+    const fy = Math.round(bandTop + (bandBottom - bandTop - fh) / 2);
+
+    ctx.drawImage(video, fx, fy, fw, fh);
+    if (input.shapes.length) {
+      ctx.save();
+      ctx.translate(fx, fy);
+      drawShapes(ctx, input.shapes, fw, fh, document.body);
+      ctx.restore();
+    }
+    // A hairline so the frame reads as placed, not floating.
+    ctx.strokeStyle = "rgba(255,255,255,0.11)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(fx - 1, fy - 1, fw + 2, fh + 2);
+
+    // The focus — what this frame is teaching.
+    let y = bandBottom + 72;
+    if (input.playerName?.trim()) {
+      ctx.font = "600 22px ui-monospace, SFMono-Regular, Menlo, monospace";
+      ctx.fillStyle = "#838d99";
+      ctx.fillText(input.playerName.trim().toUpperCase(), pad, y);
+      y += 46;
+    }
+    if (input.note?.trim()) {
+      ctx.font = '700 40px "Big Shoulders", "Arial Narrow", sans-serif';
+      ctx.fillStyle = "#f3f5f8";
+      for (const line of wrap(ctx, input.note.trim().toUpperCase(), W - pad * 2, 2)) {
+        ctx.fillText(line, pad, y);
+        y += 50;
+      }
+    }
+
+    // Footer — MIDO's quiet signature.
+    ctx.strokeStyle = "rgba(255,255,255,0.11)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(pad, H - 92);
+    ctx.lineTo(W - pad, H - 92);
+    ctx.stroke();
+    ctx.font = '700 26px "Big Shoulders", "Arial Narrow", sans-serif';
+    ctx.fillStyle = "#838d99";
+    ctx.fillText("MIDO XI", pad, H - 48);
+    ctx.font = "500 20px ui-sans-serif, system-ui, sans-serif";
+    ctx.textAlign = "right";
+    ctx.fillText("mido11.com", W - pad, H - 50);
+    ctx.textAlign = "left";
+
+    return await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error("The image could not be encoded."));
+      }, "image/png");
+    });
+  } finally {
+    video.src = "";
+  }
+}
+
 /** Hand a blob to the browser as a file. */
 export function saveBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);

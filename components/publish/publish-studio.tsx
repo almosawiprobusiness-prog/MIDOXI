@@ -8,6 +8,7 @@ import {
   type PublishTemplate,
   type PublishFormat,
 } from "@/lib/publish/types";
+import { PUBLISH_ACCENTS } from "@/lib/publish/palette";
 
 /*
   The Publish studio.
@@ -27,12 +28,13 @@ export function PublishStudio({ available }: { available: Record<PublishTemplate
   const firstAvailable =
     PUBLISH_TEMPLATES.find((t) => available[t.key])?.key ?? PUBLISH_TEMPLATES[0]!.key;
   const [template, setTemplate] = useState<PublishTemplate>(firstAvailable);
-  const [format, setFormat] = useState<PublishFormat>("square");
+  const [format, setFormat] = useState<PublishFormat>("portrait");
+  const [accent, setAccent] = useState("signal");
   const [busy, setBusy] = useState<"download" | "share" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
 
-  const src = `/app/publish/image?template=${template}&format=${format}`;
+  const src = `/app/publish/image?template=${template}&format=${format}&accent=${accent}`;
   const filename = `mido-xi-${template}-${format}.png`;
 
   const fetchBlob = async () => {
@@ -89,7 +91,10 @@ export function PublishStudio({ available }: { available: Record<PublishTemplate
       <div className="min-w-0">
         <div
           className="relative mx-auto overflow-hidden rounded-xl border border-line bg-ink-950"
-          style={{ maxWidth: format === "story" ? 360 : 640, aspectRatio: `${dims.width} / ${dims.height}` }}
+          style={{
+            maxWidth: format === "story" ? 360 : format === "portrait" ? 480 : 640,
+            aspectRatio: `${dims.width} / ${dims.height}`,
+          }}
         >
           {!loaded && (
             <div className="absolute inset-0 grid place-items-center text-text-faint">
@@ -169,6 +174,28 @@ export function PublishStudio({ available }: { available: Record<PublishTemplate
               >
                 {f.label}
               </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div className="label-tech mb-2">Accent</div>
+          <div className="flex flex-wrap gap-2">
+            {PUBLISH_ACCENTS.map((c) => (
+              <button
+                key={c.key}
+                onClick={() => {
+                  setAccent(c.key);
+                  setLoaded(false);
+                }}
+                aria-pressed={accent === c.key}
+                aria-label={c.label}
+                title={c.label}
+                className={`size-7 rounded-full border-2 transition-transform ${
+                  accent === c.key ? "scale-110 border-text-hi" : "border-line hover:scale-105"
+                }`}
+                style={{ backgroundColor: c.value }}
+              />
             ))}
           </div>
         </div>

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
 import { getProfileSettings } from "@/lib/data/profile";
-import { postIssue, mediaIssue, youtubeId, type Visibility } from "@/lib/data/feed-types";
+import { postIssue, mediaIssue, captionIssue, youtubeId, type Visibility, type PostKind, POST_KINDS } from "@/lib/data/feed-types";
 import { notify } from "@/lib/notifications/notify";
 
 /*
@@ -66,6 +66,8 @@ export interface NewPost {
   /** A YouTube link, as an alternative to uploading. */
   youtubeUrl?: string | null;
   tags?: string[];
+  /** What the post is about; omitted for a general post. */
+  kind?: PostKind | null;
   visibility?: Visibility;
 }
 
@@ -116,6 +118,7 @@ export async function createPost(input: NewPost): Promise<FeedResult> {
       media_width: input.mediaWidth ?? null,
       media_height: input.mediaHeight ?? null,
       tags: input.tags?.length ? input.tags : null,
+      kind: input.kind && POST_KINDS.some((k) => k.value === input.kind) ? input.kind : null,
       visibility: input.visibility ?? "public",
     })
     .select("id")
@@ -172,6 +175,34 @@ async function uploadMedia(
   return { ok: true, url: data.publicUrl, kind: mime.startsWith("video") ? "video" : "photo" };
 }
 
+/**
+ * Change what a post says. The caption only — media is what the post IS, and
+ * swapping the picture under existing reactions and comments would make them
+ * refer to something their authors never saw. Delete and repost for that.
+ */
+export async function updatePost(id: string, caption: string): Promise<FeedResult> {
+  const issue = captionIssue(caption);
+  if (issue) return { ok: false, error: issue };
+
+  if (isDemoMode) {
+    refresh();
+    return { ok: true };
+  }
+  const { supabase, userId } = await me();
+  if (!supabase || !userId) return { ok: false, error: "You must be signed in." };
+
+  // A caption can be emptied only when media keeps the post from being
+  // nothing; the DB's not-empty check is the final word either way.
+  const { error } = await supabase
+    .from("community_posts")
+    .update({ caption: caption.trim() || null })
+    .eq("id", id)
+    .eq("user_id", userId);
+  if (error) return { ok: false, error: error.message };
+  refresh();
+  return { ok: true };
+}
+
 export async function deletePost(id: string): Promise<FeedResult> {
   if (isDemoMode) {
     refresh();
@@ -179,11 +210,66 @@ export async function deletePost(id: string): Promise<FeedResult> {
   }
   const { supabase, userId } = await me();
   if (!supabase || !userId) return { ok: false, error: "You must be signed in." };
+
+  // Read the media URL first: the row is about to go, and a deleted post's
+  // photo left behind in a public bucket is a post that only half-deleted.
+  const { data: row } = await supabase
+    .from("community_posts")
+    .select("media_url, media_kind")
+    .eq("id", id)
+    .eq("user_id", userId)
+    .maybeSingle();
+
   // RLS already restricts this to the author; the filter makes that visible.
   const { error } = await supabase.from("community_posts").delete().eq("id", id).eq("user_id", userId);
   if (error) return { ok: false, error: error.message };
+
+  // Best-effort object removal — only for uploads (a YouTube post stores an
+  // id, not an object), and only within this user's own folder.
+  if (row?.media_url && row.media_kind !== "youtube") {
+    const path = String(row.media_url).split("/object/public/posts/")[1];
+    if (path && path.startsWith(`${userId}/`)) {
+      const admin = createAdminClient();
+      if (admin) await admin.storage.from("posts").remove([path]);
+    }
+  }
+
   refresh();
   return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Saving
+// ---------------------------------------------------------------------------
+
+/**
+ * A private bookmark. No notification to the author and no count anywhere —
+ * the entire point of a save is that it is between the player and their own
+ * development, not a public signal.
+ */
+export async function toggleSave(postId: string): Promise<{ ok: boolean; saved?: boolean; error?: string }> {
+  if (isDemoMode) return { ok: true, saved: true };
+
+  const { supabase, userId } = await me();
+  if (!supabase || !userId) return { ok: false, error: "You must be signed in." };
+
+  const { data: existing } = await supabase
+    .from("post_saves")
+    .select("post_id")
+    .eq("post_id", postId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (existing) {
+    await supabase.from("post_saves").delete().eq("post_id", postId).eq("user_id", userId);
+    refresh();
+    return { ok: true, saved: false };
+  }
+
+  const { error } = await supabase.from("post_saves").insert({ post_id: postId, user_id: userId });
+  if (error) return { ok: false, error: error.message };
+  refresh();
+  return { ok: true, saved: true };
 }
 
 // ---------------------------------------------------------------------------

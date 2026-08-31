@@ -24,6 +24,26 @@
 export type MediaKind = "photo" | "video" | "youtube";
 export type Visibility = "public" | "followers";
 
+/*
+  What a post is about. Set by the composer, never guessed after the
+  fact — old rows stay null and render as general posts. The order
+  here is the order of the feed's filter row.
+*/
+export type PostKind = "training" | "match" | "film" | "study" | "development" | "milestone";
+
+export const POST_KINDS: { value: PostKind; label: string }[] = [
+  { value: "training", label: "Training" },
+  { value: "match", label: "Match" },
+  { value: "film", label: "Film" },
+  { value: "study", label: "Study" },
+  { value: "development", label: "Development" },
+  { value: "milestone", label: "Milestone" },
+];
+
+export function kindLabel(kind: PostKind | null): string | null {
+  return POST_KINDS.find((k) => k.value === kind)?.label ?? null;
+}
+
 export interface PostMedia {
   kind: MediaKind;
   /** Public bucket URL, or a YouTube id for `youtube`. */
@@ -55,11 +75,15 @@ export interface Post {
     videoExternalId: string | null;
   } | null;
   tags: string[];
+  /** What the post is about; null for a general post. */
+  kind: PostKind | null;
   visibility: Visibility;
   createdAt: string;
   likes: number;
   comments: number;
   likedByMe: boolean;
+  /** Private bookmark — only ever the reader's own state, never a count. */
+  savedByMe: boolean;
   /** True when the signed-in reader wrote it. */
   mine: boolean;
 }
@@ -70,6 +94,10 @@ export interface ProfileSummary {
   handle: string | null;
   position: string | null;
   club: string | null;
+  /** Shirt number — worn publicly every weekend, so public here too. */
+  squadNumber: number | null;
+  /** The public "my game" line the player wrote about themselves. */
+  playStyle: string | null;
   avatar: string | null;
   bio: string | null;
   posts: number;

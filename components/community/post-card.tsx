@@ -4,57 +4,78 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { Avatar } from "@/components/ui/avatar";
 import {
-  Heart,
-  MessageCircle,
   MoreHorizontal,
   Flag,
   Trash2,
   UserX,
   Loader2,
+  Pencil,
 } from "lucide-react";
-import { blockUser, deletePost, reportPost, toggleLike } from "@/app/app/community/feed-actions";
 import {
+  blockUser,
+  deletePost,
+  reportPost,
+  toggleLike,
+  toggleSave,
+  updatePost,
+} from "@/app/app/community/feed-actions";
+import {
+  CAPTION_MAX,
   REPORT_REASONS,
   aspectOf,
   compactCount,
   displayHandle,
+  kindLabel,
   timeAgo,
   type Post,
 } from "@/lib/data/feed-types";
+import { fmtTime } from "@/lib/data/film-types";
 import { cn } from "@/lib/utils";
 
 /*
-  One post in the feed.
+  One post in the feed — the Framer-designed anatomy.
 
-  The media is the post and the words go underneath — which is the whole
-  difference between this and the forum it replaces, where a title came first
-  and a clip was an attachment.
+  Identity in a single mono-caps line, then the media LARGE (the post
+  is the image), then a native data kicker in the display voice — FILM
+  REVIEW / 6:14 / CLOSED BODY — because MIDO-generated facts should
+  read as part of the post, not as an embedded dashboard widget. A
+  study post with no media becomes a quote card: the insight IS the
+  media. The action row is words, not icon soup: APPRECIATE · COMMENT
+  · SAVE · SHARE.
 
   Three details that are easy to skip and would each be felt:
 
-  · The aspect ratio is reserved BEFORE the image loads. Without it every
-    picture that lands shoves the rest of the feed down, and on a phone that
-    means tapping the wrong post.
-
-  · The like is optimistic. A heart that waits for a round trip feels broken,
-    and the failure case — the count is briefly wrong — costs nothing.
-
-  · Report and block are on every post, one tap from the corner, for anybody.
-    Not buried in settings, and not something you have to be an admin to reach.
+  · The aspect ratio is reserved BEFORE the image loads, so nothing
+    below jumps when a picture lands.
+  · Appreciate and Save are optimistic — a control that waits for a
+    round trip feels broken, and the failure case costs nothing.
+  · Report and block are on every post, one tap from the corner, for
+    anybody. Not buried in settings.
 */
+
+/** The kicker's colour follows the football, not decoration. */
+function kickerClass(kind: Post["kind"]): string {
+  if (kind === "match") return "text-positive";
+  if (kind === "study") return "text-signal-bright";
+  return "text-text-hi";
+}
 
 export function PostCard({ post }: { post: Post }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [liked, setLiked] = useState(post.likedByMe);
   const [likes, setLikes] = useState(post.likes);
+  const [saved, setSaved] = useState(post.savedByMe);
   const [menu, setMenu] = useState(false);
   const [reporting, setReporting] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(post.caption);
   const [done, setDone] = useState<string | null>(null);
 
   const like = () => {
-    // Optimistic: the heart moves now, the server catches up.
+    // Optimistic: the word moves now, the server catches up.
     const next = !liked;
     setLiked(next);
     setLikes((n) => n + (next ? 1 : -1));
@@ -67,27 +88,61 @@ export function PostCard({ post }: { post: Post }) {
     });
   };
 
+  const save = () => {
+    const next = !saved;
+    setSaved(next);
+    start(async () => {
+      const res = await toggleSave(post.id);
+      if (!res.ok) setSaved(!next);
+    });
+  };
+
+  const share = async () => {
+    const url = `${window.location.origin}/app/community/posts/${post.id}`;
+    try {
+      if (navigator.share) await navigator.share({ url });
+      else {
+        await navigator.clipboard.writeText(url);
+        setDone("Link copied.");
+      }
+    } catch {
+      /* an abandoned share sheet is a choice, not an error */
+    }
+  };
+
+  const saveEdit = () =>
+    start(async () => {
+      const res = await updatePost(post.id, draft);
+      if (res.ok) {
+        setEditing(false);
+        router.refresh();
+      } else setDone(res.error);
+    });
+
   const profileHref = post.author.handle
     ? `/app/community/${post.author.handle}`
-    : `/app/community/${post.author.userId}`;
+    : `/app/community/players/${post.author.userId}`;
+
+  // A study insight with no picture is a quote card — the words are the media.
+  const asQuote = post.kind === "study" && !post.media && post.caption;
 
   return (
-    <article className="border-b border-line pb-4">
-      {/* Author */}
+    <article className="border-b border-line pb-5">
+      {/* Identity — one line, mono caps, the way the rest of MIDO speaks. */}
       <header className="flex items-center gap-2.5 px-1 py-3">
         <Link href={profileHref} className="shrink-0">
-          <Avatar url={post.author.avatar} name={post.author.name} size={34} />
+          <Avatar url={post.author.avatar} name={post.author.name} size={36} />
         </Link>
         <div className="min-w-0 flex-1">
           <Link href={profileHref} className="block truncate text-sm font-medium text-text-hi hover:underline">
             {post.author.name}
           </Link>
-          <span className="block truncate text-xs text-text-faint">
-            {displayHandle(post.author)}
-            {post.author.position ? ` · ${post.author.position}` : ""}
+          <span className="data-mono block truncate text-[10px] uppercase tracking-wider text-text-faint">
+            {[post.author.position, displayHandle(post.author)].filter(Boolean).join(" · ")}
+            {" · "}
+            {timeAgo(post.createdAt)}
           </span>
         </div>
-        <span className="shrink-0 text-xs text-text-faint">{timeAgo(post.createdAt)}</span>
 
         <div className="relative shrink-0">
           <button
@@ -100,18 +155,30 @@ export function PostCard({ post }: { post: Post }) {
           {menu && (
             <div className="absolute right-0 top-6 z-20 w-52 overflow-hidden rounded-lg border border-line bg-ink-900 shadow-xl shadow-black/40">
               {post.mine ? (
-                <button
-                  onClick={() =>
-                    start(async () => {
-                      await deletePost(post.id);
+                <>
+                  <button
+                    onClick={() => {
+                      setEditing(true);
+                      setDraft(post.caption);
                       setMenu(false);
-                      router.refresh();
-                    })
-                  }
-                  className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-correction transition-colors hover:bg-ink-850"
-                >
-                  <Trash2 className="size-3.5" /> Delete post
-                </button>
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-text transition-colors hover:bg-ink-850"
+                  >
+                    <Pencil className="size-3.5" /> Edit caption
+                  </button>
+                  <button
+                    onClick={() =>
+                      start(async () => {
+                        await deletePost(post.id);
+                        setMenu(false);
+                        router.refresh();
+                      })
+                    }
+                    className="flex w-full items-center gap-2 border-t border-line px-3 py-2.5 text-left text-sm text-correction transition-colors hover:bg-ink-850"
+                  >
+                    <Trash2 className="size-3.5" /> Delete post
+                  </button>
+                </>
               ) : (
                 <>
                   <button
@@ -142,10 +209,10 @@ export function PostCard({ post }: { post: Post }) {
         </div>
       </header>
 
-      {/* Media */}
+      {/* Media — the post itself. */}
       {post.media && (
         <div
-          className="relative w-full overflow-hidden bg-ink-850"
+          className="relative w-full overflow-hidden rounded-lg border border-line bg-ink-850"
           // Reserved before it loads, so nothing below jumps.
           style={{ aspectRatio: aspectOf(post.media) }}
         >
@@ -171,49 +238,106 @@ export function PostCard({ post }: { post: Post }) {
               alt=""
               fill
               unoptimized
-              sizes="(max-width: 640px) 100vw, 560px"
+              sizes="(max-width: 640px) 100vw, 640px"
               className="object-cover"
             />
           )}
         </div>
       )}
 
-      {/* Actions */}
-      <div className="flex items-center gap-4 px-1 pt-3">
-        <button
-          onClick={like}
-          aria-label={liked ? "Unlike" : "Like"}
-          aria-pressed={liked}
+      {/* The quote card — a study insight where the words are the media. */}
+      {asQuote && (
+        <blockquote className="rounded-lg border border-signal-line bg-signal-wash px-5 py-6">
+          <p className="font-display text-2xl font-bold uppercase leading-tight text-text-hi">
+            “{post.caption}”
+          </p>
+        </blockquote>
+      )}
+
+      {/*
+        The kicker — MIDO's facts, set in the display voice, native to
+        the post. FILM REVIEW / 6:14 / CLOSED BODY.
+      */}
+      {(post.kind || post.clip) && !asQuote && (
+        <div
           className={cn(
-            "flex items-center gap-1.5 text-sm transition-colors",
-            liked ? "text-correction" : "text-text-dim hover:text-text",
+            "font-display px-1 pt-3 text-lg font-bold uppercase leading-none tracking-wide",
+            kickerClass(post.kind),
           )}
         >
-          <Heart className={cn("size-5", liked && "fill-current")} />
-          {likes > 0 && <span className="data-mono text-xs">{compactCount(likes)}</span>}
+          {[
+            post.kind === "film" && post.clip ? "Film review" : kindLabel(post.kind),
+            post.clip ? fmtTime(post.clip.start) : null,
+            post.clip?.title ?? post.tags[0] ?? null,
+          ]
+            .filter(Boolean)
+            .join(" / ")}
+        </div>
+      )}
+
+      {/* Actions — words, quietly. */}
+      <div className="data-mono flex items-center gap-4 px-1 pt-3 text-[11px] uppercase tracking-wider">
+        <button
+          onClick={like}
+          aria-pressed={liked}
+          className={cn("transition-colors", liked ? "text-signal-bright" : "text-text-dim hover:text-text")}
+        >
+          Appreciate{likes > 0 ? ` ${compactCount(likes)}` : ""}
         </button>
         <Link
           href={`/app/community/posts/${post.id}`}
-          className="flex items-center gap-1.5 text-sm text-text-dim transition-colors hover:text-text"
+          className="text-text-dim transition-colors hover:text-text"
         >
-          <MessageCircle className="size-5" />
-          {post.comments > 0 && (
-            <span className="data-mono text-xs">{compactCount(post.comments)}</span>
-          )}
+          Comment{post.comments > 0 ? ` ${compactCount(post.comments)}` : ""}
         </Link>
+        <button
+          onClick={save}
+          aria-pressed={saved}
+          className={cn("transition-colors", saved ? "text-signal-bright" : "text-text-dim hover:text-text")}
+        >
+          {saved ? "Saved" : "Save"}
+        </button>
+        <button onClick={share} className="text-text-dim transition-colors hover:text-text">
+          Share
+        </button>
       </div>
 
       {/* Caption */}
-      {post.caption && (
-        <p className="whitespace-pre-line px-1 pt-2 text-sm leading-relaxed text-text">
-          <Link href={profileHref} className="font-medium text-text-hi hover:underline">
-            {displayHandle(post.author)}
-          </Link>{" "}
-          {post.caption}
-        </p>
+      {editing ? (
+        <div className="px-1 pt-2">
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value.slice(0, CAPTION_MAX))}
+            rows={3}
+            autoFocus
+            className="w-full resize-none rounded-lg border border-signal-line bg-ink-850 px-3 py-2 text-sm text-text-hi focus:outline-none"
+          />
+          <div className="mt-2 flex items-center gap-2">
+            <button
+              onClick={saveEdit}
+              disabled={pending}
+              className="h-8 rounded-lg border border-signal-line bg-signal/10 px-3 text-xs font-medium text-signal-bright disabled:opacity-50"
+            >
+              Save
+            </button>
+            <button
+              onClick={() => setEditing(false)}
+              className="h-8 rounded-lg border border-line px-3 text-xs text-text-dim"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        post.caption &&
+        !asQuote && (
+          <p className="whitespace-pre-line px-1 pt-2 text-sm leading-relaxed text-text">
+            {post.caption}
+          </p>
+        )
       )}
 
-      {post.tags.length > 0 && (
+      {post.tags.length > 0 && !asQuote && (
         <div className="flex flex-wrap gap-1.5 px-1 pt-2">
           {post.tags.map((t) => (
             <span key={t} className="chip">
@@ -301,39 +425,5 @@ function ReportDialog({
   );
 }
 
-export function Avatar({
-  url,
-  name,
-  size = 34,
-}: {
-  url: string | null;
-  name: string;
-  size?: number;
-}) {
-  const initials =
-    name
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((w) => w[0]?.toUpperCase())
-      .join("") || "?";
-
-  return url ? (
-    <Image
-      src={url}
-      alt=""
-      width={size}
-      height={size}
-      unoptimized
-      className="shrink-0 rounded-full border border-line object-cover"
-      style={{ width: size, height: size }}
-    />
-  ) : (
-    <span
-      className="grid shrink-0 place-items-center rounded-full border border-line bg-ink-850 font-display font-bold text-text-faint"
-      style={{ width: size, height: size, fontSize: size * 0.36 }}
-    >
-      {initials}
-    </span>
-  );
-}
+// The avatar became a shared primitive; re-exported so existing imports keep working.
+export { Avatar } from "@/components/ui/avatar";

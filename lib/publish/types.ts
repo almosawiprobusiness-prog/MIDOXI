@@ -13,9 +13,11 @@ export const PUBLISH_TEMPLATES: { key: PublishTemplate; label: string; needs: st
   { key: "season", label: "Season snapshot", needs: "logged matches" },
 ];
 
-export type PublishFormat = "square" | "story" | "landscape";
+export type PublishFormat = "portrait" | "square" | "story" | "landscape";
 
 export const PUBLISH_FORMATS: { key: PublishFormat; label: string; width: number; height: number }[] = [
+  // Portrait first — the feed's native shape, and the one most players want.
+  { key: "portrait", label: "Post · 1080×1350", width: 1080, height: 1350 },
   { key: "square", label: "Square · 1080", width: 1080, height: 1080 },
   { key: "story", label: "Story · 1080×1920", width: 1080, height: 1920 },
   { key: "landscape", label: "Card · 1200×630", width: 1200, height: 630 },
@@ -30,6 +32,8 @@ export interface PublishIdentity {
   position: string;
   club: string;
   squadNumber: number | null;
+  /** Public avatar URL, when the player has set a photo. */
+  avatarUrl?: string | null;
 }
 
 export interface MatchCardData {
