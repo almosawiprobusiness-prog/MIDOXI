@@ -3,11 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Play, Pause, Plus, Trash2, Loader2, CheckCircle2, Clock, Target, Dumbbell } from "lucide-react";
+import { Play, Pause, Plus, Trash2, Loader2, CheckCircle2, Clock, Target, Dumbbell, ExternalLink } from "lucide-react";
 import { studyKey } from "@/lib/intelligence/context";
 import { addStudyNote, deleteStudyNote, completeStudySession } from "@/app/app/film-room/study/actions";
 import { NOTE_KINDS, noteMeta, type StudySession, type StudyNote, type StudyNoteKind } from "@/lib/data/study-types";
-import { fmtTime, type Video } from "@/lib/data/film-types";
+import { fmtTime, videoUrlKind, type Video } from "@/lib/data/film-types";
 import { useFilmPlayer } from "./use-film-player";
 import { YouTubeStage } from "./youtube-stage";
 
@@ -24,6 +24,19 @@ export function StudySessionView({
 }) {
   const router = useRouter();
   const isYouTube = video?.source === "youtube";
+  /*
+    A page-embed source (sport.video, a club stream) reached study mode
+    as a bare <video src="…html page…"> — a black rectangle with a
+    0:00 timeline, the exact failure the film room's classifier exists
+    to prevent. Study mode now takes the same branch the film room
+    takes: the site's own player in an iframe, and because another
+    origin's player exposes no playhead, the note stamp becomes the
+    clock the player READS off the screen and types — the
+    EmbeddedStage contract, applied to studying.
+  */
+  const pageKind = video?.source === "url" ? videoUrlKind(video.url) : null;
+  const isPage = pageKind?.kind === "page";
+  const pageHost = isPage && pageKind?.kind === "page" ? pageKind.host : null;
 
   /*
     Study Mode drives whichever player is here, through the shared hook.
@@ -56,16 +69,29 @@ export function StudySessionView({
   const [stamp, setStamp] = useState(true);
   const [busy, setBusy] = useState(false);
 
+  // The typed clock for page embeds, where no playhead is readable.
+  const [manualMin, setManualMin] = useState("");
+  const [manualSec, setManualSec] = useState("");
+
   // completion
   const [summary, setSummary] = useState(session.summary ?? "");
   const [completing, setCompleting] = useState(false);
   const [completeBusy, setCompleteBusy] = useState(false);
 
+  const manualSeconds = () => {
+    const m = parseInt(manualMin || "0", 10);
+    const s = parseInt(manualSec || "0", 10);
+    if (!Number.isFinite(m) || !Number.isFinite(s)) return null;
+    return Math.max(0, m * 60 + Math.min(59, Math.max(0, s)));
+  };
+
   const addNote = async () => {
     if (!body.trim()) return;
     setBusy(true);
     // `stamp` alone now — a YouTube playhead is as real as any other.
-    await addStudyNote(session.id, kind, body, stamp ? current : null);
+    // On a page embed the stamp is the clock the player typed.
+    const at = stamp ? (isPage ? manualSeconds() : current) : null;
+    await addStudyNote(session.id, kind, body, at);
     setBusy(false);
     setBody("");
     router.refresh();
@@ -91,6 +117,15 @@ export function StudySessionView({
         <div className="overflow-hidden rounded-xl border border-line bg-black shadow-2xl shadow-black/40">
           {isYouTube && video?.externalId ? (
             <YouTubeStage externalId={video.externalId} {...youtubeHandlers} onUnavailable={() => {}} />
+          ) : video && isPage ? (
+            <iframe
+              src={video.url}
+              title={video.title}
+              className="aspect-video w-full"
+              allow="fullscreen; autoplay; encrypted-media; picture-in-picture"
+              allowFullScreen
+              referrerPolicy="no-referrer"
+            />
           ) : video ? (
             <video
               ref={videoRef}
@@ -105,8 +140,25 @@ export function StudySessionView({
           )}
         </div>
 
-        {/* Shown for both sources now that both have a playhead. */}
-        {video && (
+        {isPage && pageHost && (
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs leading-relaxed text-text-faint">
+              {pageHost} plays the football; MIDO keeps the notes. Its player keeps its own
+              clock — type it when you stamp a note.
+            </p>
+            <a
+              href={video!.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-signal-bright transition-colors hover:text-signal"
+            >
+              Open on {pageHost} <ExternalLink className="size-3" />
+            </a>
+          </div>
+        )}
+
+        {/* The transport drives OUR players; another origin's player drives itself. */}
+        {video && !isPage && (
           <div className="mt-3 flex items-center gap-3 rounded-lg border border-line bg-ink-900 p-3">
             <button onClick={togglePlay} aria-label={playing ? "Pause" : "Play"} className="grid size-9 place-items-center rounded-lg bg-signal text-white transition-colors hover:bg-signal-deep">
               {playing ? <Pause className="size-4" /> : <Play className="size-4" />}
@@ -143,7 +195,29 @@ export function StudySessionView({
             <p className="mb-2 text-xs text-text-faint">{noteMeta(kind).hint}</p>
             <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={3} placeholder="Type your note…" className="w-full resize-y rounded-lg border border-line bg-ink-850 px-3 py-2 text-sm text-text-hi placeholder:text-text-faint focus:border-signal-line focus:outline-none" />
             <div className="mt-2 flex items-center justify-between">
-              {video ? (
+              {video && isPage ? (
+                <label className="flex items-center gap-1.5 text-xs text-text-dim">
+                  <input type="checkbox" checked={stamp} onChange={(e) => setStamp(e.target.checked)} className="accent-[var(--signal)]" />
+                  <Clock className="size-3.5" /> Stamp
+                  <input
+                    value={manualMin}
+                    onChange={(e) => setManualMin(e.target.value.replace(/\D/g, "").slice(0, 3))}
+                    placeholder="min"
+                    inputMode="numeric"
+                    aria-label="Minute on the player's clock"
+                    className="h-7 w-12 rounded-md border border-line bg-ink-850 text-center text-xs text-text-hi placeholder:text-text-faint focus:border-signal-line focus:outline-none"
+                  />
+                  :
+                  <input
+                    value={manualSec}
+                    onChange={(e) => setManualSec(e.target.value.replace(/\D/g, "").slice(0, 2))}
+                    placeholder="sec"
+                    inputMode="numeric"
+                    aria-label="Second on the player's clock"
+                    className="h-7 w-12 rounded-md border border-line bg-ink-850 text-center text-xs text-text-hi placeholder:text-text-faint focus:border-signal-line focus:outline-none"
+                  />
+                </label>
+              ) : video ? (
                 <label className="flex items-center gap-1.5 text-xs text-text-dim">
                   <input type="checkbox" checked={stamp} onChange={(e) => setStamp(e.target.checked)} className="accent-[var(--signal)]" />
                   <Clock className="size-3.5" /> Stamp {fmtTime(current)}
@@ -167,11 +241,15 @@ export function StudySessionView({
               <div key={n.id} className="group panel p-3">
                 <div className="flex items-center gap-2">
                   <span className="label-tech" style={{ color: meta.color }}>{meta.label}</span>
-                  {n.atSeconds != null && (
+                  {n.atSeconds != null && isPage ? (
+                    // Another origin's player cannot be seeked — the
+                    // clock is a fact to scrub to, not a button.
+                    <span className="data-mono text-[11px] text-text-faint">{fmtTime(n.atSeconds)}</span>
+                  ) : n.atSeconds != null ? (
                     <button onClick={() => { seek(n.atSeconds!); void player().play(); }} className="data-mono text-[11px] text-text-faint hover:text-signal-bright">
                       {fmtTime(n.atSeconds)}
                     </button>
-                  )}
+                  ) : null}
                   {!session.completed && (
                     <button onClick={() => removeNote(n.id)} aria-label="Delete note" className="ml-auto text-text-faint opacity-0 transition-opacity hover:text-correction group-hover:opacity-100">
                       <Trash2 className="size-3.5" />
