@@ -1,0 +1,67 @@
+{
+  "configId": "F",
+  "passageId": "p3",
+  "model": "gemini-2.5-flash",
+  "source": "file",
+  "identity": true,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 22851,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 4165,
+    "thinkingTokens": 3235,
+    "outputTokens": 449,
+    "total": 7849,
+    "detail": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 811
+      },
+      {
+        "modality": "VIDEO",
+        "tokenCount": 3354
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "The viewer, identified by their royal blue shirt, operates primarily on the left wing despite being designated as a central attacker. There is a general lack of central attacking movement and support for the ball carrier throughout the clip.",
+    "observations": [
+      {
+        "atSeconds": 0,
+        "title": "Initial central positioning",
+        "body": "The viewer is positioned centrally in the attacking half as their team (green) has possession on the left flank. They are ahead of the ball, but not making a specific run.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 3,
+        "title": "No immediate defensive engagement",
+        "body": "When possession is lost by a teammate, the viewer does not immediately engage in a counter-press or track back to help win the ball. They continue moving forward for a moment before slowing.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 5,
+        "title": "Drifting from central role",
+        "body": "As the opposing team (white) gains possession and builds play, the viewer drifts significantly from a central attacking position towards the left wing. This takes them out of a primary attacking channel.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 9,
+        "title": "Lack of central support after regaining possession",
+        "body": "When the viewer's team (green) regains possession, the viewer remains wide on the left wing. They do not move back into a central position to offer a passing option or make a run as a central attacker.",
+        "confidence": "observed",
+        "aboutViewer": true
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "kit-and-role",
+      "couldMatchOthers": 0
+    }
+  },
+  "at": "2026-08-31T03:58:03.437Z"
+}

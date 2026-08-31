@@ -1,0 +1,64 @@
+{
+  "configId": "E",
+  "passageId": "p2",
+  "model": "gemini-3.7-flash",
+  "source": "yt",
+  "identity": true,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 12890,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 2476,
+    "thinkingTokens": 634,
+    "outputTokens": 365,
+    "total": 3475,
+    "detail": [
+      {
+        "modality": "VIDEO",
+        "tokenCount": 990
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 1110
+      },
+      {
+        "modality": "AUDIO",
+        "tokenCount": 376
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "A direct free-kick opportunity taken from central range outside the penalty area. The taker sends a dipping strike over the defensive wall that rattles against the crossbar, followed by a scramble as defenders recover the rebound.",
+    "observations": [
+      {
+        "atSeconds": 44,
+        "title": "Wall alignment and dead-ball setup",
+        "body": "The defending team establishes a five-player wall centrally while the goalkeeper positions slightly toward the left side of the goal frame. The dead-ball taker stands over the ball with a direct sightline toward the target.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 50,
+        "title": "Direct strike cleared over wall",
+        "body": "The free-kick taker approaches with a measured run-up and drives the ball with the right foot, lifting it cleanly over the jumping wall toward the upper corner of the net.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 52,
+        "title": "Woodwork strike and rebound pursuit",
+        "body": "The shot beats the leaping goalkeeper and strikes off the crossbar before bouncing down near the goal area. Attackers and defenders both react toward the landing zone to contest the loose ball.",
+        "confidence": "observed",
+        "aboutViewer": false
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "kit-and-role",
+      "couldMatchOthers": 9
+    }
+  },
+  "at": "2026-08-31T03:56:32.803Z"
+}

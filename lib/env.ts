@@ -47,6 +47,7 @@ export const env = {
   whoopClientId: clean(process.env.WHOOP_CLIENT_ID),
   whoopClientSecret: clean(process.env.WHOOP_CLIENT_SECRET),
   geminiVideoModel: clean(process.env.GEMINI_VIDEO_MODEL),
+  geminiVideoModelDeep: clean(process.env.GEMINI_VIDEO_MODEL_DEEP),
   youtubeKey: clean(process.env.YOUTUBE_API_KEY),
   // Global monthly Claude spend ceiling in USD. 0 / unset = no cap.
   aiMonthlyBudgetUsd: Number(clean(process.env.AI_MONTHLY_BUDGET_USD)) || 0,

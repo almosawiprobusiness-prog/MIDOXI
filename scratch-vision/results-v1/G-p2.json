@@ -1,0 +1,67 @@
+{
+  "configId": "G",
+  "passageId": "p2",
+  "model": "gemini-2.5-pro",
+  "source": "file",
+  "identity": true,
+  "mediaResolution": "MEDIA_RESOLUTION_MEDIUM",
+  "status": 200,
+  "latencyMs": 23755,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 4948,
+    "thinkingTokens": 1669,
+    "outputTokens": 532,
+    "total": 7149,
+    "detail": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 820
+      },
+      {
+        "modality": "VIDEO",
+        "tokenCount": 4128
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "The clip shows a defensive free kick situation. The viewer, identified as the player in the white #10 shirt, holds a central defensive position in the box and maintains discipline until the direct shot goes wide for a goal kick.",
+    "observations": [
+      {
+        "atSeconds": 9,
+        "title": "Defensive Wall and Zonal Marking",
+        "body": "The defending team (white) sets up a four-player wall for the direct free kick. Other defenders, including the player identified as the viewer, are positioned inside the penalty area, appearing to mark zonally rather than man-to-man. The initial setup is compact and covers the central area of the goal.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 10,
+        "title": "Viewer's Position in the Defensive Structure",
+        "body": "You are positioned centrally, near the penalty spot, as part of the defensive unit for the free kick. You are goal-side of an attacker but are not tightly marking them, instead holding a zone and watching the ball. This positioning allows you to react to the initial shot and any potential rebounds.",
+        "confidence": "uncertain",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 13,
+        "title": "Holding Position Until Threat is Clear",
+        "body": "As the shot is taken, you hold your ground and watch the ball's trajectory. You do not break from your defensive shape or turn upfield until the ball has clearly gone wide and out of play. This shows good discipline in a set-piece situation.",
+        "confidence": "uncertain",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 14,
+        "title": "Direct Shot Misses Target",
+        "body": "The attacking team attempts a direct shot on goal from the free kick. The shot is low and aimed at the near post but goes wide, resulting in a goal kick. The defensive wall and goalkeeper positioning were not ultimately tested by the final execution.",
+        "confidence": "observed",
+        "aboutViewer": false
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "kit-and-role",
+      "couldMatchOthers": 7
+    }
+  },
+  "at": "2026-08-31T03:59:17.504Z"
+}

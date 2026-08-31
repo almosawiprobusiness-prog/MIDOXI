@@ -8,6 +8,7 @@ import { features } from "@/lib/env";
 import {
   CLIP_MAX_SECONDS,
   clipLengthIssue,
+  identityLevelFrom,
   type AnalysisObservation,
   type AnalysisOutcome,
   type AnalysisRequest,
@@ -16,6 +17,7 @@ import {
 } from "./provider";
 import {
   INLINE_MAX_BYTES,
+  DEEP_VIDEO_MODEL,
   MAX_SOURCE_BYTES,
   VIDEO_MODEL,
   filesApiAvailable,
@@ -73,12 +75,17 @@ HARD RULES — these are not style preferences:
 - NEVER state distances, speeds, or any measurement. You are watching video, not tracking data. "He covers 8 metres" would be fabrication.
 - NEVER name real players, teams or competitions. You do not know who these people are.
 - Anchor every observation to a timestamp in MM:SS as it appears in the video.
+- BEFORE attributing anything, establish the scene: what colour each TEAM wears, which direction each attacks, and what the officials wear (referees often wear bright blue, yellow or green — a referee is never the viewer). If the viewer's stated kit matches no outfield player — or matches an official — say exactly that in the summary, set basis "none", and write about the passage instead.
+- If the footage cuts to different teams, kits or lighting mid-window, say so. NEVER carry the viewer's identity across a cut into a different game — a new scene means the identification audit starts again.
 - FIRST, before anything else, audit whether you can actually pick the viewer out, and report it in "identification". Be literal and do not be agreeable:
     · "squadNumberLegible" — can you genuinely READ numbers on shirts in this footage? In amateur video shot from the touchline, you usually cannot. If you cannot, say false.
     · "basis" — "squad-number" only if you actually read their number. "kit-and-role" if all you have is their kit colour and position. "none" if you have neither.
     · "couldMatchOthers" — how many OTHER players on the pitch fit the description just as well. If eleven players wear red and you cannot read numbers, that is 10.
   Getting this wrong is the worst thing you can do here. Agreeing that you found someone you did not find produces confident coaching aimed at a stranger.
-- Set "aboutViewer" true on any observation that describes the viewer specifically, and false on observations about the passage, a team, or play in general.
+- Set "aboutViewer" true on any observation that describes the viewer specifically, and false on observations about the passage, a team, or play in general. When basis is "none", never write "you", "your" or "the viewer" in any observation — there is no identified viewer to address.
+- OUTCOMES are facts, not guesses: say a shot was a goal, saved, off the woodwork or wide ONLY when the film visibly settles it (ball in the net, keeper holding it, ball out of play). If the resolution is not visible — blur, cut, occlusion — say the outcome is not visible. An invented save is as wrong as an invented goal.
+- Call a SCAN observed only when a clear head-turn away from the ball is visible in the footage. "Possible scan" belongs in "uncertain". Do not turn ordinary glances into tactical scanning.
+- The read is FOR the viewer. Use other players as context for what the viewer's team is doing — do not narrate the whole game player by player.
 - Mark every observation:
     "observed"  — it happens in the film and you could point at it
     "inferred"  — it follows from what is visible, but it is your judgement
@@ -211,6 +218,22 @@ export const nativeVideo: VideoAnalysisProvider = {
     if (!(await consumeFeature("deep_analyses"))) {
       return { ok: false, error: "Film analysis is unavailable on this plan." };
     }
+    /*
+      A deep read runs the pro model and costs two film reads — priced by
+      measurement (docs/product/AI_COST_MODEL.md), not marketing. The second
+      unit is consumed up front like the first; if it cannot be, the first is
+      given back and the read refuses honestly rather than running at a price
+      the plan did not agree to.
+    */
+    if ((request.depth ?? "quick") === "deep") {
+      if (!(await consumeFeature("deep_analyses"))) {
+        await releaseFeature("deep_analyses");
+        return {
+          ok: false,
+          error: "A deep read uses two film reads and only one is left this month. Run a quick read, or come back next month.",
+        };
+      }
+    }
 
     const started = Date.now();
     const concepts = CONCEPTS.filter((c) => request.viewer.concepts.includes(c.slug)).slice(0, 6);
@@ -219,21 +242,26 @@ export const nativeVideo: VideoAnalysisProvider = {
     /*
       What MIDO already knows about this player, appended to the system prompt.
 
-      It goes in the SYSTEM block rather than the user turn because that block
-      is cached for an hour — so a player reading five clips in an evening pays
-      for their memory once. It is also the right place semantically: these are
+      It goes in the SYSTEM block rather than the user turn because these are
       standing facts, not part of this particular question.
     */
     const memory = memoryPromptBlock(await listMemory());
 
-    let res = await generateFromVideo<VideoAnswer>({
-      system: memory ? `${SYSTEM}
-
-${memory}` : SYSTEM,
+    /*
+      One payload builder for every attempt. The retry path used to
+      rebuild this by hand and any prompt change had to be made twice —
+      the second copy silently drifting was a real failure waiting.
+    */
+    const payloadFor = (
+      src: { fileUri: string; mimeType: string; inlineBase64?: string },
+      model: string,
+    ) => ({
+      system: memory ? `${SYSTEM}\n\n${memory}` : SYSTEM,
+      model,
       video: {
-        fileUri: resolved.fileUri,
-        mimeType: resolved.mimeType,
-        inlineBase64: resolved.inlineBase64,
+        fileUri: src.fileUri,
+        mimeType: src.mimeType,
+        inlineBase64: src.inlineBase64,
         startSeconds: request.fromSeconds,
         endSeconds: request.toSeconds,
       },
@@ -267,6 +295,28 @@ ${memory}` : SYSTEM,
     });
 
     /*
+      Depth routing — proven by benchmark, not preference (see
+      docs/product/VISION_ACCURACY_BENCHMARK.md). Quick reads run the
+      fast model; deep reads run the pro model, and if the pro model
+      refuses, the read falls back to the fast model ONCE and says so,
+      because a read that silently downgraded would let two different
+      qualities wear the same label.
+    */
+    const depth = request.depth ?? "quick";
+    let usedModel = depth === "deep" ? DEEP_VIDEO_MODEL : VIDEO_MODEL;
+    let usedDepth: "quick" | "deep" = depth;
+    let deepFellBack = false;
+
+    let res = await generateFromVideo<VideoAnswer>(payloadFor(resolved, usedModel));
+
+    if (!res.ok && depth === "deep" && !/allowance|plan|budget/i.test(res.error)) {
+      usedModel = VIDEO_MODEL;
+      usedDepth = "quick";
+      deepFellBack = true;
+      res = await generateFromVideo<VideoAnswer>(payloadFor(resolved, usedModel));
+    }
+
+    /*
       Stale-handle recovery. A cached Gemini file handle can die inside
       its 47-hour window (the provider's side, not ours), and a read
       against a dead handle fails looking like a Vision failure. When
@@ -281,47 +331,15 @@ ${memory}` : SYSTEM,
       await forgetFile(request.videoId);
       const fresh = await resolveSource(request);
       if (fresh.ok) {
-        res = await generateFromVideo<VideoAnswer>({
-          system: memory ? `${SYSTEM}\n\n${memory}` : SYSTEM,
-          video: {
-            fileUri: fresh.fileUri,
-            mimeType: fresh.mimeType,
-            inlineBase64: fresh.inlineBase64,
-            startSeconds: request.fromSeconds,
-            endSeconds: request.toSeconds,
-          },
-          schema: SCHEMA as unknown as Record<string, unknown>,
-          maxTokens: 6000,
-          prompt: JSON.stringify({
-            watch: `From ${mmss(request.fromSeconds)} to ${mmss(request.toSeconds)}.`,
-            lookingFor:
-              request.focus || "Anything useful about movement, body shape and decision-making.",
-            viewer: {
-              role: request.viewer.role,
-              position: request.viewer.position,
-              onThePitch:
-                request.viewer.identity ||
-                "NOT STATED — you do not know which player this is. Write about the passage and mark identity-dependent observations uncertain.",
-            },
-            curatedConcepts: concepts.map((c) => ({
-              slug: c.slug,
-              name: c.name,
-              looksLike: c.looksLike,
-              cues: c.cues,
-            })),
-            earlierObservations: prior.length
-              ? prior.map((p) => ({ on: p.on, concept: p.concept, said: p.title }))
-              : undefined,
-          }),
-        });
+        res = await generateFromVideo<VideoAnswer>(payloadFor(fresh, usedModel));
       }
     }
 
     const usage = res.ok ? res.value.usage : { input: 0, output: 0, thoughts: 0 };
     await logAiUsage({
       feature: "deep_analyses",
-      tier: "video",
-      model: VIDEO_MODEL,
+      tier: usedDepth === "deep" ? "video_deep" : "video",
+      model: usedModel,
       inputTokens: usage.input,
       outputTokens: usage.output,
       latencyMs: Date.now() - started,
@@ -334,7 +352,13 @@ ${memory}` : SYSTEM,
       // charge is for nothing, so give it back. A read that RAN and came back
       // useless is a different thing and is not refunded below.
       await releaseFeature("deep_analyses");
+      if (depth === "deep") await releaseFeature("deep_analyses"); // both units back
       return { ok: false, error: res.error };
+    }
+    if (deepFellBack) {
+      // The deep model never ran; the read that did was a quick one. The
+      // second unit bought the depth that was not delivered — give it back.
+      await releaseFeature("deep_analyses");
     }
 
     const valid = new Set(CONCEPTS.map((c) => c.slug));
@@ -365,6 +389,9 @@ ${memory}` : SYSTEM,
 
     const notes: string[] = [];
     if (identity.note) notes.push(identity.note);
+    if (deepFellBack) {
+      notes.push("The deeper model was unavailable, so this is a standard read — run Deep read again later for the sharper version.");
+    }
     if (res.value.rangeInPromptOnly) {
       notes.push("The whole video was read and the passage located from the timestamps.");
     }
@@ -378,10 +405,19 @@ ${memory}` : SYSTEM,
         summary: [answer.summary ?? "", ...notes].filter(Boolean).join("\n\n"),
         observations,
         framesUsed: 0,
+        identity: identityLevelFrom(answer.identification, Boolean(request.viewer.identity)),
+        depth: usedDepth,
+        promptVersion: VIDEO_PROMPT_VERSION,
       },
     };
   },
 };
+
+/** The system prompt's version — bump when SYSTEM meaningfully changes, and
+ *  keep lib/ai/prompts.ts's manifest entry in step (a test holds them together). */
+export const VIDEO_PROMPT_VERSION = 2;
+
+
 
 const RANK: Record<NonNullable<AnalysisObservation["confidence"]>, number> = {
   observed: 3,

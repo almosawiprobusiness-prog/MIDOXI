@@ -8,6 +8,7 @@ import {
   analyseFrames,
   analyseVideo,
   filmRoomCapabilities,
+  setVideoIdentity,
   type FilmRoomCapabilities,
 } from "@/app/app/film-room/analysis-actions";
 import {
@@ -109,8 +110,11 @@ export function FilmReading({
   sourceUrl,
   onSeek,
   analyses,
+  identityOverride = null,
 }: {
   videoId: string;
+  /** This match's "how to spot you", when it differs from the profile. */
+  identityOverride?: string | null;
   isYouTube: boolean;
   /** Current playhead, so the range starts where the coach is looking. */
   current: number;
@@ -127,6 +131,9 @@ export function FilmReading({
   const [from, setFrom] = useState(Math.max(0, Math.floor(current)));
   const [span, setSpan] = useState(30);
   const [focus, setFocus] = useState("");
+  const [depth, setDepth] = useState<"quick" | "deep">("quick");
+  const [editingIdentity, setEditingIdentity] = useState(false);
+  const [identityDraft, setIdentityDraft] = useState<string | null>(null);
   const [captured, setCaptured] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -164,7 +171,7 @@ export function FilmReading({
 
     if (mode === "video") {
       start(async () => {
-        const res = await analyseVideo({ videoId, fromSeconds: from, toSeconds: to, focus });
+        const res = await analyseVideo({ videoId, fromSeconds: from, toSeconds: to, focus, depth });
         if (res.ok) {
           setNote(`Read ${fmtTime(from)}–${fmtTime(to)}.`);
           router.refresh();
@@ -244,6 +251,59 @@ export function FilmReading({
           </p>
 
           {/* Who you are, for a video read */}
+          {/*
+            "Is this still you?" — the identity the next read will use, said
+            up front, with a one-line door to correct it for THIS match. Kits
+            change between fixtures; a stale identity is how the wrong player
+            gets coached.
+          */}
+          {mode === "video" && caps?.hasIdentity && (
+            <div className="mt-3 rounded-lg border border-line bg-ink-850 p-3">
+              <div className="flex items-start gap-2.5">
+                <UserSearch className="mt-0.5 size-4 shrink-0 text-signal-bright" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs leading-relaxed text-text-dim">
+                    Reading you as:{" "}
+                    <span className="text-text">
+                      {identityDraft ?? identityOverride ?? caps.identityLine}
+                    </span>
+                    {identityOverride && !identityDraft && (
+                      <span className="text-text-faint"> (this match only)</span>
+                    )}
+                  </p>
+                  {editingIdentity ? (
+                    <div className="mt-2 flex items-center gap-2">
+                      <input
+                        value={identityDraft ?? identityOverride ?? ""}
+                        onChange={(e) => setIdentityDraft(e.target.value.slice(0, 140))}
+                        placeholder="e.g. white shirt today, number 14"
+                        autoFocus
+                        className={inp}
+                      />
+                      <button
+                        onClick={() => {
+                          const v = (identityDraft ?? "").trim();
+                          setEditingIdentity(false);
+                          void setVideoIdentity(videoId, v).then(() => router.refresh());
+                        }}
+                        className="h-9 shrink-0 rounded-lg border border-signal-line bg-signal/10 px-3 text-xs text-signal-bright"
+                      >
+                        Save
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setEditingIdentity(true)}
+                      className="mt-1 text-xs text-signal-bright underline-offset-2 hover:underline"
+                    >
+                      Different kit this match?
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {mode === "video" && caps && !caps.hasIdentity && (
             <div className="mt-3 flex items-start gap-2.5 rounded-lg border border-line bg-ink-850 p-3">
               <UserSearch className="mt-0.5 size-4 shrink-0 text-signal-bright" />
@@ -348,6 +408,42 @@ export function FilmReading({
               ))}
             </div>
           </div>
+
+          {/*
+            How hard to look. Deep runs the sharper, slower model on the same
+            passage and costs two film reads — priced by measurement, and the
+            model name never shown; "deep" is the product word.
+          */}
+          {mode === "video" && (
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              <span className="label-tech mr-1">Read</span>
+              <button
+                onClick={() => setDepth("quick")}
+                aria-pressed={depth === "quick"}
+                className={cn(
+                  "h-8 rounded-lg border px-3 text-xs transition-colors",
+                  depth === "quick"
+                    ? "border-signal-line bg-signal/10 text-signal-bright"
+                    : "border-line text-text-dim hover:text-text",
+                )}
+              >
+                Quick — 1 film read
+              </button>
+              <button
+                onClick={() => setDepth("deep")}
+                aria-pressed={depth === "deep"}
+                title="A slower, sharper read of the same passage. Costs two film reads."
+                className={cn(
+                  "h-8 rounded-lg border px-3 text-xs transition-colors",
+                  depth === "deep"
+                    ? "border-signal-line bg-signal/10 text-signal-bright"
+                    : "border-line text-text-dim hover:text-text",
+                )}
+              >
+                Deep — sharper, 2 film reads
+              </button>
+            </div>
+          )}
 
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <button

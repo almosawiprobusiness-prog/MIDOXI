@@ -1,0 +1,127 @@
+{
+  "configId": "B",
+  "passageId": "p2",
+  "model": "gemini-2.5-flash",
+  "source": "yt",
+  "identity": true,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 14122,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 5065,
+    "thinkingTokens": 1100,
+    "outputTokens": 991,
+    "total": 7156,
+    "detail": [
+      {
+        "modality": "AUDIO",
+        "tokenCount": 375
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 820
+      },
+      {
+        "modality": "VIDEO",
+        "tokenCount": 3870
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "This clip shows a free-kick from the left side of the attacking half, followed by a corner kick. The viewer is involved in the attacking movements in the box for both set pieces.",
+    "observations": [
+      {
+        "atSeconds": 42,
+        "title": "Initial Position for Free-Kick",
+        "body": "The viewer, wearing white shirt number 10, is positioned near the penalty spot, slightly to the right of the goal, facing the ball as the free-kick is prepared.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 43,
+        "title": "Defensive Wall and Box Setup",
+        "body": "The defending team forms a four-player wall. Several attacking players are positioned around the penalty area, some marking defenders, others looking for space.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 44,
+        "title": "Free-Kick Taker",
+        "body": "A player in a white shirt, not the viewer, prepares to take the free-kick from the left wing, outside the penalty area.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 45,
+        "title": "Free-Kick Delivery",
+        "body": "The free-kick is taken, with the ball lofted into the penalty area towards the far post.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 46,
+        "title": "Movement Towards Far Post",
+        "body": "As the ball is delivered, the viewer (white #10) begins to move towards the far post, initially positioned behind a defender.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 47,
+        "title": "First Contact in Box",
+        "body": "A white shirt player, not the viewer, heads the ball towards the center of the goal.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 48,
+        "title": "Reacting to Bouncing Ball",
+        "body": "The ball bounces in the box. The viewer (white #10) is now in a central position, reacting to the bouncing ball while surrounded by defenders.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 49,
+        "title": "Blocked Shot",
+        "body": "Another white shirt player, not the viewer, attempts a shot from close range, which is blocked by a defender. The viewer is nearby but not directly involved in the shot.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 50,
+        "title": "Corner Awarded",
+        "body": "The ball deflects off the defender and goes out of play, resulting in a corner kick.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 51,
+        "title": "Preparing for Corner",
+        "body": "The viewer (white #10) walks towards the corner flag, indicating preparation for the subsequent corner kick.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 55,
+        "title": "Corner Kick Delivery",
+        "body": "The corner kick is taken, with the ball delivered high into the penalty box.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 56,
+        "title": "Attempted Header",
+        "body": "The viewer (white #10) is positioned near the penalty spot, attempting to get on the end of the cross, but a defender clears the ball.",
+        "confidence": "observed",
+        "aboutViewer": true
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": true,
+      "basis": "squad-number",
+      "couldMatchOthers": 0
+    }
+  },
+  "at": "2026-08-31T03:52:54.928Z"
+}

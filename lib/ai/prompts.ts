@@ -87,6 +87,6 @@ export const PROMPT_MANIFEST: { def: Omit<PromptDef, "system">; livesIn: string 
   { def: { name: "study_enhance", version: 1, tier: "standard" }, livesIn: "lib/ai/study-engine.ts" },
   { def: { name: "study_picks", version: 1, tier: "fast" }, livesIn: "lib/data/discover.ts" },
   { def: { name: "frame_read", version: 1, tier: "standard" }, livesIn: "lib/video/frame-reader.ts" },
-  { def: { name: "video_read", version: 1, tier: "standard" }, livesIn: "lib/video/native-video.ts (Gemini)" },
+  { def: { name: "video_read", version: 2, tier: "standard" }, livesIn: "lib/video/native-video.ts (Gemini)" },
   { def: { name: "voice_match", version: 1, tier: "standard" }, livesIn: "lib/ai/voice-match.ts (Gemini)" },
 ];

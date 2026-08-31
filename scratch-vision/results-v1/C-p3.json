@@ -1,0 +1,106 @@
+{
+  "configId": "C",
+  "passageId": "p3",
+  "model": "gemini-2.5-flash",
+  "source": "yt",
+  "identity": true,
+  "mediaResolution": "MEDIA_RESOLUTION_MEDIUM",
+  "status": 200,
+  "latencyMs": 8116,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 4490,
+    "thinkingTokens": 259,
+    "outputTokens": 749,
+    "total": 5498,
+    "detail": [
+      {
+        "modality": "VIDEO",
+        "tokenCount": 3354
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 811
+      },
+      {
+        "modality": "AUDIO",
+        "tokenCount": 325
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "This clip shows a passage of play where the team in white maintains possession in the midfield, with some forward passes and attempts to create attacking opportunities. The team in green defends compactly and attempts to win the ball back.",
+    "observations": [
+      {
+        "atSeconds": 58,
+        "title": "Ball possession in midfield",
+        "body": "The team in white is in possession of the ball in the central midfield area, with multiple players surrounding the ball carrier.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 59,
+        "title": "Forward pass attempt",
+        "body": "A player in white attempts a forward pass towards an attacking player, but the pass is intercepted by a green defender.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 60,
+        "title": "Defensive pressure",
+        "body": "The team in green applies immediate pressure after winning the ball, with two players closing down the white player who lost possession.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 61,
+        "title": "Midfield circulation",
+        "body": "The team in white regains possession and circulates the ball in the midfield, looking for an opening. Players are moving to offer passing options.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 63,
+        "title": "Lack of direct attacking runs",
+        "body": "While the ball is being circulated, there is a lack of incisive runs from the attacking players in white to break the defensive line of the green team.",
+        "confidence": "inferred",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 65,
+        "title": "Defensive shape maintained",
+        "body": "The green team maintains a compact defensive shape, making it difficult for the white team to penetrate through the center.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 67,
+        "title": "Lateral ball movement",
+        "body": "The white team continues to move the ball laterally across the midfield, but without significant forward progression or threat to the opposition goal.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 69,
+        "title": "Ball lost in transition",
+        "body": "The white team loses possession in the midfield as a pass is misplaced, leading to a turnover.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 70,
+        "title": "Green team counter-attack",
+        "body": "The green team quickly attempts to launch a counter-attack after winning the ball, with a forward pass into space.",
+        "confidence": "observed",
+        "aboutViewer": false
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "none",
+      "couldMatchOthers": 0
+    }
+  },
+  "at": "2026-08-31T03:53:56.494Z"
+}

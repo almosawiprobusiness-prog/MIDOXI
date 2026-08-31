@@ -124,3 +124,37 @@ retest, tracked as an open item.
 - Client-side fake background processing.
 - A second vision provider. TwelveLabs deferred with criteria.
 - Any UI implying tracking, measurement, or automated identity.
+
+## Accuracy pass (2026-08-30)
+
+Benchmarked before changed — VISION_ACCURACY_BASELINE.md and
+VISION_ACCURACY_BENCHMARK.md hold the evidence. What is now true:
+
+- **Routing:** quick reads run `gemini-3.7-flash` (default, env
+  `GEMINI_VIDEO_MODEL`); deep reads run `gemini-2.5-pro` (env
+  `GEMINI_VIDEO_MODEL_DEEP`), cost two film reads, and fall back to a quick
+  read ONCE with the downgrade stated in the summary and the second unit
+  refunded. Model names never reach the UI — "Quick read" / "Deep read".
+- **Prompt v2** (`video_read` v2): scene-first kit audit, referee rule, no
+  second person without identification, no identity across scene cuts,
+  outcome discipline, scanning restraint. Eliminated every measured false
+  attribution while keeping kit-unique attribution.
+- **Identity is structured:** `player_profiles.team_side / kit_primary /
+  kit_secondary` + squad number + position + the free note, composed by
+  `composePitchIdentity()`. Per-match override on `videos.pitch_identity_override`
+  ("Different kit this match?" in the reader panel). The identification audit
+  is now PERSISTED on `clip_analyses` (level/basis/couldMatchOthers/legibility)
+  and surfaced as a chip (Identified / Likely you / Uncertain / Not identified).
+- **Correction loop:** "That's not me" marks `identity_rejected`; the read
+  stays visible as corrected and stops feeding prior-observation context.
+- **Frames lane** now receives the identity, emits confidence + aboutViewer,
+  and caps viewer claims at inferred (uncertain without identity) — stills can
+  never verify identity the way motion can.
+- **Versioning:** `clip_analyses.depth / prompt_version / source_kind` +
+  identity columns (migration 0041). **Reuse:** an identical read (same
+  passage, focus, depth, prompt version, not rejected) is returned, not
+  re-charged; `reanalyse: true` is the deliberate override.
+- **Dead knobs, measured:** media resolution does nothing for video on these
+  models (HIGH rejected, MEDIUM token-identical). Hybrid Claude frame
+  confirmation DEFERRED — prompt v2 removed the failure it would have
+  guarded, so its cost is not yet justified.

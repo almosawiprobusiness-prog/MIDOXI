@@ -1,0 +1,58 @@
+{
+  "configId": "E",
+  "passageId": "p4",
+  "model": "gemini-3.7-flash",
+  "source": "yt",
+  "identity": true,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 8075,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 2101,
+    "thinkingTokens": 295,
+    "outputTokens": 248,
+    "total": 2644,
+    "detail": [
+      {
+        "modality": "VIDEO",
+        "tokenCount": 726
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 1099
+      },
+      {
+        "modality": "AUDIO",
+        "tokenCount": 276
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "Attacking forward runs into space behind the defensive line, strikes a lofted finish over the advancing goalkeeper, and scores into the top corner.",
+    "observations": [
+      {
+        "atSeconds": 158,
+        "title": "Attacking run into space",
+        "body": "The forward identifies the opening between defenders and makes a direct forward run into the penalty box to receive in stride.",
+        "confidence": "observed",
+        "aboutViewer": true,
+        "concept": "runs-in-behind"
+      },
+      {
+        "atSeconds": 160,
+        "title": "First-time chipped finish",
+        "body": "Upon meeting the ball under defensive pressure, the attacker lifts a high shot over the onrushing goalkeeper directly into the goal.",
+        "confidence": "observed",
+        "aboutViewer": true
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "kit-and-role",
+      "couldMatchOthers": 2
+    }
+  },
+  "at": "2026-08-31T03:56:52.060Z"
+}

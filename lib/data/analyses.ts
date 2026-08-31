@@ -1,7 +1,7 @@
 import "server-only";
 import { createClient, createAdminClient, getAuthUser } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
-import type { AnalysisKind, AnalysisObservation } from "@/lib/video/provider";
+import type { AnalysisIdentity, AnalysisKind, AnalysisObservation } from "@/lib/video/provider";
 
 /*
   Saved film analyses. Same adapter contract as every other data module.
@@ -22,6 +22,12 @@ export interface ClipAnalysis {
   focus: string;
   summary: string;
   observations: AnalysisObservation[];
+  /** The identification audit, when the read produced one. */
+  identity?: AnalysisIdentity | null;
+  depth?: "quick" | "deep" | null;
+  promptVersion?: number | null;
+  /** True when the player said this read followed the wrong player. */
+  identityRejected: boolean;
   createdAt: string;
 }
 
@@ -37,6 +43,10 @@ export interface SaveAnalysisInput {
   focus: string;
   summary: string;
   observations: AnalysisObservation[];
+  identity?: AnalysisIdentity | null;
+  depth?: "quick" | "deep" | null;
+  promptVersion?: number | null;
+  sourceKind?: string | null;
 }
 
 interface DemoDB {
@@ -59,6 +69,17 @@ function rowTo(r: Record<string, unknown>): ClipAnalysis {
     focus: (r.focus as string) ?? "",
     summary: (r.summary as string) ?? "",
     observations: ((r.observations as AnalysisObservation[]) ?? []) as AnalysisObservation[],
+    identity: r.identity_level
+      ? {
+          level: r.identity_level as AnalysisIdentity["level"],
+          basis: (r.identity_basis as AnalysisIdentity["basis"]) ?? "none",
+          couldMatchOthers: Number(r.identity_could_match ?? 0),
+          squadNumberLegible: Boolean(r.squad_number_legible),
+        }
+      : null,
+    depth: (r.depth as "quick" | "deep") ?? null,
+    promptVersion: r.prompt_version == null ? null : Number(r.prompt_version),
+    identityRejected: Boolean(r.identity_rejected),
     createdAt: (r.created_at as string) ?? new Date().toISOString(),
   };
 }
@@ -94,6 +115,10 @@ export async function saveAnalysis(input: SaveAnalysisInput): Promise<ClipAnalys
       focus: input.focus,
       summary: input.summary,
       observations: input.observations,
+      identity: input.identity ?? null,
+      depth: input.depth ?? null,
+      promptVersion: input.promptVersion ?? null,
+      identityRejected: false,
       createdAt: new Date().toISOString(),
     };
     demoDB.analyses.push(row);
@@ -120,10 +145,38 @@ export async function saveAnalysis(input: SaveAnalysisInput): Promise<ClipAnalys
       focus: input.focus || null,
       summary: input.summary || null,
       observations: input.observations,
+      depth: input.depth ?? null,
+      prompt_version: input.promptVersion ?? null,
+      source_kind: input.sourceKind ?? null,
+      identity_level: input.identity?.level ?? null,
+      identity_basis: input.identity?.basis ?? null,
+      identity_could_match: input.identity?.couldMatchOthers ?? null,
+      squad_number_legible: input.identity?.squadNumberLegible ?? null,
     })
     .select("*")
     .maybeSingle();
   return data ? rowTo(data) : null;
+}
+
+/**
+ * "That's not me." The player's verdict on an identification, recorded on the
+ * row — the read stays visible (deleting it would hide what happened) but is
+ * marked corrected and never feeds prior-observation context again.
+ */
+export async function markWrongPlayer(id: string, rejected = true): Promise<boolean> {
+  if (isDemoMode) {
+    const a = demoDB.analyses.find((x) => x.id === id);
+    if (!a) return false;
+    a.identityRejected = rejected;
+    return true;
+  }
+  const supabase = await createClient();
+  if (!supabase) return false;
+  const { error } = await supabase
+    .from("clip_analyses")
+    .update({ identity_rejected: rejected })
+    .eq("id", id);
+  return !error;
 }
 
 export async function deleteAnalysis(id: string): Promise<boolean> {
@@ -174,7 +227,7 @@ export async function priorObservations(input: {
 
   if (isDemoMode) {
     rows.push(
-      ...demoDB.analyses.map((a) => ({
+      ...demoDB.analyses.filter((a) => !a.identityRejected).map((a) => ({
         videoId: a.videoId,
         createdAt: a.createdAt,
         observations: a.observations,
@@ -192,6 +245,9 @@ export async function priorObservations(input: {
       .from("clip_analyses")
       .select("video_id, created_at, observations")
       .eq("user_id", user.id)
+      // A read the player marked as following the wrong player must never be
+      // fed forward as their own history.
+      .eq("identity_rejected", false)
       .order("created_at", { ascending: false })
       .limit(40);
 

@@ -1,0 +1,66 @@
+{
+  "configId": "E",
+  "passageId": "p1",
+  "model": "gemini-3.7-flash",
+  "source": "yt",
+  "identity": true,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 13194,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 2744,
+    "thinkingTokens": 871,
+    "outputTokens": 369,
+    "total": 3984,
+    "detail": [
+      {
+        "modality": "VIDEO",
+        "tokenCount": 1188
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 1105
+      },
+      {
+        "modality": "AUDIO",
+        "tokenCount": 451
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "Passages focus on attacking transitions and penetration runs in behind the backline, attacking depth from central and wide forward channels.",
+    "observations": [
+      {
+        "atSeconds": 19,
+        "title": "Diagonal run into depth",
+        "body": "As the midfield central carrier turns forward, the attacker recognizes the opening between the center back and left back. The run is angled across the defensive line into space, creating an immediate passing lane.",
+        "confidence": "observed",
+        "aboutViewer": true,
+        "concept": "runs-in-behind"
+      },
+      {
+        "atSeconds": 22,
+        "title": "Direct first touch and strike under recovery pressure",
+        "body": "After receiving the ball in the box, the first touch is directed forward into stride rather than checked back. This allows a quick strike toward goal before the recovering defender can make contact.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 31,
+        "title": "Timing transition run through midfield",
+        "body": "As possession is secured near midfield in the second sequence, the attacker holds position wide to stretch the defensive shape before accelerating vertically. This movement stretches the opponent backline as the buildup develops.",
+        "confidence": "observed",
+        "aboutViewer": true,
+        "concept": "runs-in-behind"
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "kit-and-role",
+      "couldMatchOthers": 9
+    }
+  },
+  "at": "2026-08-31T03:56:19.911Z"
+}

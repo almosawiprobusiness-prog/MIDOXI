@@ -1,0 +1,64 @@
+{
+  "configId": "D",
+  "passageId": "p2",
+  "model": "gemini-2.5-pro",
+  "source": "yt",
+  "identity": true,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 27565,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 5065,
+    "thinkingTokens": 1703,
+    "outputTokens": 416,
+    "total": 7184,
+    "detail": [
+      {
+        "modality": "VIDEO",
+        "tokenCount": 3870
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 820
+      },
+      {
+        "modality": "AUDIO",
+        "tokenCount": 375
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "This clip shows a direct free kick against your team. You are positioned in the defensive wall. The initial shot is saved by the goalkeeper, but the rebound is picked up by an opponent who gets a second shot off, which goes wide of the goal.",
+    "observations": [
+      {
+        "atSeconds": 42,
+        "title": "Positioning in the Defensive Wall",
+        "body": "You are part of a four-player wall defending a direct free kick just outside the penalty area. You are positioned as the second player from the left of the wall. Your body shape is side-on, which is correct for protecting yourself and preparing to jump.",
+        "confidence": "uncertain",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 51,
+        "title": "Reacting to the Second Ball",
+        "body": "When the goalkeeper makes the save, the ball is parried back into a dangerous area. You turn to react, but an attacker is quicker to the loose ball. As a forward, your primary defensive job here is done, but being the first to react to the second ball is crucial for clearing the danger.",
+        "confidence": "uncertain",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 52,
+        "title": "Attacking Follow-Up on Rebound",
+        "body": "The attacking team shows good anticipation. As soon as the keeper saves the shot, one of their players follows in to contest the rebound. This creates a second shooting opportunity from the initial set piece.",
+        "confidence": "observed",
+        "aboutViewer": false
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "kit-and-role",
+      "couldMatchOthers": 9
+    }
+  },
+  "at": "2026-08-31T03:54:58.503Z"
+}

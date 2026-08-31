@@ -1,0 +1,64 @@
+{
+  "configId": "E",
+  "passageId": "p4",
+  "model": "gemini-3.7-flash",
+  "source": "yt",
+  "identity": true,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 16572,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 2412,
+    "thinkingTokens": 632,
+    "outputTokens": 341,
+    "total": 3385,
+    "detail": [
+      {
+        "modality": "VIDEO",
+        "tokenCount": 726
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 1410
+      },
+      {
+        "modality": "AUDIO",
+        "tokenCount": 276
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "Attacking from right to left in white kits against opponents in dark jerseys, you drive forward in transition through the middle, strike from outside the box, and score as the shot loops into the net beyond the goalkeeper.",
+    "observations": [
+      {
+        "atSeconds": 158,
+        "title": "Forward carry into shooting pocket",
+        "body": "Receiving in stride during transition, you drive centrally into open space ahead of the backline without hesitating. You maintain momentum straight toward goal, fixing the retreating defenders rather than looking to pass wide.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 160,
+        "title": "Direct strike on goal",
+        "body": "You set your stride and strike right-footed from outside the penalty area, generating elevation over the retreating defensive line.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 162,
+        "title": "Finish into the net",
+        "body": "The shot carries over the goalkeeper's reach and settles directly inside the goal net as the opposing defenders drop back too late to intervene.",
+        "confidence": "observed",
+        "aboutViewer": false
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "kit-and-role",
+      "couldMatchOthers": 10
+    }
+  },
+  "at": "2026-08-31T04:07:37.547Z"
+}

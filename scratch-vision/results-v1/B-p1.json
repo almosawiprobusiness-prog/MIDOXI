@@ -1,0 +1,72 @@
+{
+  "configId": "B",
+  "passageId": "p1",
+  "model": "gemini-2.5-flash",
+  "source": "yt",
+  "identity": true,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 12582,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 5909,
+    "thinkingTokens": 1381,
+    "outputTokens": 539,
+    "total": 7829,
+    "detail": [
+      {
+        "modality": "VIDEO",
+        "tokenCount": 4644
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 815
+      },
+      {
+        "modality": "AUDIO",
+        "tokenCount": 450
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "The viewer, identified as the central attacker in the royal blue #10 shirt, is visible and identifiable only in the first segment of the video (00:18-00:27). In this segment, the viewer primarily observes the opponent's build-up, maintaining a central position. When possession is regained, the viewer immediately initiates a run in behind the defensive line. The second segment of the video (00:27-00:36) features different teams (white and black kits), and the viewer is not present or identifiable.",
+    "observations": [
+      {
+        "atSeconds": 18,
+        "title": "Initial positioning during opponent build-up",
+        "body": "The viewer is positioned high and centrally, between two white defenders, as the opponent begins their build-up from their own half. The viewer is not actively engaging the ball carrier at this point.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 20,
+        "title": "Observational stance",
+        "body": "As the white team circulates the ball in their defensive half, the viewer maintains a central position, observing the play without committing to a press or a specific defensive assignment.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 25,
+        "title": "Anticipation and run in behind",
+        "body": "Immediately after a blue defender intercepts a long pass, the viewer turns and initiates a forward run, looking to exploit space behind the white defensive line. This shows good anticipation of the turnover.",
+        "confidence": "observed",
+        "aboutViewer": true,
+        "concept": "runs-in-behind"
+      },
+      {
+        "atSeconds": 27,
+        "title": "Viewer not identifiable",
+        "body": "The video transitions to a different match or segment where the teams are wearing white and black kits. The viewer, described as wearing a royal blue #10 shirt, is not present or identifiable in this portion of the footage.",
+        "confidence": "uncertain",
+        "aboutViewer": false
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": true,
+      "basis": "squad-number",
+      "couldMatchOthers": 0
+    }
+  },
+  "at": "2026-08-31T03:52:40.804Z"
+}

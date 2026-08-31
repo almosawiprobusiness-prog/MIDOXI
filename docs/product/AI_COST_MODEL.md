@@ -75,3 +75,27 @@ after a `MODELS` table change.
   architecture supports it; not enabled.
 - Moving Vision to Vertex AI for the minors-clause resolution may
   change unit prices marginally; re-run this table then.
+
+## Vision, re-measured (2026-08-30 — accuracy pass)
+
+Benchmark-measured (vision-bench, current price list: 3.7-flash $0.75/$3.75,
+2.5-pro $1.25/$10 per Mtok):
+
+| Operation | Tokens (typical) | Cost | Latency |
+|---|---|---|---|
+| Quick read, ~15s passage (3.7-flash) | ~2.4k in / ~0.9k out | **$0.005** | 8–20s |
+| Quick read, 60–90s window | ~8k in / ~1k out | **~$0.010** | 15–30s |
+| Deep read, ~15s passage (2.5-pro) | ~5.1k in / ~2.3k out | **$0.030** | 24–30s |
+| Deep read, 60s window | ~17k in / ~2.5k out | **~$0.046** | 30–45s |
+| Direct upload vs YouTube | ≈ same tokens; upload adds transfer latency | — | +3–10s |
+
+Player-months: a normal player (≤20 quick reads) costs **≤ $0.20/mo** of
+vision; a vision-heavy player (60 reads, third of them deep) **≈ $1.00/mo**.
+Deep read at 2 film-read units keeps the allowance the price lever — no
+plan change needed. Internal ladder: `video` logged at $2/Mtok blended,
+`video_deep` at $5/Mtok — both deliberately above the measured blends
+($1.6 / $4.0) because `withinAiBudget()` reads them.
+
+Tier read: quick reads are cheap enough for broad paid allowance; deep reads
+are safely meterable at 2 units; full-match remains future/expensive and is
+still refused honestly.

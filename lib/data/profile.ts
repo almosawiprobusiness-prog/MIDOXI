@@ -28,6 +28,9 @@ export interface ProfileSettings {
    * about them, and says so rather than guessing.
    */
   pitchIdentity: string;
+  teamSide: string;
+  kitPrimary: string;
+  kitSecondary: string;
   /** A link a report's reader can follow. Never a source of facts. */
   transfermarktUrl: string;
   /** Public URL in the `avatars` bucket, or "". */
@@ -67,6 +70,9 @@ export interface ProfileFormInput {
   level: string;
   favoriteClub: string;
   pitchIdentity: string;
+  teamSide: string;
+  kitPrimary: string;
+  kitSecondary: string;
   transfermarktUrl: string;
 }
 
@@ -94,6 +100,7 @@ export async function getProfileSettings(forUser?: string): Promise<ProfileSetti
       level: player.level,
       favoriteClub: "Manchester City",
       pitchIdentity: `${player.squadNumber}, home kit`,
+      teamSide: "home", kitPrimary: "royal blue", kitSecondary: "white",
       transfermarktUrl: "",
       avatarUrl: "",
       isPublic: false,
@@ -110,7 +117,7 @@ export async function getProfileSettings(forUser?: string): Promise<ProfileSetti
   const empty: ProfileSettings = {
     email: "", fullName: "", knownAs: "", dateOfBirth: "", nationality: "", foot: "Right",
     primaryPosition: "", secondaryPosition: "", heightCm: null, weightKg: null,
-    club: "", league: "", squadNumber: null, season: "", level: "", favoriteClub: "", pitchIdentity: "",
+    club: "", league: "", squadNumber: null, season: "", level: "", favoriteClub: "", pitchIdentity: "", teamSide: "", kitPrimary: "", kitSecondary: "",
     transfermarktUrl: "", avatarUrl: "", isPublic: false,
     handle: "", playStyle: "", favoritePlayers: [], strengths: [], achievements: "", socials: {},
   };
@@ -150,6 +157,9 @@ export async function getProfileSettings(forUser?: string): Promise<ProfileSetti
     level: pp?.level ?? "",
     favoriteClub: pp?.favorite_club ?? "",
     pitchIdentity: pp?.pitch_identity ?? "",
+    teamSide: pp?.team_side ?? "",
+    kitPrimary: pp?.kit_primary ?? "",
+    kitSecondary: pp?.kit_secondary ?? "",
     transfermarktUrl: pp?.transfermarkt_url ?? "",
     avatarUrl: profile?.avatar_url ?? "",
     isPublic: pp?.is_public ?? false,

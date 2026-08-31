@@ -1,0 +1,60 @@
+{
+  "configId": "H",
+  "passageId": "p2",
+  "model": "gemini-3.7-flash",
+  "source": "file",
+  "identity": true,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 10598,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 2166,
+    "thinkingTokens": 589,
+    "outputTokens": 328,
+    "total": 3083,
+    "detail": [
+      {
+        "modality": "VIDEO",
+        "tokenCount": 1056
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 1110
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "A direct free kick executed from outside the penalty area curls over the defensive wall and finishes in the net for a goal.",
+    "observations": [
+      {
+        "atSeconds": 3,
+        "title": "Defensive wall and attacking alignment",
+        "body": "The defending side sets a four-man wall centrally just outside the penalty box. Attacking players in white position themselves wide and on the shoulder of the wall to create lanes and prepare for rebounds.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 10,
+        "title": "Direct free-kick strike",
+        "body": "The set-piece taker strikes the ball cleanly with elevation, clearing the four-man wall and directing it toward the upper corner out of the reach of the goalkeeper.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 12,
+        "title": "Secondary crash runs into the box",
+        "body": "As the strike is taken, attacking runners immediately break into the penalty area to contest any spilled ball or rebound off the woodwork.",
+        "confidence": "observed",
+        "aboutViewer": false
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "kit-and-role",
+      "couldMatchOthers": 7
+    }
+  },
+  "at": "2026-08-31T04:00:42.310Z"
+}

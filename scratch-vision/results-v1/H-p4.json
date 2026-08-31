@@ -1,0 +1,54 @@
+{
+  "configId": "H",
+  "passageId": "p4",
+  "model": "gemini-3.7-flash",
+  "source": "file",
+  "identity": true,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 12439,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 1825,
+    "thinkingTokens": 584,
+    "outputTokens": 275,
+    "total": 2684,
+    "detail": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 1099
+      },
+      {
+        "modality": "VIDEO",
+        "tokenCount": 726
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "Attacking transition where the forward carries the ball into open territory centrally and executes a lofted finish over the goalkeeper into the goal.",
+    "observations": [
+      {
+        "atSeconds": 2,
+        "title": "Attacking direct space on the break",
+        "body": "You collect the ball in transition and drive directly into the central lane. The defending line is retreating on their heels, giving you clear lane alignment to advance toward the penalty area before contact arrives.",
+        "confidence": "observed",
+        "aboutViewer": true,
+        "concept": "runs-in-behind"
+      },
+      {
+        "atSeconds": 5,
+        "title": "Execution of the lofted finish",
+        "body": "You spot the goalkeeper off their line and lift the strike cleanly over their reach. The ball dips directly under the crossbar inside the frame, giving the retreating defender no opportunity to clear off the line.",
+        "confidence": "observed",
+        "aboutViewer": true
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "kit-and-role",
+      "couldMatchOthers": 9
+    }
+  },
+  "at": "2026-08-31T04:01:07.720Z"
+}

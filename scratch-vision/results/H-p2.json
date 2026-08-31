@@ -1,0 +1,60 @@
+{
+  "configId": "H",
+  "passageId": "p2",
+  "model": "gemini-3.7-flash",
+  "source": "file",
+  "identity": true,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 13850,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 2477,
+    "thinkingTokens": 667,
+    "outputTokens": 373,
+    "total": 3517,
+    "detail": [
+      {
+        "modality": "VIDEO",
+        "tokenCount": 1056
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 1421
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "The white team attacks the goal on the left, while the dark kit team defends, with their goalkeeper wearing bright yellow. A direct free kick is awarded centrally outside the penalty area. The taker strikes the dead ball cleanly over the defensive wall into the upper section of the net for a goal.",
+    "observations": [
+      {
+        "atSeconds": 0,
+        "title": "Set piece alignment",
+        "body": "The defending team lines up a three-man wall near the penalty area to contest the central free kick. Attackers in white position themselves both out wide and inside the channel, while a single taker in white sets up directly behind the ball.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 10,
+        "title": "Direct strike on goal",
+        "body": "The set-piece taker approaches with a deliberate run-up and strikes the stationary ball with the right foot. The flight trajectory carries over the jumping wall directly toward the goal frame.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 12,
+        "title": "Goal converted",
+        "body": "The strike eludes the reaching goalkeeper and enters the top of the net. The taker turns toward the touchline to celebrate with teammates as the substitute bench reacts.",
+        "confidence": "observed",
+        "aboutViewer": true
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "kit-and-role",
+      "couldMatchOthers": 5
+    }
+  },
+  "at": "2026-08-31T04:06:54.394Z"
+}

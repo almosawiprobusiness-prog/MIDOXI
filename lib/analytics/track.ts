@@ -33,6 +33,13 @@ export type ProductEvent =
   | "study_completed"
   | "film_uploaded"
   | "film_analysis_completed"
+  | "vision_quick_read"
+  | "vision_deep_read"
+  | "vision_read_reused"
+  | "vision_identity_corrected"
+  | "vision_identity_confirmed"
+  | "vision_uncertain_identity"
+  | "vision_provider_fallback"
   /*
     The Vision job pipeline: STARTED with the window count (how much
     film players actually ask MIDO to read), FINISHED with the terminal

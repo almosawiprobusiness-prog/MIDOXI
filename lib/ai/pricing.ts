@@ -10,7 +10,7 @@
   Claude off early for every user, and an under-estimate spends past the cap.
 */
 
-export type AiTier = "fast" | "standard" | "deep" | "video";
+export type AiTier = "fast" | "standard" | "deep" | "video" | "video_deep";
 
 /**
  * Approx blended $/1M tokens (input+output midpoint) — for usage estimates.
@@ -38,7 +38,15 @@ export const TIER_COST_PER_MTOK: Record<AiTier, number> = {
   fast: 3,
   standard: 9,
   deep: 15,
-  video: 1,
+  /*
+    Re-measured 2026-08-30 for the vision accuracy pass (vision-bench):
+    quick reads now run gemini-3.7-flash ($0.75 in / $3.75 out per Mtok) —
+    the honest blend on measured passage mixes is ~$1.6/Mtok, so 2 stays
+    deliberately above it. Deep reads run gemini-2.5-pro ($1.25 / $10);
+    measured blend ~$4/Mtok, logged at 5 for the same reason.
+  */
+  video: 2,
+  video_deep: 5,
 };
 
 /**

@@ -6,6 +6,8 @@ export interface Video {
   title: string;
   source: VideoSource;
   url: string; // playable src (mp4/webm) or youtube watch/embed url
+  /** This match's "how to spot you", when it differs from the profile. */
+  pitchIdentityOverride?: string | null;
   externalId?: string; // youtube id
   thumbnailUrl?: string;
   durationSeconds?: number | null;

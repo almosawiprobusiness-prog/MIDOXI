@@ -1,0 +1,68 @@
+{
+  "configId": "G",
+  "passageId": "p4",
+  "model": "gemini-2.5-pro",
+  "source": "file",
+  "identity": true,
+  "mediaResolution": "MEDIA_RESOLUTION_MEDIUM",
+  "status": 200,
+  "latencyMs": 25460,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 3647,
+    "thinkingTokens": 1949,
+    "outputTokens": 533,
+    "total": 6129,
+    "detail": [
+      {
+        "modality": "VIDEO",
+        "tokenCount": 2838
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 809
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "The viewer makes a well-timed run in behind the defense to go one-on-one with the goalkeeper. His shot beats the keeper but hits the inside of the post and is cleared by a defender.",
+    "observations": [
+      {
+        "atSeconds": 1,
+        "title": "Run in behind the defensive line",
+        "body": "You time your run to attack the space between the two central defenders, moving onto the blindside of the nearest opponent. This movement means the defender isn't aware of your run until the ball is played, giving you a clear advantage to receive the pass and break through on goal.",
+        "confidence": "observed",
+        "aboutViewer": true,
+        "concept": "runs-in-behind"
+      },
+      {
+        "atSeconds": 2,
+        "title": "First touch into space",
+        "body": "As you meet the through ball, your first touch is positive, pushing the ball ahead of you and into the penalty area. This allows you to continue your run at speed without breaking stride, creating the separation needed to take a shot before the recovering defenders or the goalkeeper can close you down.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 4,
+        "title": "Shot selection under pressure",
+        "body": "With the goalkeeper advancing to narrow the angle, you take the shot early. You aim low and across the keeper toward the far post, which is the correct technical choice in this 1v1 situation. The execution is nearly perfect, beating the goalkeeper but striking the inside of the post.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 7,
+        "title": "Rebound is cleared by the defense",
+        "body": "After your shot hits the post, the ball ricochets across the goalmouth into a dangerous area. A recovering defender is the first to react, clearing the ball just ahead of your arriving teammate. This sequence shows how quickly a second chance can appear and disappear.",
+        "confidence": "observed",
+        "aboutViewer": false
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "kit-and-role",
+      "couldMatchOthers": 2
+    }
+  },
+  "at": "2026-08-31T04:00:08.415Z"
+}

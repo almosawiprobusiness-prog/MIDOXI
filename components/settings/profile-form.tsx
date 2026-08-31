@@ -29,6 +29,9 @@ export function ProfileForm({ profile }: { profile: ProfileSettings }) {
     season: profile.season,
     level: profile.level,
     pitchIdentity: profile.pitchIdentity,
+    teamSide: profile.teamSide,
+    kitPrimary: profile.kitPrimary,
+    kitSecondary: profile.kitSecondary,
     transfermarktUrl: profile.transfermarktUrl,
   });
   const [busy, setBusy] = useState(false);
@@ -129,19 +132,58 @@ export function ProfileForm({ profile }: { profile: ProfileSettings }) {
         uncertain rather than guessing.
       */}
       <div className="mt-4 border-t border-line pt-4">
-        <label className="block">
-          <span className="label-tech mb-1 block">How to spot you on film</span>
+        <div className="label-tech mb-2">On-pitch identity</div>
+        <p className="mb-3 text-xs leading-relaxed text-text-faint">
+          This is what lets a film read be about YOU rather than about the passage. Kit and number
+          matter most — MIDO identifies you before attributing anything, and says so when it cannot.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <label className="block">
+            <span className="label-tech mb-1 block">Usually</span>
+            <select
+              value={form.teamSide}
+              onChange={(e) => set({ teamSide: e.target.value })}
+              className={inp}
+            >
+              <option value="">—</option>
+              <option value="home">Home team</option>
+              <option value="away">Away team</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className="label-tech mb-1 block">Shirt colour</span>
+            <input
+              value={form.kitPrimary}
+              onChange={(e) => set({ kitPrimary: e.target.value })}
+              placeholder="royal blue"
+              maxLength={24}
+              className={inp}
+            />
+          </label>
+          <label className="block">
+            <span className="label-tech mb-1 block">Shorts / second colour</span>
+            <input
+              value={form.kitSecondary}
+              onChange={(e) => set({ kitSecondary: e.target.value })}
+              placeholder="white"
+              maxLength={24}
+              className={inp}
+            />
+          </label>
+        </div>
+        <label className="mt-3 block">
+          <span className="label-tech mb-1 block">How to spot you — the extra detail</span>
           <input
             value={form.pitchIdentity}
             onChange={(e) => set({ pitchIdentity: e.target.value })}
-            placeholder="9, blue shirts and white shorts, left footed"
+            placeholder="usually the highest central forward, black boots"
             maxLength={140}
             className={inp}
           />
         </label>
         <p className="mt-1.5 text-xs leading-relaxed text-text-faint">
-          Kit, number, anything that separates you from twenty-one other people. Film reading uses
-          it to write about you — without it, a read is about the passage and says so.
+          Your number and position come from the profile above. If a match used a different kit,
+          you can say so on that video in the film room.
         </p>
 
         <label className="mt-4 block">

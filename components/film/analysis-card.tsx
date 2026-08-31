@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Scissors, Trash2, Target, Check, Undo2, Loader2, ChevronDown, Dumbbell, GraduationCap } from "lucide-react";
 import { peopleForConcept } from "@/lib/knowledge/graph";
-import { observationToClip, removeAnalysis } from "@/app/app/film-room/analysis-actions";
+import { correctAnalysisIdentity, observationToClip, removeAnalysis } from "@/app/app/film-room/analysis-actions";
 import {
   confirmObservation,
   confirmedFor,
@@ -13,7 +13,7 @@ import {
   unconfirmObservation,
   type LoopProposal,
 } from "@/app/app/film-room/loop-actions";
-import { CONFIDENCE_META, type AnalysisObservation } from "@/lib/video/provider";
+import { CONFIDENCE_META, IDENTITY_META, type AnalysisObservation } from "@/lib/video/provider";
 import type { ClipAnalysis } from "@/lib/data/analyses";
 import { fmtTime } from "@/lib/data/film-types";
 import { cn } from "@/lib/utils";
@@ -94,6 +94,29 @@ export function AnalysisCard({
           {isVideo ? "video read" : `${analysis.framesSampled} frames`}
         </span>
         {analysis.focus && <span className="chip !normal-case">{analysis.focus}</span>}
+        {analysis.depth === "deep" && (
+          <span className="chip" title="Read by the deeper model — sharper, slower, two film reads.">
+            deep read
+          </span>
+        )}
+        {/*
+          Who this read is about — the identification audit, surfaced instead
+          of buried. When MIDO could not identify the player, that is stated
+          here, not discovered three observations in.
+        */}
+        {analysis.identity && (
+          <span
+            className="chip"
+            style={
+              analysis.identity.level === "high" || analysis.identity.level === "moderate"
+                ? { color: "var(--positive)", borderColor: "color-mix(in oklab, var(--positive) 35%, transparent)" }
+                : { color: "var(--review)", borderColor: "color-mix(in oklab, var(--review) 35%, transparent)" }
+            }
+            title={IDENTITY_META[analysis.identity.level].hint}
+          >
+            {analysis.identityRejected ? "corrected: not you" : IDENTITY_META[analysis.identity.level].label}
+          </span>
+        )}
         <button
           onClick={() =>
             start(async () => {
@@ -139,7 +162,34 @@ export function AnalysisCard({
       </ul>
 
       {/* Beta: was this read of the footage useful? */}
-      <div className="flex justify-end border-t border-line px-4 py-2.5">
+      <div className="flex items-center justify-between border-t border-line px-4 py-2.5">
+        {/*
+          The correction loop. Wrong-player analysis is worse than no
+          analysis — one tap records the player's verdict, which outranks the
+          model's: the read is marked corrected and stops feeding MIDO's
+          memory of their game.
+        */}
+        {analysis.identity && !analysis.identityRejected ? (
+          <button
+            onClick={() =>
+              start(async () => {
+                await correctAnalysisIdentity(videoId, analysis.id);
+                router.refresh();
+              })
+            }
+            disabled={pending}
+            className="text-xs text-text-faint transition-colors hover:text-review"
+            title="MIDO followed the wrong player? Mark it, and this read stops counting toward your record."
+          >
+            That&rsquo;s not me
+          </button>
+        ) : analysis.identityRejected ? (
+          <span className="text-xs text-review">
+            Marked as the wrong player — this read no longer counts toward your record.
+          </span>
+        ) : (
+          <span />
+        )}
         <AiFeedback subject={`film:${analysis.kind}`} />
       </div>
     </article>

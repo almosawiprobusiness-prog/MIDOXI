@@ -1,0 +1,73 @@
+{
+  "configId": "D",
+  "passageId": "p3",
+  "model": "gemini-2.5-pro",
+  "source": "yt",
+  "identity": true,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 24796,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 4806,
+    "thinkingTokens": 1676,
+    "outputTokens": 564,
+    "total": 7046,
+    "detail": [
+      {
+        "modality": "AUDIO",
+        "tokenCount": 325
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 1127
+      },
+      {
+        "modality": "VIDEO",
+        "tokenCount": 3354
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "The team in white attacks from left to right against the team in green, who attack from right to left. The official wears a bright blue shirt. The viewer's stated kit of 'Royal blue shirt' matches the official, not any outfield player. Therefore, the viewer cannot be identified, and this analysis will describe the general passage of play.",
+    "observations": [
+      {
+        "atSeconds": 59,
+        "title": "Midfield Pressing Trap",
+        "body": "The green team executes a coordinated press in the middle third. As the pass is played into the white midfielder, two green players immediately converge on the ball carrier, closing down space and forcing a turnover. The pass into the central area acts as their trigger to press together.",
+        "confidence": "observed",
+        "aboutViewer": false,
+        "concept": "pressing-triggers"
+      },
+      {
+        "atSeconds": 101,
+        "title": "Isolated Ball Carrier",
+        "body": "When the white midfielder receives the ball under pressure, there are no immediate, safe passing options available. Teammates are either static or too far away to offer effective support, which contributes to the player being dispossessed. Better movement off the ball could have provided an escape from the press.",
+        "confidence": "inferred",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 103,
+        "title": "Attempted Counter-Attacking Run",
+        "body": "Immediately after winning possession, the green team looks to transition quickly into attack. A forward makes a run into the channel behind the white defence. The pass is attempted but intercepted, showing the attacking intent but also good defensive reading from the white team.",
+        "confidence": "observed",
+        "aboutViewer": false,
+        "concept": "runs-in-behind"
+      },
+      {
+        "atSeconds": 107,
+        "title": "Unsuccessful Switch of Play",
+        "body": "Faced with a compact green defensive block, the white team attempts to change the point of attack with a long diagonal pass. The idea is correct, but the execution is poor, as the pass is overhit and goes out for a throw-in, conceding possession.",
+        "confidence": "observed",
+        "aboutViewer": false
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "none",
+      "couldMatchOthers": 0
+    }
+  },
+  "at": "2026-08-31T04:05:55.854Z"
+}

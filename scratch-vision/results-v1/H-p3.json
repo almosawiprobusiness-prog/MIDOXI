@@ -1,0 +1,61 @@
+{
+  "configId": "H",
+  "passageId": "p3",
+  "model": "gemini-3.7-flash",
+  "source": "file",
+  "identity": true,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 12960,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 1959,
+    "thinkingTokens": 603,
+    "outputTokens": 314,
+    "total": 2876,
+    "detail": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 1101
+      },
+      {
+        "modality": "VIDEO",
+        "tokenCount": 858
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "The attacking team in white breaks forward through the right-central channel, carrying possession toward the attacking third while the defending team retreats centrally to protect the box.",
+    "observations": [
+      {
+        "atSeconds": 1,
+        "title": "Central build-up and release",
+        "body": "The midfield player receives facing forward and quickly slides a pass between defensive lines to a teammate breaking through the right-central channel.",
+        "confidence": "observed",
+        "aboutViewer": false,
+        "concept": "runs-in-behind"
+      },
+      {
+        "atSeconds": 6,
+        "title": "Defensive transition shape",
+        "body": "The defending back line recovers centrally, funneling the dribbler toward the right touchline while closing inside passing lanes.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 10,
+        "title": "Forward carrying into attacking third",
+        "body": "The attacker drives diagonally forward toward the penalty area, attracting multiple defenders as supporting attackers begin their runs inside.",
+        "confidence": "observed",
+        "aboutViewer": false
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "none",
+      "couldMatchOthers": 21
+    }
+  },
+  "at": "2026-08-31T04:00:55.276Z"
+}

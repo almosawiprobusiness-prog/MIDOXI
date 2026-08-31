@@ -1,0 +1,86 @@
+{
+  "configId": "A",
+  "passageId": "p3",
+  "model": "gemini-2.5-flash",
+  "source": "yt",
+  "identity": false,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 21034,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 4499,
+    "thinkingTokens": 2700,
+    "outputTokens": 607,
+    "total": 7806,
+    "detail": [
+      {
+        "modality": "AUDIO",
+        "tokenCount": 325
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 820
+      },
+      {
+        "modality": "VIDEO",
+        "tokenCount": 3354
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "The white team attempts to build an attack through midfield and wide circulation, but struggles to create penetrating runs against a compact green defense. Attacking movements are primarily focused on maintaining possession and offering short support.",
+    "observations": [
+      {
+        "atSeconds": 59,
+        "title": "Forward run not utilized",
+        "body": "A white player in a central attacking position makes a forward run into space, attempting to get in behind the green defense. The ball is played to a deeper midfielder instead, and the run is not rewarded.",
+        "confidence": "uncertain",
+        "aboutViewer": true,
+        "concept": "runs-in-behind"
+      },
+      {
+        "atSeconds": 101,
+        "title": "Support for wide player",
+        "body": "As the ball moves to the right wing, a central white player moves to offer a supporting passing option. This helps the wide player maintain possession under pressure.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 103,
+        "title": "Ball circulation in midfield",
+        "body": "The white team circulates the ball across the midfield and wide areas, maintaining possession. Players move to create passing triangles and offer safe options, but without significant forward progression.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 107,
+        "title": "Lack of penetrating movement",
+        "body": "Despite sustained possession, there is a general absence of aggressive runs in behind the green defensive line. Most attacking movement remains in front of the opposition defense.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 110,
+        "title": "Receiving in advanced central position",
+        "body": "A white player receives the ball centrally in a more advanced position, just outside the attacking third. This player immediately turns to face the goal, looking to combine or drive forward.",
+        "confidence": "uncertain",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 111,
+        "title": "Immediate pressure on central receiver",
+        "body": "The white player who received the ball centrally is immediately closed down by a green defender. This quick pressure limits the options for a forward pass or a shot.",
+        "confidence": "uncertain",
+        "aboutViewer": true
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "none",
+      "couldMatchOthers": 21
+    }
+  },
+  "at": "2026-08-31T03:52:05.724Z"
+}

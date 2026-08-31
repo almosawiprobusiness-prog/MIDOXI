@@ -1,0 +1,66 @@
+{
+  "configId": "D",
+  "passageId": "p3",
+  "model": "gemini-2.5-pro",
+  "source": "yt",
+  "identity": true,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 26855,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 4490,
+    "thinkingTokens": 2075,
+    "outputTokens": 425,
+    "total": 6990,
+    "detail": [
+      {
+        "modality": "AUDIO",
+        "tokenCount": 325
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 811
+      },
+      {
+        "modality": "VIDEO",
+        "tokenCount": 3354
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "I cannot identify the specified player. The description of a 'Royal blue shirt' matches the referee, not a player on either the white or green team. The following observations are about the general passage of play, where the white team's attack breaks down but is followed by an effective counter-press to regain possession.",
+    "observations": [
+      {
+        "atSeconds": 59,
+        "title": "Run in Behind Not Utilized",
+        "body": "As the white team's midfielder carries the ball forward, the most advanced attacker makes a darting run between the two central defenders. The ball carrier is put under pressure and is unable to make the through pass before being tackled.",
+        "confidence": "observed",
+        "aboutViewer": false,
+        "concept": "runs-in-behind"
+      },
+      {
+        "atSeconds": 101,
+        "title": "Possession Lost Under Pressure",
+        "body": "The ball carrier for the white team is isolated as they advance into the opponent's half. With no immediate passing option available to relieve pressure, they are tackled and lose the ball, halting the attack.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 104,
+        "title": "Effective Counter-Press",
+        "body": "Immediately after possession is lost at 01:01, the two nearest white attackers swarm the new ball carrier. This immediate, aggressive pressure forces a mistake and allows the white team to win the ball back within three seconds.",
+        "confidence": "observed",
+        "aboutViewer": false,
+        "concept": "pressing-triggers"
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "none",
+      "couldMatchOthers": 0
+    }
+  },
+  "at": "2026-08-31T03:55:25.359Z"
+}

@@ -71,6 +71,9 @@ export async function updateProfile(input: ProfileFormInput): Promise<Result> {
     level: input.level || null,
     favorite_club: input.favoriteClub?.trim() || null,
     pitch_identity: input.pitchIdentity?.trim() || null,
+    team_side: input.teamSide === "home" || input.teamSide === "away" ? input.teamSide : null,
+    kit_primary: input.kitPrimary?.trim().slice(0, 24) || null,
+    kit_secondary: input.kitSecondary?.trim().slice(0, 24) || null,
     transfermarkt_url: normaliseTransfermarkt(input.transfermarktUrl ?? ""),
   });
   if (error) return { ok: false, error: error.message };

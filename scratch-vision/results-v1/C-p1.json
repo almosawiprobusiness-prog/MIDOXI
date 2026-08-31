@@ -1,0 +1,79 @@
+{
+  "configId": "C",
+  "passageId": "p1",
+  "model": "gemini-2.5-flash",
+  "source": "yt",
+  "identity": true,
+  "mediaResolution": "MEDIA_RESOLUTION_MEDIUM",
+  "status": 200,
+  "latencyMs": 10002,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 5909,
+    "thinkingTokens": 779,
+    "outputTokens": 528,
+    "total": 7216,
+    "detail": [
+      {
+        "modality": "AUDIO",
+        "tokenCount": 450
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 815
+      },
+      {
+        "modality": "VIDEO",
+        "tokenCount": 4644
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "The viewer, wearing number 10 in royal blue, is observed in the first part of the clip. They demonstrate good movement to support play, receive the ball in an advanced position, and then move into the penalty area for a potential cross. The viewer is not identifiable in the second part of the clip.",
+    "observations": [
+      {
+        "atSeconds": 18,
+        "title": "Initial positioning",
+        "body": "The viewer starts in a central attacking position, high up the pitch, as the team builds from the back. This initial position allows for a direct attacking threat.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 19,
+        "title": "Movement to support build-up",
+        "body": "The viewer makes a short movement towards the ball carrier, then checks back slightly to create space. This movement provides a passing option for the midfield.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 21,
+        "title": "Receiving and distributing",
+        "body": "The viewer receives the ball in the attacking third, turns quickly, and plays a pass out wide to a teammate. This shows good awareness and ability to link play.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 22,
+        "title": "Movement into the box",
+        "body": "After releasing the ball wide, the viewer immediately makes a run into the penalty area. This is good anticipation of a potential cross or cut-back.",
+        "confidence": "observed",
+        "aboutViewer": true,
+        "concept": "runs-in-behind"
+      },
+      {
+        "atSeconds": 27,
+        "title": "Viewer not visible",
+        "body": "The viewer is not identifiable in the second segment of the video, which features different teams and kits. Observations cannot be made about the viewer from this point.",
+        "confidence": "uncertain",
+        "aboutViewer": true
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": true,
+      "basis": "squad-number",
+      "couldMatchOthers": 0
+    }
+  },
+  "at": "2026-08-31T03:53:36.946Z"
+}

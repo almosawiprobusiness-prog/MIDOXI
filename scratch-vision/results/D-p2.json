@@ -1,0 +1,64 @@
+{
+  "configId": "D",
+  "passageId": "p2",
+  "model": "gemini-2.5-pro",
+  "source": "yt",
+  "identity": true,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 25527,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 5381,
+    "thinkingTokens": 1984,
+    "outputTokens": 463,
+    "total": 7828,
+    "detail": [
+      {
+        "modality": "AUDIO",
+        "tokenCount": 375
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 1136
+      },
+      {
+        "modality": "VIDEO",
+        "tokenCount": 3870
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "This clip covers a direct free kick. The team in White attacks from right to left, against a team in Dark kits. The viewer is requested as wearing a white #10 shirt, but player numbers are not legible in the footage, so no specific player can be identified. The passage shows the White team scoring a goal directly from the free kick.",
+    "observations": [
+      {
+        "atSeconds": 42,
+        "title": "Set Piece Organisation",
+        "body": "The White team has a direct free kick from outside the penalty area, to the right of the D. The defending Dark team sets a four-player wall. The White team positions one player to take the kick and has at least four other players positioned around the box to attack the delivery or any potential rebound.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 49,
+        "title": "Coordinated Runs into the Box",
+        "body": "As the free-kick taker begins his run-up, two attackers in white shirts time their runs to enter the penalty area. One attacker makes a diagonal run from a central position toward the back post, while another moves into the space vacated by the wall. These runs are designed to challenge for the ball if it is crossed or parried by the goalkeeper.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 50,
+        "title": "Direct Free Kick Goal",
+        "body": "The player in the white #11 shirt strikes the ball with his right foot. The shot curls over the wall and goes directly into the top-left corner of the goal, beyond the reach of the diving goalkeeper. The shot is precise and results in a goal for the White team.",
+        "confidence": "observed",
+        "aboutViewer": false
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "none",
+      "couldMatchOthers": 5
+    }
+  },
+  "at": "2026-08-31T04:05:30.956Z"
+}

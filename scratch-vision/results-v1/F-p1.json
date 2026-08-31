@@ -1,0 +1,85 @@
+{
+  "configId": "F",
+  "passageId": "p1",
+  "model": "gemini-2.5-flash",
+  "source": "file",
+  "identity": true,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 29280,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 5459,
+    "thinkingTokens": 3612,
+    "outputTokens": 693,
+    "total": 9764,
+    "detail": [
+      {
+        "modality": "VIDEO",
+        "tokenCount": 4644
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 815
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "The video shows two distinct passages of play. In the first segment (00:00-00:08), the viewer, wearing royal blue #10, demonstrates active pressing from a central attacking position. In the second segment (00:09-00:18), a different player, wearing white #10 and highlighted, makes a run in behind the defense and positions for a cross.",
+    "observations": [
+      {
+        "atSeconds": 4,
+        "title": "Viewer initiates press",
+        "body": "From a central attacking position, the viewer begins to close down the white team's ball carrier in their defensive half. This shows an initial commitment to winning the ball back.",
+        "confidence": "observed",
+        "aboutViewer": true,
+        "concept": "pressing-triggers"
+      },
+      {
+        "atSeconds": 6,
+        "title": "Sustained pressing effort",
+        "body": "After the initial press forces a pass, the viewer immediately shifts to press the next white player who receives the ball. This indicates a sustained work rate in defensive transition.",
+        "confidence": "observed",
+        "aboutViewer": true,
+        "concept": "pressing-triggers"
+      },
+      {
+        "atSeconds": 9,
+        "title": "Kit change and viewer identity",
+        "body": "The video transitions to a new passage of play. The player identified as the viewer is now wearing a white shirt with number 10, and is highlighted. This is a different kit from the previous segment.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 12,
+        "title": "Run in behind",
+        "body": "As the white team builds up possession, the viewer makes a forward run into the space between the opposing defenders. This is an attempt to exploit the defensive line and create a scoring opportunity.",
+        "confidence": "observed",
+        "aboutViewer": true,
+        "concept": "runs-in-behind"
+      },
+      {
+        "atSeconds": 14,
+        "title": "Continued attacking run",
+        "body": "The viewer continues their run towards the goal, getting behind the defensive line, even though the ball is played wide to the right wing. This shows commitment to the attacking movement.",
+        "confidence": "observed",
+        "aboutViewer": true,
+        "concept": "runs-in-behind"
+      },
+      {
+        "atSeconds": 17,
+        "title": "Positioning for a cross",
+        "body": "After the run in behind, the viewer adjusts their position inside the penalty area, anticipating a cross from the right wing. They are central, near the penalty spot.",
+        "confidence": "observed",
+        "aboutViewer": true
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": true,
+      "basis": "squad-number",
+      "couldMatchOthers": 0
+    }
+  },
+  "at": "2026-08-31T03:57:21.421Z"
+}

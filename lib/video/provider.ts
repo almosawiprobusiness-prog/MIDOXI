@@ -87,7 +87,74 @@ export interface AnalysisRequest {
   source?: { kind: "upload" | "youtube" | "url"; title: string };
   /** Observations already recorded against these concepts, for a re-check. */
   priorObservations?: PriorObservation[];
+  /**
+   * How hard to look. "quick" is the default read on the fast model;
+   * "deep" runs the slower, sharper model on the same passage and costs
+   * two film reads. Routing proven by benchmark, not vibes — see
+   * docs/product/VISION_ACCURACY_BENCHMARK.md.
+   */
+  depth?: "quick" | "deep";
 }
+
+/**
+ * How confidently the read picked the viewer out of the footage — computed
+ * in code from the model's identification audit, never taken on trust.
+ * When this is "low" or "none", nothing in the read may say "you did".
+ */
+export interface AnalysisIdentity {
+  level: "high" | "moderate" | "low" | "none";
+  basis: "squad-number" | "kit-and-role" | "none";
+  couldMatchOthers: number;
+  squadNumberLegible: boolean;
+}
+
+/**
+ * Derive the identity level from the model's identification audit. Pure and
+ * shared: the provider uses it at read time, tests pin its rules. The rules
+ * are deliberately conservative — "high" needs a legible number matched to
+ * exactly one player; anything the model itself says could match others
+ * degrades.
+ */
+export function identityLevelFrom(
+  id: { squadNumberLegible?: unknown; basis?: unknown; couldMatchOthers?: unknown } | undefined,
+  identityGiven: boolean,
+): AnalysisIdentity {
+  const basis = (id?.basis === "squad-number" || id?.basis === "kit-and-role"
+    ? id.basis
+    : "none") as AnalysisIdentity["basis"];
+  const couldMatchOthers = Math.max(0, Number(id?.couldMatchOthers ?? 0) || 0);
+  const squadNumberLegible = Boolean(id?.squadNumberLegible);
+
+  let level: AnalysisIdentity["level"] = "none";
+  if (identityGiven && basis !== "none") {
+    if (basis === "squad-number" && squadNumberLegible && couldMatchOthers === 0) level = "high";
+    else if (couldMatchOthers <= 2) level = "moderate";
+    else level = "low";
+  }
+  return { level, basis, couldMatchOthers, squadNumberLegible };
+}
+
+export const IDENTITY_META: Record<
+  AnalysisIdentity["level"],
+  { label: string; hint: string }
+> = {
+  high: {
+    label: "Identified",
+    hint: "MIDO read your number or found exactly one player matching your description across the passage.",
+  },
+  moderate: {
+    label: "Likely you",
+    hint: "MIDO found a player matching your kit and role, but could not read a number — treat 'you' claims as probable, not certain.",
+  },
+  low: {
+    label: "Uncertain",
+    hint: "Several players fit your description equally well. Claims about you are capped and worth double-checking.",
+  },
+  none: {
+    label: "Not identified",
+    hint: "MIDO could not pick you out of this footage at all. The read is about the passage, not about you.",
+  },
+};
 
 /**
  * Something MIDO already said about this player, on an earlier clip.
@@ -150,6 +217,12 @@ export interface AnalysisResult {
   summary: string;
   observations: AnalysisObservation[];
   framesUsed: number;
+  /** The identification audit, kept structured — not just prose. */
+  identity?: AnalysisIdentity;
+  /** Which depth actually ran ("quick" after a deep fallback says so). */
+  depth?: "quick" | "deep";
+  /** The system-prompt version that produced this, for later comparison. */
+  promptVersion?: number;
 }
 
 export type AnalysisOutcome =

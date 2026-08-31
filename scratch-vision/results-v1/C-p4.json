@@ -1,0 +1,72 @@
+{
+  "configId": "C",
+  "passageId": "p4",
+  "model": "gemini-2.5-flash",
+  "source": "yt",
+  "identity": true,
+  "mediaResolution": "MEDIA_RESOLUTION_MEDIUM",
+  "status": 200,
+  "latencyMs": 9867,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 3922,
+    "thinkingTokens": 892,
+    "outputTokens": 405,
+    "total": 5219,
+    "detail": [
+      {
+        "modality": "VIDEO",
+        "tokenCount": 2838
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 809
+      },
+      {
+        "modality": "AUDIO",
+        "tokenCount": 275
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "The viewer, in a white shirt, makes a run into the box, receives a through ball, and scores with a shot over the goalkeeper.",
+    "observations": [
+      {
+        "atSeconds": 1,
+        "title": "Initial Movement",
+        "body": "The viewer is positioned on the right side of the attacking third, already moving forward as the ball is played by a teammate in a dark kit.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 2,
+        "title": "Run in Behind",
+        "body": "The viewer makes a direct run into the penalty area, getting behind the defensive line to receive a through pass. This creates a clear scoring opportunity.",
+        "confidence": "observed",
+        "aboutViewer": true,
+        "concept": "runs-in-behind"
+      },
+      {
+        "atSeconds": 3,
+        "title": "First Touch and Shot",
+        "body": "The viewer takes a single touch to control the ball inside the box, then immediately strikes it towards goal. The shot is taken quickly after the first touch.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 4,
+        "title": "Goal Scored",
+        "body": "The shot goes over the outstretched arms of the goalkeeper and into the net, resulting in a goal. The viewer ends up on the ground after the effort.",
+        "confidence": "observed",
+        "aboutViewer": true
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "kit-and-role",
+      "couldMatchOthers": 0
+    }
+  },
+  "at": "2026-08-31T03:54:06.362Z"
+}

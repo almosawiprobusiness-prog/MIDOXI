@@ -1,0 +1,62 @@
+{
+  "configId": "H",
+  "passageId": "p1",
+  "model": "gemini-3.7-flash",
+  "source": "file",
+  "identity": true,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 23213,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 2293,
+    "thinkingTokens": 559,
+    "outputTokens": 371,
+    "total": 3223,
+    "detail": [
+      {
+        "modality": "VIDEO",
+        "tokenCount": 1188
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 1105
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "Footage features two sequences focusing on off-the-ball positioning and forward movements against structured defensive lines.",
+    "observations": [
+      {
+        "atSeconds": 2,
+        "title": "Central Pressing Trigger and Interception Angle",
+        "body": "As the opponent receives in the central third, the pressing shape attempts to collapse centrally. The approach angle needs to cut off the square pass sooner to prevent the turn into forward space.",
+        "confidence": "inferred",
+        "aboutViewer": false,
+        "concept": "pressing-triggers"
+      },
+      {
+        "atSeconds": 6,
+        "title": "Exploiting Channel Space on Transition",
+        "body": "Once the central block is bypassed, play shifts directly to the right channel where depth is available behind the fullback. Early recognition of this space allows the attacking line to stretch the defense laterally.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 13,
+        "title": "Curved Run Behind the Defensive Line",
+        "body": "The forward initiates a run across the shoulder of the center-back into the channel while maintaining an onside body position. Timing the burst as the passer shapes to strike keeps the defender facing their own goal.",
+        "confidence": "observed",
+        "aboutViewer": true,
+        "concept": "runs-in-behind"
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "kit-and-role",
+      "couldMatchOthers": 9
+    }
+  },
+  "at": "2026-08-31T04:00:31.706Z"
+}

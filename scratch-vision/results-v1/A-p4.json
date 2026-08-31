@@ -1,0 +1,85 @@
+{
+  "configId": "A",
+  "passageId": "p4",
+  "model": "gemini-2.5-flash",
+  "source": "yt",
+  "identity": false,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 14370,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 3933,
+    "thinkingTokens": 2023,
+    "outputTokens": 563,
+    "total": 6519,
+    "detail": [
+      {
+        "modality": "AUDIO",
+        "tokenCount": 275
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 820
+      },
+      {
+        "modality": "VIDEO",
+        "tokenCount": 2838
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "The clip shows an attacking sequence where a forward pass leads to a shot on goal that hits the crossbar, followed by a rebound header that misses the target.",
+    "observations": [
+      {
+        "atSeconds": 37,
+        "title": "Ball Progression on the Wing",
+        "body": "A player in a dark kit, wearing number 22, receives the ball on the left side of the attacking third. They are looking to move the ball forward.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 38,
+        "title": "Forward Pass into Attack",
+        "body": "Player 22 plays a pass forward and centrally into the penalty area. This pass creates an opportunity for a teammate to receive the ball in a dangerous position.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 39,
+        "title": "First Shot on Goal",
+        "body": "A player in a white kit receives the forward pass, takes one touch to control, and immediately attempts a shot on goal. The shot is struck with power.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 42,
+        "title": "Shot Hits Crossbar",
+        "body": "The initial shot on goal strikes the crossbar, preventing it from entering the net directly. The ball rebounds back into play.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 43,
+        "title": "Follow-up Header Attempt",
+        "body": "The same player who took the initial shot reacts quickly to the rebound. With the goalkeeper on the ground, they attempt to head the ball towards the goal.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 44,
+        "title": "Rebound Misses Target",
+        "body": "The follow-up header goes wide of the goal, failing to convert the second chance created by the crossbar rebound. The opportunity to score is lost.",
+        "confidence": "observed",
+        "aboutViewer": false
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": true,
+      "basis": "none",
+      "couldMatchOthers": 9
+    }
+  },
+  "at": "2026-08-31T03:52:20.096Z"
+}

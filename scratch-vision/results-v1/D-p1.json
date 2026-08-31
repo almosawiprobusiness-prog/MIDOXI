@@ -1,0 +1,66 @@
+{
+  "configId": "D",
+  "passageId": "p1",
+  "model": "gemini-2.5-pro",
+  "source": "yt",
+  "identity": true,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 24484,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 5909,
+    "thinkingTokens": 1856,
+    "outputTokens": 467,
+    "total": 8232,
+    "detail": [
+      {
+        "modality": "VIDEO",
+        "tokenCount": 4644
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 815
+      },
+      {
+        "modality": "AUDIO",
+        "tokenCount": 450
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "This clip contains two separate plays. In the first, as a central forward in blue, you initiate a press on a back pass that leads to a turnover and a counter-attack for your team. In the second, playing in white, you make an intelligent run in behind the opposition's back line, which goes unseen by your teammate on the ball.",
+    "observations": [
+      {
+        "atSeconds": 22,
+        "title": "Curved Pressing Run Forces Turnover",
+        "body": "When the opponent plays a pass back to their center-back, you use it as a trigger to press. Your run is curved, which successfully blocks the passing lane back across the defense and forces the player on the ball into a rushed forward pass that your midfield intercepts.",
+        "confidence": "observed",
+        "aboutViewer": true,
+        "concept": "pressing-triggers"
+      },
+      {
+        "atSeconds": 31,
+        "title": "Run in Behind Splits the Defense",
+        "body": "In the second sequence, as the ball travels to your teammate on the right wing, you make a run into the channel between the opposition's center-back and full-back. This movement offers a clear through-ball option in a dangerous area behind their defensive line.",
+        "confidence": "observed",
+        "aboutViewer": true,
+        "concept": "runs-in-behind"
+      },
+      {
+        "atSeconds": 33,
+        "title": "Attacking Run Not Utilized",
+        "body": "Your run successfully creates a goal-scoring opportunity, but the teammate in possession does not make the pass into the space you've attacked. While the run itself was effective, the team could not capitalize on it as the final ball was not delivered.",
+        "confidence": "inferred",
+        "aboutViewer": false
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "kit-and-role",
+      "couldMatchOthers": 10
+    }
+  },
+  "at": "2026-08-31T03:54:30.935Z"
+}

@@ -29,6 +29,8 @@ HARD RULES — these are not style preferences:
 - NEVER claim to see something that is not in the frames. If the frames do not show whether a defender turned, say the frames do not show it.
 - Sampled frames have gaps between them. Talk about what changed BETWEEN frames, and be explicit that the moments in between were not seen.
 - Anchor every observation to one of the given timestamps.
+- If the viewer's on-pitch identity is stated, look for that player. If you cannot pick them out — numbers illegible, several players match, the kit matches nobody or matches an official — say so plainly and write about the passage instead. Never address an unidentified player as "you".
+- Mark every observation "observed" (visible in a frame), "inferred" (follows from what the frames show), or "uncertain" (the frames do not settle it — including who the viewer is). Set "aboutViewer" true only on observations that describe the viewer specifically.
 - Write like a coach at a screen: concrete, specific, useful in the next session. No hype.
 - Where an observation matches one of the curated football concepts provided, name it.
 
@@ -49,13 +51,26 @@ const SCHEMA = {
           title: { type: "string" },
           body: { type: "string" },
           concept: { type: "string" },
+          confidence: { type: "string", enum: ["observed", "inferred", "uncertain"] },
+          aboutViewer: { type: "boolean" },
         },
-        required: ["atSeconds", "title", "body"],
+        required: ["atSeconds", "title", "body", "confidence", "aboutViewer"],
       },
     },
   },
   required: ["summary", "observations"],
 } as const;
+
+const CONF_RANK = { observed: 3, inferred: 2, uncertain: 1 } as const;
+
+function capConfidence(
+  claimed: "observed" | "inferred" | "uncertain" | undefined,
+  identityGiven: boolean,
+): "observed" | "inferred" | "uncertain" {
+  const ceiling = identityGiven ? "inferred" : "uncertain";
+  const c = claimed && CONF_RANK[claimed] ? claimed : "observed";
+  return CONF_RANK[c] > CONF_RANK[ceiling] ? ceiling : c;
+}
 
 export const frameReader: VideoAnalysisProvider = {
   id: "mido-frames",
@@ -109,7 +124,7 @@ export const frameReader: VideoAnalysisProvider = {
 
     const res = await generateJson<{
       summary: string;
-      observations: { atSeconds: number; title: string; body: string; concept?: string }[];
+      observations: { atSeconds: number; title: string; body: string; concept?: string; confidence?: "observed" | "inferred" | "uncertain"; aboutViewer?: boolean }[];
     }>({
       tier: "standard",
       system: SYSTEM,
@@ -123,6 +138,9 @@ export const frameReader: VideoAnalysisProvider = {
         viewer: {
           role: request.viewer.role,
           position: request.viewer.position,
+          onThePitch:
+            request.viewer.identity ||
+            "NOT STATED — you do not know which player this is. Write about the passage and mark identity-dependent observations uncertain.",
         },
         curatedConcepts: concepts.map((c) => ({
           slug: c.slug,
@@ -169,6 +187,18 @@ export const frameReader: VideoAnalysisProvider = {
         body: (o.body ?? "").slice(0, 600),
         // Only keep a concept the graph actually knows.
         concept: o.concept && valid.has(o.concept) ? o.concept : undefined,
+        /*
+          Twelve stills can never verify identity the way motion can, so
+          claims ABOUT THE VIEWER cap at "inferred" with an identity and
+          "uncertain" without one — the same ceiling discipline as the video
+          lane, which this lane used to skip entirely (every frame read
+          rendered as "Observed", which the truth model never intended).
+          Passage observations keep what the frames genuinely show.
+        */
+        confidence:
+          o.aboutViewer === false
+            ? (o.confidence ?? "observed")
+            : capConfidence(o.confidence, Boolean(request.viewer.identity)),
       }))
       .filter((o) => o.title && o.body)
       .sort((a, b) => a.atSeconds - b.atSeconds);

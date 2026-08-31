@@ -1,0 +1,69 @@
+{
+  "configId": "G",
+  "passageId": "p3",
+  "model": "gemini-2.5-pro",
+  "source": "file",
+  "identity": true,
+  "mediaResolution": "MEDIA_RESOLUTION_MEDIUM",
+  "status": 200,
+  "latencyMs": 27395,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 4481,
+    "thinkingTokens": 1862,
+    "outputTokens": 533,
+    "total": 6876,
+    "detail": [
+      {
+        "modality": "VIDEO",
+        "tokenCount": 3354
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 1127
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "The team in White attacks from right to left, and the team in Green attacks from left to right. The viewer is described as wearing a royal blue shirt, but the only player in that colour is the goalkeeper for the White team. No outfield player matches the description, so a specific player cannot be identified. This analysis focuses on the general attacking movement of the White team.",
+    "observations": [
+      {
+        "atSeconds": 1,
+        "title": "Early Run Into the Channel",
+        "body": "As a White midfielder receives the ball in the centre circle, a forward makes a sharp run into the space behind the Green defence. This movement offers an immediate penetrating option and forces the defenders to adjust, even though the pass is not made.",
+        "confidence": "observed",
+        "aboutViewer": false,
+        "concept": "runs-in-behind"
+      },
+      {
+        "atSeconds": 5,
+        "title": "Second Forward Run from Central Player",
+        "body": "With possession now established on the right wing, a central attacker for the White team makes another forward run. This consistent movement to get in behind the defensive line puts sustained pressure on the opposition and creates potential passing lanes.",
+        "confidence": "observed",
+        "aboutViewer": false,
+        "concept": "runs-in-behind"
+      },
+      {
+        "atSeconds": 7,
+        "title": "Multiple Forward Runners Supporting the Ball",
+        "body": "When the ball is played back into the middle of the pitch, the White team has multiple players making forward runs simultaneously. One player attacks the wide channel while another occupies the central defenders, giving the ball carrier several options to progress the attack.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 11,
+        "title": "Turnover and Transition",
+        "body": "The White team's attack down the right flank is contained, and the Green team wins possession. They immediately launch a counter-attack, playing forward into the space left by the White team's attacking players.",
+        "confidence": "observed",
+        "aboutViewer": false
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "none",
+      "couldMatchOthers": 10
+    }
+  },
+  "at": "2026-08-31T04:06:40.420Z"
+}

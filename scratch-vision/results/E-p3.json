@@ -1,0 +1,64 @@
+{
+  "configId": "E",
+  "passageId": "p3",
+  "model": "gemini-3.7-flash",
+  "source": "yt",
+  "identity": true,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 19984,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 2596,
+    "thinkingTokens": 815,
+    "outputTokens": 393,
+    "total": 3804,
+    "detail": [
+      {
+        "modality": "AUDIO",
+        "tokenCount": 326
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 1412
+      },
+      {
+        "modality": "VIDEO",
+        "tokenCount": 858
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "The match features one team in all-white attacking left-to-right on screen and another in all-green defending. The match official wears a bright blue shirt in central midfield. Because no outfield player wears royal blue, the requested viewer matches an official or non-existent outfield kit in this footage, so basis is set to none and observations analyze the general passage of play.",
+    "observations": [
+      {
+        "atSeconds": 58,
+        "title": "Build-up along the left touchline",
+        "body": "The team in white initiates possession in midfield before funneling play wide to the left touchline. The receiver takes a positive forward touch to commit the nearest green defender.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 64,
+        "title": "Wide progression into final third",
+        "body": "The white winger advances down the flank, isolating the outside defender and carrying the ball towards the attacking third. The central attackers from the white team start advancing to occupy the penalty box.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 68,
+        "title": "Defensive collapse and passing lane closure",
+        "body": "As the ball carrier drives inward, the green back line retreats centrally to compress space in front of goal. The defending unit blocks the forward passing lanes into the box, slowing the momentum of the attack.",
+        "confidence": "inferred",
+        "aboutViewer": false
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "none",
+      "couldMatchOthers": 0
+    }
+  },
+  "at": "2026-08-31T04:05:05.320Z"
+}

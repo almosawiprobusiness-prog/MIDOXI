@@ -53,7 +53,7 @@ import type { AiTier, AiUsage } from "./pricing";
   put in the table below. Naming the subset here means adding a tier for
   another provider cannot silently leave a hole in this map.
 */
-export type ClaudeTier = Exclude<AiTier, "video">;
+export type ClaudeTier = Exclude<AiTier, "video" | "video_deep">;
 
 const MODELS: Record<ClaudeTier, string> = {
   fast: "claude-haiku-4-5-20251001",

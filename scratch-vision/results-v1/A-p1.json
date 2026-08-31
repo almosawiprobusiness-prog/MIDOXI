@@ -1,0 +1,102 @@
+{
+  "configId": "A",
+  "passageId": "p1",
+  "model": "gemini-2.5-flash",
+  "source": "yt",
+  "identity": false,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 10090,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 5918,
+    "thinkingTokens": 364,
+    "outputTokens": 768,
+    "total": 7050,
+    "detail": [
+      {
+        "modality": "VIDEO",
+        "tokenCount": 4644
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 824
+      },
+      {
+        "modality": "AUDIO",
+        "tokenCount": 450
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "This clip shows two distinct passages of play. The first involves a team in white building up from the back, with some off-ball movement and a shot on goal. The second passage shows a team in white defending and then attempting to build up, with a focus on wide play.",
+    "observations": [
+      {
+        "atSeconds": 19,
+        "title": "Build-up from the back",
+        "body": "The team in white attempts to build play from their defensive third. They use short passes to move the ball through the central midfield.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 20,
+        "title": "Central forward drops deep",
+        "body": "A player in a white kit, playing as a central forward, drops deep towards the midfield line. This movement creates space in behind the opposition's defensive line.",
+        "confidence": "inferred",
+        "aboutViewer": true,
+        "concept": "blindside-movement"
+      },
+      {
+        "atSeconds": 21,
+        "title": "Opposition pressing",
+        "body": "The team in blue applies pressure in the midfield, attempting to win the ball back. They are compact and force the white team to play quickly.",
+        "confidence": "observed",
+        "aboutViewer": false,
+        "concept": "pressing-triggers"
+      },
+      {
+        "atSeconds": 23,
+        "title": "Shot on goal",
+        "body": "A player in white receives the ball in a central attacking position and takes a shot towards the goal. The shot goes wide of the target.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 28,
+        "title": "Defensive positioning",
+        "body": "The team in white is positioned in a defensive shape, with players tracking back. They are covering central areas, forcing the opposition wide.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 30,
+        "title": "Wide player receives ball",
+        "body": "A player in white on the right wing receives the ball. They are isolated with an opponent, looking to drive forward.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 32,
+        "title": "Lack of support for wide player",
+        "body": "The wide player in white receives the ball but has limited immediate support from teammates. This makes it difficult to progress the attack.",
+        "confidence": "inferred",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 34,
+        "title": "Central forward checks back",
+        "body": "A player in a white kit, playing as a central forward, checks back towards the ball to offer a passing option. This is a similar movement to the one observed earlier in the clip.",
+        "confidence": "inferred",
+        "aboutViewer": true,
+        "concept": "blindside-movement"
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "kit-and-role",
+      "couldMatchOthers": 2
+    }
+  },
+  "at": "2026-08-31T03:51:35.002Z"
+}

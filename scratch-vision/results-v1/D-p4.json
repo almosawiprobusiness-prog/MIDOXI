@@ -1,0 +1,66 @@
+{
+  "configId": "D",
+  "passageId": "p4",
+  "model": "gemini-2.5-pro",
+  "source": "yt",
+  "identity": true,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 30312,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 3922,
+    "thinkingTokens": 1745,
+    "outputTokens": 425,
+    "total": 6092,
+    "detail": [
+      {
+        "modality": "AUDIO",
+        "tokenCount": 275
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 809
+      },
+      {
+        "modality": "VIDEO",
+        "tokenCount": 2838
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "The viewer makes a well-timed run in behind the defense, receives a through ball, and scores with a composed, low finish across the goalkeeper into the far corner.",
+    "observations": [
+      {
+        "atSeconds": 237,
+        "title": "Well-timed run in behind",
+        "body": "At 02:37, as your teammate is about to receive the ball, you initiate your run from a central area. You arc your movement into the right channel, timing it to break the defensive line as the pass is played, which leaves the defender unable to recover.",
+        "confidence": "observed",
+        "aboutViewer": true,
+        "concept": "runs-in-behind"
+      },
+      {
+        "atSeconds": 238,
+        "title": "Attacking the defender's blindside",
+        "body": "Your run is made across the back of the nearest central defender. This means they cannot see both you and the ball at the same time, giving you a crucial advantage to receive the pass without being challenged.",
+        "confidence": "inferred",
+        "aboutViewer": true,
+        "concept": "blindside-movement"
+      },
+      {
+        "atSeconds": 241,
+        "title": "Composed finish across goal",
+        "body": "After a good touch to carry the ball into the penalty area, you take the shot as the angle becomes tighter. You strike it low and across the face of the goal, aiming for the far post, which is a high-percentage choice that beats the diving keeper.",
+        "confidence": "observed",
+        "aboutViewer": true
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "kit-and-role",
+      "couldMatchOthers": 2
+    }
+  },
+  "at": "2026-08-31T03:55:55.673Z"
+}

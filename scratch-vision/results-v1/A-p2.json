@@ -1,0 +1,85 @@
+{
+  "configId": "A",
+  "passageId": "p2",
+  "model": "gemini-2.5-flash",
+  "source": "yt",
+  "identity": false,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 9684,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 5075,
+    "thinkingTokens": 943,
+    "outputTokens": 549,
+    "total": 6567,
+    "detail": [
+      {
+        "modality": "AUDIO",
+        "tokenCount": 375
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 830
+      },
+      {
+        "modality": "VIDEO",
+        "tokenCount": 3870
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "A free kick is taken from outside the box, struck over the defensive wall. The goalkeeper makes a save, and the subsequent rebound is cleared by the defending team.",
+    "observations": [
+      {
+        "atSeconds": 42,
+        "title": "Free kick setup",
+        "body": "The play begins with a free kick being set up. Players from both teams are positioning themselves, with the defending team forming a wall and the attacking team placing players in the box.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 45,
+        "title": "Defensive wall formation",
+        "body": "The defending team has a wall of players in dark kits positioned to block the free kick. They are organized to cover a portion of the goal.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 47,
+        "title": "Free kick delivery",
+        "body": "A player in a white kit takes the free kick, striking the ball towards the goal. The ball travels over the defensive wall.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 50,
+        "title": "Goalkeeper save",
+        "body": "The goalkeeper, wearing a yellow kit, reacts to the shot and makes a save. The ball is pushed away from the goal.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 52,
+        "title": "Rebound and follow-up attempt",
+        "body": "The ball rebounds into the penalty area after the save. An attacking player in a white kit attempts to reach the ball for a follow-up shot.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 54,
+        "title": "Defensive clearance",
+        "body": "A defender in a dark kit successfully clears the ball out of the penalty area. This action removes the immediate danger from the goal.",
+        "confidence": "observed",
+        "aboutViewer": false
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "none",
+      "couldMatchOthers": 10
+    }
+  },
+  "at": "2026-08-31T03:51:44.688Z"
+}

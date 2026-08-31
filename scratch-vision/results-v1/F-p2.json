@@ -1,0 +1,74 @@
+{
+  "configId": "F",
+  "passageId": "p2",
+  "model": "gemini-2.5-flash",
+  "source": "file",
+  "identity": true,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 19150,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 4948,
+    "thinkingTokens": 2784,
+    "outputTokens": 494,
+    "total": 8226,
+    "detail": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 820
+      },
+      {
+        "modality": "VIDEO",
+        "tokenCount": 4128
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "The viewer, white #10, is positioned deep in his own half during an opponent's direct free kick, remaining uninvolved as the shot is taken and saved by his team's goalkeeper.",
+    "observations": [
+      {
+        "atSeconds": 0,
+        "title": "Opponent's Free Kick Setup",
+        "body": "An opponent in a dark shirt sets the ball for a free kick just outside the penalty area. The defending team (white shirts) organizes a wall and positions players in the box.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 0,
+        "title": "Viewer's Deep Positioning",
+        "body": "The viewer, wearing white shirt number 10, is positioned near the halfway line, far from the defensive action around the penalty box. He is not part of the wall or marking opponents.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 9,
+        "title": "Direct Shot on Goal",
+        "body": "The opponent takes a direct shot from the free kick, sending the ball over the defensive wall towards the goal.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 9,
+        "title": "Goalkeeper Save",
+        "body": "The defending team's goalkeeper makes a save, pushing the ball over the crossbar, resulting in a corner kick.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 10,
+        "title": "Viewer's Lack of Immediate Involvement",
+        "body": "Following the shot and save, the viewer begins to walk slowly towards the penalty area. He does not sprint or immediately adjust his position for the upcoming corner kick.",
+        "confidence": "observed",
+        "aboutViewer": true
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": true,
+      "basis": "squad-number",
+      "couldMatchOthers": 0
+    }
+  },
+  "at": "2026-08-31T03:57:40.578Z"
+}

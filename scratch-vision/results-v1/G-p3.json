@@ -1,0 +1,68 @@
+{
+  "configId": "G",
+  "passageId": "p3",
+  "model": "gemini-2.5-pro",
+  "source": "file",
+  "identity": true,
+  "mediaResolution": "MEDIA_RESOLUTION_MEDIUM",
+  "status": 200,
+  "latencyMs": 25439,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 4165,
+    "thinkingTokens": 1859,
+    "outputTokens": 470,
+    "total": 6494,
+    "detail": [
+      {
+        "modality": "VIDEO",
+        "tokenCount": 3354
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 811
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "The viewer, playing as a neutral attacker in a blue shirt, receives the ball under pressure and makes a simple layoff. The play then moves away from him, and he does not make a significant supporting run before his team loses possession.",
+    "observations": [
+      {
+        "atSeconds": 1,
+        "title": "Receiving With Back to Goal",
+        "body": "You receive the ball in the center circle with your back to the opponent's goal. A defender immediately closes you down from behind, applying pressure as soon as the pass is played.",
+        "confidence": "observed",
+        "aboutViewer": true,
+        "concept": "pressing-triggers"
+      },
+      {
+        "atSeconds": 2,
+        "title": "Secure Layoff Pass",
+        "body": "You make a one-touch layoff to a supporting teammate to your left. This is a good decision to keep possession under pressure rather than attempting a risky turn.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 3,
+        "title": "Limited Movement After Passing",
+        "body": "After your layoff, your movement is a slow jog forward. You don't make a run to create a passing option for the new ball carrier or attack the space behind the defence, which keeps you disconnected from the developing attack on the wing.",
+        "confidence": "inferred",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 9,
+        "title": "Recovery Pace in Transition",
+        "body": "When your team loses possession around 00:08, you are in a central position. As the opposition begins to counter-attack, your recovery is a jog rather than a sprint back into a defensive shape.",
+        "confidence": "observed",
+        "aboutViewer": true
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "kit-and-role",
+      "couldMatchOthers": 0
+    }
+  },
+  "at": "2026-08-31T03:59:42.951Z"
+}

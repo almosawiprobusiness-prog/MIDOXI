@@ -61,3 +61,13 @@ directive's release gate.
 Nutrition · Trainer OS expansion · trainer payments beyond what ships
 · sourcing · community expansion · TwelveLabs · full-match single-call
 reads · posting OAuth integrations · server-side PDF · QR on documents.
+
+## Addendum — vision accuracy pass (2026-08-30)
+
+| Claim | Verdict | Evidence |
+|---|---|---|
+| False attribution controlled | PASS | prompt v2 confirmation runs: 0/9 (was 11 across v1 matrix); "That's not me" correction persists |
+| Identity before attribution | PASS | structured pitch identity + per-match override + persisted audit + level chip |
+| Routing is benchmarked, not vibes | PASS | VISION_ACCURACY_BENCHMARK.md, one variable at a time |
+| Broken code-default model gone | PASS | 3.7-flash default proven on YouTube-via-Vertex; test forbids 3.6-flash regression |
+| No unmetered path | PASS | deep reads consume 2 units, log tier video_deep; fallback refunds the second |

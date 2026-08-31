@@ -1,0 +1,78 @@
+{
+  "configId": "B",
+  "passageId": "p3",
+  "model": "gemini-2.5-flash",
+  "source": "yt",
+  "identity": true,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 10487,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 4490,
+    "thinkingTokens": 738,
+    "outputTokens": 519,
+    "total": 5747,
+    "detail": [
+      {
+        "modality": "VIDEO",
+        "tokenCount": 3354
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 811
+      },
+      {
+        "modality": "AUDIO",
+        "tokenCount": 325
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "The video shows a passage of play where the white team attempts to build up from the back under pressure from the green team. There is a general lack of forward attacking movement and support around the ball carrier, leading to frequent backward or sideways passes and eventual loss of possession.",
+    "observations": [
+      {
+        "atSeconds": 59,
+        "title": "Lack of forward options",
+        "body": "A white player receives the ball in the central midfield area but has no immediate forward passing options. He is forced to play a backward pass to a teammate deeper in his own half.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 61,
+        "title": "Isolated wide player",
+        "body": "A white player on the right wing receives the ball but is quickly closed down by a green defender. There is no immediate support from a teammate to create a passing triangle or overlap, forcing a backward pass.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 64,
+        "title": "Repetitive backward passing",
+        "body": "The white team repeatedly resorts to backward passes when under pressure. This indicates a difficulty in breaking lines or finding forward-thinking options to advance play.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 67,
+        "title": "Loss of possession under pressure",
+        "body": "A white player on the right wing attempts to dribble past two green defenders but loses possession. The lack of support or a clear passing outlet contributed to the turnover.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 69,
+        "title": "Green team's forward progression",
+        "body": "After winning possession, a green player immediately drives forward with the ball and then makes a decisive forward pass, quickly transitioning from defense to attack.",
+        "confidence": "observed",
+        "aboutViewer": false
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "none",
+      "couldMatchOthers": 0
+    }
+  },
+  "at": "2026-08-31T03:53:05.416Z"
+}

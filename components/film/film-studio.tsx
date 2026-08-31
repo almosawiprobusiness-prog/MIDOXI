@@ -1188,6 +1188,7 @@ export function FilmStudio({
                 sourceUrl={video.url}
                 onSeek={seek}
                 analyses={analyses}
+                identityOverride={video.pitchIdentityOverride ?? null}
               />
             </div>
       </div>

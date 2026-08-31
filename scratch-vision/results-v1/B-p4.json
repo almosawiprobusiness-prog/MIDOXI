@@ -1,0 +1,78 @@
+{
+  "configId": "B",
+  "passageId": "p4",
+  "model": "gemini-2.5-flash",
+  "source": "yt",
+  "identity": true,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 9680,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 3922,
+    "thinkingTokens": 1001,
+    "outputTokens": 443,
+    "total": 5366,
+    "detail": [
+      {
+        "modality": "VIDEO",
+        "tokenCount": 2838
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 809
+      },
+      {
+        "modality": "AUDIO",
+        "tokenCount": 275
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "The viewer, in a white shirt, receives the ball and drives towards the goal. They take a shot that hits the crossbar, and the ball is eventually cleared by the defending team.",
+    "observations": [
+      {
+        "atSeconds": 2,
+        "title": "Receives ball in stride",
+        "body": "The viewer receives the ball near the edge of the penalty area while already in a full sprint, maintaining momentum towards the goal.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 3,
+        "title": "Direct run at goal",
+        "body": "After receiving the ball, the viewer takes two touches, driving directly towards the center of the goal, committing the defender.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 4,
+        "title": "Shot on goal",
+        "body": "The viewer takes a shot from inside the penalty area. The shot is struck with power.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 5,
+        "title": "Shot hits crossbar",
+        "body": "The shot taken by the viewer strikes the crossbar of the goal, deflecting downwards.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 7,
+        "title": "Ball cleared from danger",
+        "body": "After hitting the crossbar and bouncing near the goal line, a defender is able to clear the ball away from the goal area.",
+        "confidence": "observed",
+        "aboutViewer": false
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "kit-and-role",
+      "couldMatchOthers": 0
+    }
+  },
+  "at": "2026-08-31T03:53:15.097Z"
+}

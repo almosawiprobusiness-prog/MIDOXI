@@ -13,6 +13,7 @@ function rowToVideo(v: Record<string, unknown>): Video {
     externalId: (v.external_url as string)?.match(/[\w-]{11}/)?.[0],
     thumbnailUrl: (v.thumbnail_url as string) ?? undefined,
     durationSeconds: (v.duration_seconds as number) ?? null,
+    pitchIdentityOverride: (v.pitch_identity_override as string) ?? null,
     matchId: (v.match_id as string) ?? null,
     status: (v.status as Video["status"]) ?? "ready",
     createdAt: (v.created_at as string) ?? new Date().toISOString(),
@@ -110,6 +111,23 @@ export async function getVideoWithClips(id: string): Promise<VideoDetail | null>
   down. Fail-soft: a false return means the length stays unknown, and
   callers can still use the fetched value for the current request.
 */
+/**
+ * This match's "how to spot you". Kits change between fixtures; the override
+ * lives on the video row and beats the profile identity for reads of it.
+ * Empty string clears it back to the profile.
+ */
+export async function setPitchIdentityOverride(videoId: string, identity: string): Promise<boolean> {
+  const value = identity.trim().slice(0, 140) || null;
+  if (isDemoMode) return true;
+  const supabase = await createClient();
+  if (!supabase) return false;
+  const { error } = await supabase
+    .from("videos")
+    .update({ pitch_identity_override: value })
+    .eq("id", videoId);
+  return !error;
+}
+
 export async function setVideoDuration(id: string, seconds: number): Promise<boolean> {
   if (!Number.isFinite(seconds) || seconds <= 0) return false;
   if (isDemoMode) return demoStore.setVideoDuration(id, seconds);

@@ -31,7 +31,24 @@ const BASE = "https://generativelanguage.googleapis.com";
  * that wants the cheaper lite variant sets GEMINI_VIDEO_MODEL and the provider
  * reports whichever it actually used.
  */
-export const VIDEO_MODEL = env.geminiVideoModel || "gemini-3.6-flash";
+/*
+  Benchmarked 2026-08-30 (scripts/vision-bench.mjs, four frame-verified
+  passages of real footage): gemini-3.7-flash never false-attributed a
+  player in eight runs, matched or beat gemini-2.5-flash on football
+  facts, uses ~45% of its video input tokens, and — unlike 3.6-flash —
+  reads YouTube through Vertex without the 500. So it is the default,
+  and the previous default that silently broke on the production
+  backend is gone.
+*/
+export const VIDEO_MODEL = env.geminiVideoModel || "gemini-3.7-flash";
+
+/*
+  The deep-read model. gemini-2.5-pro produced the sharpest football
+  description in the benchmark (it was the only config to name the
+  referee trap unprompted, and its goal reads matched the frames) at
+  ~2.5× the latency. Selected per-read, never globally.
+*/
+export const DEEP_VIDEO_MODEL = env.geminiVideoModelDeep || "gemini-2.5-pro";
 
 /*
   ── TWO BACKENDS, ONE DIALECT ──────────────────────────────────────
@@ -346,6 +363,8 @@ export interface GenerateInput {
   /** OpenAPI-subset schema. Note: no `additionalProperties` — it is rejected. */
   schema: Record<string, unknown>;
   maxTokens?: number;
+  /** Which model reads it. Defaults to VIDEO_MODEL; deep reads pass DEEP_VIDEO_MODEL. */
+  model?: string;
 }
 
 export interface GenerateResult<T> {
@@ -395,7 +414,8 @@ function buildBody(input: GenerateInput, withRange: boolean): Record<string, unk
  * which path it took, so a degraded read is never presented as a clean one.
  */
 export async function generateFromVideo<T>(input: GenerateInput): Promise<GeminiOutcome<GenerateResult<T>>> {
-  const endpoint = generateContentEndpoint();
+  const model = input.model ?? VIDEO_MODEL;
+  const endpoint = generateContentEndpoint(model);
   if (!endpoint) return { ok: false, error: "Video model is not configured." };
 
   const attempt = async (withRange: boolean) =>
@@ -509,7 +529,7 @@ export async function generateFromVideo<T>(input: GenerateInput): Promise<Gemini
           (json.usageMetadata?.thoughtsTokenCount ?? 0),
         thoughts: json.usageMetadata?.thoughtsTokenCount ?? 0,
       },
-      model: VIDEO_MODEL,
+      model,
       rangeInPromptOnly,
     },
   };

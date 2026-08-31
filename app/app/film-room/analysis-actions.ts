@@ -12,8 +12,10 @@ import {
   type AnalysisFrame,
   type AnalysisObservation,
 } from "@/lib/video/provider";
-import { saveAnalysis, deleteAnalysis, priorObservations, type ClipAnalysis } from "@/lib/data/analyses";
-import { getVideoWithClips } from "@/lib/data/film";
+import { saveAnalysis, deleteAnalysis, listAnalyses, markWrongPlayer, priorObservations, type ClipAnalysis } from "@/lib/data/analyses";
+import { VIDEO_PROMPT_VERSION } from "@/lib/video/native-video";
+import { composePitchIdentity } from "@/lib/data/pitch-identity";
+import { getVideoWithClips, setPitchIdentityOverride } from "@/lib/data/film";
 import { getProfileSettings } from "@/lib/data/profile";
 import { checkFeature } from "@/lib/billing/membership";
 import { allowanceLabel } from "@/lib/billing/gate-copy";
@@ -73,7 +75,20 @@ async function readerContext(videoId: string, forConcepts?: string[]) {
       role: viewer.role,
       position: viewer.position || viewer.positionLabel,
       concepts,
-      identity: profile.pitchIdentity || undefined,
+      /*
+        Composed from the structured fields plus the free note — the model
+        gets "home team, royal blue and white kit, number 10, plays ST. black
+        boots" rather than whatever half of that the player happened to type.
+      */
+      identity:
+        composePitchIdentity({
+          teamSide: profile.teamSide,
+          kitPrimary: profile.kitPrimary,
+          kitSecondary: profile.kitSecondary,
+          squadNumber: profile.squadNumber,
+          position: profile.primaryPosition,
+          note: profile.pitchIdentity,
+        }) || undefined,
     },
     videoId,
   };
@@ -133,6 +148,11 @@ export interface AnalyseVideoInput {
    * default — it is the whole difference between a reading and a record.
    */
   recheck?: boolean;
+  /** "deep" runs the pro model on the same passage and costs two film reads. */
+  depth?: "quick" | "deep";
+  /** Run again even when an identical read already exists (identity changed,
+   *  model upgraded, or the player asked). */
+  reanalyse?: boolean;
 }
 
 export async function analyseVideo(input: AnalyseVideoInput): Promise<AnalysisResponse> {
@@ -144,6 +164,38 @@ export async function analyseVideo(input: AnalyseVideoInput): Promise<AnalysisRe
   if (!detail.video.url) return { ok: false, error: "That video has no readable source." };
 
   const ctx = await readerContext(input.videoId);
+
+  // A per-match identity beats the profile's: kits change between fixtures,
+  // and the override lives on the video row for exactly that reason.
+  if (detail.video.pitchIdentityOverride) {
+    ctx.viewer.identity = detail.video.pitchIdentityOverride;
+  }
+
+  const depth = input.depth ?? "quick";
+
+  /*
+    Never pay twice for the same question. If an identical read already
+    exists — same passage, same focus, same depth, same prompt version, and
+    the player has not rejected its identification — hand it back instead of
+    re-running it. Re-analysis is a deliberate act (identity changed, model
+    upgraded, the player asked), not a default.
+  */
+  if (!input.reanalyse) {
+    const existing = (await listAnalyses(input.videoId)).find(
+      (a) =>
+        a.kind === "video" &&
+        Math.abs(a.fromSeconds - input.fromSeconds) < 1 &&
+        Math.abs(a.toSeconds - input.toSeconds) < 1 &&
+        (a.focus || "") === (input.focus || "") &&
+        (a.depth ?? "quick") === depth &&
+        a.promptVersion === VIDEO_PROMPT_VERSION &&
+        !a.identityRejected,
+    );
+    if (existing) {
+      await track("vision_read_reused", { depth });
+      return { ok: true, analysis: existing };
+    }
+  }
 
   // What MIDO already said about these concepts, on other film. This is item
   // one of the loop: the model is told what it is looking for a second time.
@@ -166,9 +218,20 @@ export async function analyseVideo(input: AnalyseVideoInput): Promise<AnalysisRe
     sourceUrl: detail.video.url,
     source: { kind: detail.video.source, title: detail.video.title },
     priorObservations: prior.map((p) => ({ on: p.on, concept: p.concept, title: p.title })),
+    depth,
   });
 
   if (!outcome.ok) return { ok: false, error: outcome.error };
+
+  await track(depth === "deep" ? "vision_deep_read" : "vision_quick_read", {
+    source: detail.video.source,
+    identityLevel: outcome.result.identity?.level ?? "none",
+    fellBack: outcome.result.depth !== depth,
+  });
+  if (outcome.result.depth !== depth) await track("vision_provider_fallback", {});
+  if ((outcome.result.identity?.level ?? "none") === "none" && ctx.viewer.identity) {
+    await track("vision_uncertain_identity", {});
+  }
 
   return save(input.videoId, {
     fromSeconds: input.fromSeconds,
@@ -178,7 +241,43 @@ export async function analyseVideo(input: AnalyseVideoInput): Promise<AnalysisRe
     fpsSampled: 0,
     focus: input.focus,
     outcome: outcome.result,
+    sourceKind: detail.video.source,
   });
+}
+
+/**
+ * "That's not me." Records the player's correction on the read — their verdict
+ * outranks the model's. The read stays visible, marked corrected; it stops
+ * feeding prior-observation context immediately.
+ */
+/**
+ * "Is this still you?" — the per-match identity. Kits change between
+ * fixtures; this saves the answer on the video row, where every read of that
+ * video (including passage jobs) picks it up. Empty clears back to profile.
+ */
+export async function setVideoIdentity(
+  videoId: string,
+  identity: string,
+): Promise<{ ok: boolean }> {
+  const done = await setPitchIdentityOverride(videoId, identity);
+  if (done) {
+    await track("vision_identity_confirmed", { overridden: Boolean(identity.trim()) });
+    revalidatePath(`/app/film-room/${videoId}`);
+  }
+  return { ok: done };
+}
+
+export async function correctAnalysisIdentity(
+  videoId: string,
+  analysisId: string,
+  rejected = true,
+): Promise<{ ok: boolean }> {
+  const done = await markWrongPlayer(analysisId, rejected);
+  if (done) {
+    await track("vision_identity_corrected", { rejected });
+    revalidatePath(`/app/film-room/${videoId}`);
+  }
+  return { ok: done };
 }
 
 async function save(
@@ -203,7 +302,11 @@ async function save(
       */
       observations: AnalysisObservation[];
       framesUsed: number;
+      identity?: import("@/lib/video/provider").AnalysisIdentity;
+      depth?: "quick" | "deep";
+      promptVersion?: number;
     };
+    sourceKind?: string;
   },
 ): Promise<AnalysisResponse> {
   const saved = await saveAnalysis({
@@ -218,6 +321,10 @@ async function save(
     focus: input.focus,
     summary: input.outcome.summary,
     observations: input.outcome.observations,
+    identity: input.outcome.identity ?? null,
+    depth: input.outcome.depth ?? null,
+    promptVersion: input.outcome.promptVersion ?? null,
+    sourceKind: input.sourceKind ?? null,
   });
 
   if (!saved) return { ok: false, error: "The analysis ran but could not be saved." };
@@ -295,6 +402,8 @@ export interface FilmRoomCapabilities {
   tracking: typeof TRACKING_GAP;
   /** Whether the player has said how to find themselves on film. */
   hasIdentity: boolean;
+  /** The composed "how to spot you" line the next read will use, for confirmation. */
+  identityLine: string | null;
   clip: { minSeconds: number; maxSeconds: number; maxUploadMb: number };
   /**
    * How many film reads are left, said before they run out.
@@ -312,10 +421,19 @@ export async function filmRoomCapabilities(): Promise<FilmRoomCapabilities> {
     getProfileSettings(),
     checkFeature("deep_analyses"),
   ]);
+  const identityLine = composePitchIdentity({
+    teamSide: profile.teamSide,
+    kitPrimary: profile.kitPrimary,
+    kitSecondary: profile.kitSecondary,
+    squadNumber: profile.squadNumber,
+    position: profile.primaryPosition,
+    note: profile.pitchIdentity,
+  });
   return {
     providers,
     tracking: TRACKING_GAP,
-    hasIdentity: Boolean(profile.pitchIdentity),
+    hasIdentity: Boolean(identityLine),
+    identityLine: identityLine || null,
     clip: {
       minSeconds: CLIP_MIN_SECONDS,
       maxSeconds: CLIP_MAX_SECONDS,

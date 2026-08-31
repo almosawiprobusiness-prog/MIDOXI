@@ -1,0 +1,65 @@
+{
+  "configId": "E",
+  "passageId": "p3",
+  "model": "gemini-3.7-flash",
+  "source": "yt",
+  "identity": true,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 11180,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 2285,
+    "thinkingTokens": 602,
+    "outputTokens": 339,
+    "total": 3226,
+    "detail": [
+      {
+        "modality": "AUDIO",
+        "tokenCount": 326
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 1101
+      },
+      {
+        "modality": "VIDEO",
+        "tokenCount": 858
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "Play develops down the right wing as the team in white builds out against the green press, working the ball inside to advance through central midfield.",
+    "observations": [
+      {
+        "atSeconds": 58,
+        "title": "Build-up into the right touchline",
+        "body": "The white team circulates possession out to the right flank under pressure from green midfielders. The receiving player holds position near the touchline to provide an outlet.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 64,
+        "title": "Recycling inside away from pressure",
+        "body": "Facing pressure along the sideline, the wide player checks back and connects with the central midfielder. This switch inward bypasses the initial recovery line of the defending team.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 68,
+        "title": "Central carry into attacking half",
+        "body": "The central midfielder drives forward into vacated space between the defensive lines. Forward runners adjust their paths toward the box to stretch the retreating back line.",
+        "confidence": "observed",
+        "aboutViewer": false,
+        "concept": "runs-in-behind"
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "none",
+      "couldMatchOthers": 20
+    }
+  },
+  "at": "2026-08-31T03:56:43.984Z"
+}

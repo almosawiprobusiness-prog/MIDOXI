@@ -1,0 +1,64 @@
+{
+  "configId": "D",
+  "passageId": "p4",
+  "model": "gemini-2.5-pro",
+  "source": "yt",
+  "identity": true,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 26366,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 4238,
+    "thinkingTokens": 2284,
+    "outputTokens": 328,
+    "total": 6850,
+    "detail": [
+      {
+        "modality": "AUDIO",
+        "tokenCount": 275
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 1125
+      },
+      {
+        "modality": "VIDEO",
+        "tokenCount": 2838
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "A team in white shirts attacks from right to left against a team in dark shirts. The viewer, in a white shirt, receives the ball centrally, drives towards goal, and scores with a shot from outside the penalty area.",
+    "observations": [
+      {
+        "atSeconds": 158,
+        "title": "Direct run at the defence",
+        "body": "Receiving the ball in a central position, you immediately turn and run directly at the retreating defenders. Your positive first touch and acceleration into space create the shooting opportunity that follows.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 160,
+        "title": "Shooting from distance",
+        "body": "As the defenders back away, you take the opportunity to shoot from outside the box. It is a decisive action, choosing to strike the ball early rather than attempting to beat the last defender or find a teammate.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 162,
+        "title": "Shot results in a goal",
+        "body": "Your left-footed shot beats the diving goalkeeper and finds the back of the net. The play results in a goal for your team.",
+        "confidence": "observed",
+        "aboutViewer": false
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "kit-and-role",
+      "couldMatchOthers": 0
+    }
+  },
+  "at": "2026-08-31T04:07:20.878Z"
+}

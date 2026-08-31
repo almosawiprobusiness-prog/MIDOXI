@@ -1,0 +1,74 @@
+{
+  "configId": "F",
+  "passageId": "p4",
+  "model": "gemini-2.5-flash",
+  "source": "file",
+  "identity": true,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 10948,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 3647,
+    "thinkingTokens": 818,
+    "outputTokens": 450,
+    "total": 4915,
+    "detail": [
+      {
+        "modality": "VIDEO",
+        "tokenCount": 2838
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 809
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "The viewer receives the ball in a central attacking position, dribbles past two defenders with close control, and finishes with a shot into the goal.",
+    "observations": [
+      {
+        "atSeconds": 0,
+        "title": "Receiving the ball under pressure",
+        "body": "The viewer receives the ball in a central area, with a defender immediately closing down. The first touch is controlled, setting up the drive.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 1,
+        "title": "Dribbling past first defender",
+        "body": "The viewer takes a touch to the right, moving the ball past the initial defender. This creates a clear path forward towards the goal.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 2,
+        "title": "Driving into shooting position",
+        "body": "The viewer continues to drive towards the goal, bypassing a second defender. This movement creates a good angle for a shot from inside the penalty area.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 3,
+        "title": "Shot on goal",
+        "body": "From a central position inside the box, the viewer takes a shot. The ball is struck towards the goal.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 6,
+        "title": "Goal scored",
+        "body": "The shot from the viewer finds the back of the net. The goalkeeper is unable to make the save.",
+        "confidence": "observed",
+        "aboutViewer": false
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": true,
+      "basis": "squad-number",
+      "couldMatchOthers": 0
+    }
+  },
+  "at": "2026-08-31T03:58:14.390Z"
+}

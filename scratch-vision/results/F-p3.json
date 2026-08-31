@@ -1,0 +1,76 @@
+{
+  "configId": "F",
+  "passageId": "p3",
+  "model": "gemini-2.5-flash",
+  "source": "file",
+  "identity": true,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 16952,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 4481,
+    "thinkingTokens": 1716,
+    "outputTokens": 588,
+    "total": 6785,
+    "detail": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 1127
+      },
+      {
+        "modality": "VIDEO",
+        "tokenCount": 3354
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "The viewer's stated kit (royal blue) matches the referee in the footage, not an outfield player. Therefore, it is not possible to identify the viewer as a player on the pitch. The observations below describe the general attacking movement and support around the ball carrier for both teams in the passage.",
+    "observations": [
+      {
+        "atSeconds": 1,
+        "title": "White team's central support",
+        "body": "A white midfielder receives the ball from a defender. Two white teammates are positioned within close proximity, offering immediate short passing options to maintain possession in the central area.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 3,
+        "title": "White team's wide distribution",
+        "body": "A white player in central midfield receives the ball and, under immediate pressure from a green player, quickly plays a pass out to a teammate on the right wing. This action helps to switch the point of attack and relieve central congestion.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 5,
+        "title": "White team's forward run",
+        "body": "As the white team maintains possession in midfield, a white attacking player makes a forward run into the space behind the green defensive line. This run creates depth and stretches the opponent's defense, even though the ball is not played to them.",
+        "confidence": "observed",
+        "aboutViewer": false,
+        "concept": "runs-in-behind"
+      },
+      {
+        "atSeconds": 8,
+        "title": "Green team's effective press",
+        "body": "A green player successfully dispossesses a white player in the central midfield area. This turnover was a direct result of multiple green players closing down the ball carrier and limiting their options.",
+        "confidence": "observed",
+        "aboutViewer": false,
+        "concept": "pressing-triggers"
+      },
+      {
+        "atSeconds": 11,
+        "title": "Green team's quick transition to wide attack",
+        "body": "Immediately after winning possession in midfield, the green team quickly moves the ball out to their left winger. This rapid transition aims to exploit space on the flank before the white defense can fully reorganize.",
+        "confidence": "observed",
+        "aboutViewer": false
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "none",
+      "couldMatchOthers": 0
+    }
+  },
+  "at": "2026-08-31T04:06:12.927Z"
+}

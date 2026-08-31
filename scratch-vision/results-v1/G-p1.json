@@ -1,0 +1,69 @@
+{
+  "configId": "G",
+  "passageId": "p1",
+  "model": "gemini-2.5-pro",
+  "source": "file",
+  "identity": true,
+  "mediaResolution": "MEDIA_RESOLUTION_MEDIUM",
+  "status": 200,
+  "latencyMs": 28288,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 5459,
+    "thinkingTokens": 2104,
+    "outputTokens": 502,
+    "total": 8065,
+    "detail": [
+      {
+        "modality": "VIDEO",
+        "tokenCount": 4644
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 815
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "The clip shows a short passage of defensive work followed by an attacking transition. As the central forward, you press the opposition's build-up, and upon the turnover, you make a run in behind the defensive line. The clip then cuts to a completely different game, making further analysis impossible.",
+    "observations": [
+      {
+        "atSeconds": 2,
+        "title": "Initiating the press",
+        "body": "As the opposition centre-back receives the ball, you begin your press. Your run is curved, which successfully forces the ball-carrier to move towards the touchline and away from the center of the pitch.",
+        "confidence": "uncertain",
+        "aboutViewer": true,
+        "concept": "pressing-triggers"
+      },
+      {
+        "atSeconds": 4,
+        "title": "Using a cover shadow",
+        "body": "After the opponent makes a pass, you adjust your position to block the passing lane back to the player you just pressed. This effectively traps the ball on that side of the field and makes the opposition's next move more predictable for your team.",
+        "confidence": "uncertain",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 6,
+        "title": "Immediate transition to attack",
+        "body": "The instant your team wins the ball in midfield, you transition from pressing to making an attacking run. You accelerate into the space behind the opposition's back line, providing a dangerous forward passing option.",
+        "confidence": "uncertain",
+        "aboutViewer": true,
+        "concept": "runs-in-behind"
+      },
+      {
+        "atSeconds": 8,
+        "title": "Clip continuity issue",
+        "body": "The video abruptly cuts to a different game or a different time. The camera angle, time of day, and on-pitch markings all change, making it impossible to continue tracking the original passage of play.",
+        "confidence": "observed",
+        "aboutViewer": false
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "kit-and-role",
+      "couldMatchOthers": 0
+    }
+  },
+  "at": "2026-08-31T03:58:53.743Z"
+}

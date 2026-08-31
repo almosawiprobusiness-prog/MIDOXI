@@ -1,0 +1,85 @@
+{
+  "configId": "C",
+  "passageId": "p2",
+  "model": "gemini-2.5-flash",
+  "source": "yt",
+  "identity": true,
+  "mediaResolution": "MEDIA_RESOLUTION_MEDIUM",
+  "status": 200,
+  "latencyMs": 11427,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 5065,
+    "thinkingTokens": 965,
+    "outputTokens": 588,
+    "total": 6618,
+    "detail": [
+      {
+        "modality": "AUDIO",
+        "tokenCount": 375
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 820
+      },
+      {
+        "modality": "VIDEO",
+        "tokenCount": 3870
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "This clip shows a free kick being taken by the opposing team. The viewer is positioned defensively in the box, marking an opponent. The free kick is delivered into the box, headed by an opponent, and saved by the goalkeeper.",
+    "observations": [
+      {
+        "atSeconds": 42,
+        "title": "Defensive Positioning for Free Kick",
+        "body": "The viewer, wearing the white number 10 shirt, is positioned inside the penalty area, marking an opponent in a dark shirt. They are standing to the right of the defensive wall, facing the ball.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 45,
+        "title": "Opponent Free Kick Setup",
+        "body": "An opponent in a dark shirt, number 11, stands over the ball, preparing to take the free kick. The defending team has formed a wall of five players.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 50,
+        "title": "Free Kick Delivery",
+        "body": "The opponent takes the free kick, sending a high ball over the defensive wall and into the penalty area. The delivery is aimed towards the center of the box.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 51,
+        "title": "Viewer Tracks Ball Flight",
+        "body": "As the ball is delivered, the viewer initially tracks their marked opponent but then shifts their focus and body position towards the flight of the ball. They are reacting to the incoming cross.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 52,
+        "title": "Opponent Header on Goal",
+        "body": "An opponent in a dark shirt makes contact with the ball, heading it towards the goal. The header is from a central position inside the box.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 53,
+        "title": "Goalkeeper Save",
+        "body": "The goalkeeper successfully saves the headed shot, preventing a goal. The ball is pushed away from danger.",
+        "confidence": "observed",
+        "aboutViewer": false
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": true,
+      "basis": "squad-number",
+      "couldMatchOthers": 0
+    }
+  },
+  "at": "2026-08-31T03:53:48.376Z"
+}
