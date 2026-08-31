@@ -55,3 +55,7 @@ supabase/run/
 /extension/dist
 /extension/dist-store
 /extension/*.zip
+scratch-vision/*.mp4
+scratch-vision/*.jpg
+scratch-vision/clips/
+scratch-vision/gt/
