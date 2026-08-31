@@ -109,7 +109,7 @@ export function CalendarWeek({
     return map;
   }, [events, meetings]);
 
-  const rangeLabel = `${monday.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} – ${days[6].toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`;
+  const rangeLabel = `${monday.toLocaleDateString("en-GB", { timeZone: "UTC", day: "numeric", month: "short" })} – ${days[6].toLocaleDateString("en-GB", { timeZone: "UTC", day: "numeric", month: "short" })}`;
 
   return (
     <div>

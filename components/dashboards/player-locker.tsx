@@ -345,7 +345,7 @@ export async function PlayerLocker() {
               </div>
 
               {recentMatch.stats.length > 0 && (
-                <div className="mt-4 grid grid-cols-4 gap-2 border-t border-line pt-4">
+                <div className="mt-4 grid grid-cols-2 gap-2 border-t border-line pt-4 sm:grid-cols-4">
                   {recentMatch.stats.slice(0, 4).map((s) => (
                     <div key={s.label}>
                       <div className="stat-figure text-2xl">{s.value}</div>
@@ -387,7 +387,7 @@ export async function PlayerLocker() {
       <div className="mt-8 grid grid-cols-1 gap-4 xl:grid-cols-12">
         <section className="rise-in xl:col-span-8" style={{ animationDelay: "360ms" }}>
           <SectionHeader label="Week at a glance" action={{ label: "Calendar", href: "/app/calendar" }} />
-          <div className="panel grid grid-cols-7 gap-px overflow-hidden bg-line">
+          <div className="panel grid grid-cols-1 sm:grid-cols-7 gap-px overflow-hidden bg-line">
             {DAY_LETTERS.map((letter, day) => {
               const events = week.filter((e) => e.day === day);
               const isToday = day === data.todayIndex;

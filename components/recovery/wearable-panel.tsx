@@ -148,7 +148,7 @@ export function WearablePanel({
               </div>
               <p className="mt-1 data-mono text-[11px] text-text-faint">
                 {connection.lastSyncAt
-                  ? `Last synced ${new Date(connection.lastSyncAt).toLocaleString()}`
+                  ? `Last synced ${new Date(connection.lastSyncAt).toLocaleString("en-GB", { timeZone: "UTC", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} UTC`
                   : "Not synced yet"}
               </p>
             </div>
@@ -187,7 +187,7 @@ export function WearablePanel({
           {latest ? (
             <>
               <p className="label-tech mt-5 mb-2 text-text-faint">
-                Measured — {new Date(latest.day).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "short" })}
+                Measured — {new Date(latest.day).toLocaleDateString("en-GB", { timeZone: "UTC", weekday: "long", day: "numeric", month: "short" })}
               </p>
 
               {/*

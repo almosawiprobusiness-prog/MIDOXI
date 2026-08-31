@@ -35,6 +35,13 @@ export function AnalysisJobPanel({
   const [passages, setPassages] = useState(3);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /*
+    True when the drive loop stopped without the job reaching an end
+    state — a refused advance or a network throw. Without this, a
+    stalled job kept `state: "running"` and the panel span forever
+    with no way back except a full reload.
+  */
+  const [stalled, setStalled] = useState(false);
   const driving = useRef(false);
 
   /*
@@ -46,11 +53,13 @@ export function AnalysisJobPanel({
     if (driving.current) return;
     driving.current = true;
     let current = j;
+    setStalled(false);
     try {
       while (current.state === "queued" || current.state === "running") {
         const res = await advanceJob(current.id);
         if (!res.ok) {
           setError(res.error);
+          setStalled(true);
           break;
         }
         current = res.job;
@@ -60,6 +69,11 @@ export function AnalysisJobPanel({
           break;
         }
       }
+    } catch {
+      // A thrown network error is the same situation as a refusal: the
+      // job is resumable, the player just needs the button back.
+      setError("The connection dropped mid-read. Nothing was lost — resume to continue from the next passage.");
+      setStalled(true);
     } finally {
       driving.current = false;
     }
@@ -87,7 +101,7 @@ export function AnalysisJobPanel({
     void drive(res.job);
   };
 
-  const active = job && (job.state === "queued" || job.state === "running");
+  const active = job && (job.state === "queued" || job.state === "running") && !stalled;
 
   return (
     <div className="panel p-4">
@@ -101,7 +115,17 @@ export function AnalysisJobPanel({
         {allowanceLeft !== null ? ` (${allowanceLeft} left this month)` : ""}.
       </p>
 
-      {!job || job.state === "failed" ? (
+      {stalled && job ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => void drive(job)}
+            className="flex h-9 items-center gap-2 rounded-lg border border-signal-line bg-signal/10 px-3 text-sm text-signal-bright transition-colors hover:bg-signal/20"
+          >
+            Resume reading
+          </button>
+          {error && <span className="text-xs text-correction">{error}</span>}
+        </div>
+      ) : !job || job.state === "failed" ? (
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {[2, 3, 4].map((n) => (
             <button

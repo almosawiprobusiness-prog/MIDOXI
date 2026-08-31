@@ -355,12 +355,18 @@ export function ConfirmDelete({
   label = "Delete",
   compact,
 }: {
+  /*
+    May return `{ ok, error }` (the app's action shape) or anything else.
+    A returned refusal is shown in place of the row — every confirm-to-
+    delete in the app inherited silent failure until this checked.
+  */
   onConfirm: () => Promise<unknown>;
   label?: string;
   compact?: boolean;
 }) {
   const [armed, setArmed] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
 
   if (!armed) {
     return (
@@ -385,7 +391,17 @@ export function ConfirmDelete({
         type="button"
         onClick={async () => {
           setBusy(true);
-          await onConfirm();
+          setFailed(null);
+          try {
+            const res = (await onConfirm()) as { ok?: boolean; error?: string } | undefined;
+            if (res && res.ok === false) {
+              setFailed(res.error || "That could not be deleted.");
+            } else {
+              setArmed(false);
+            }
+          } catch {
+            setFailed("That could not be deleted — check your connection and try again.");
+          }
           setBusy(false);
         }}
         className={cn(
@@ -396,6 +412,7 @@ export function ConfirmDelete({
         {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
         Confirm
       </button>
+      {failed && <span className="text-xs text-correction">{failed}</span>}
       <button
         type="button"
         onClick={() => setArmed(false)}

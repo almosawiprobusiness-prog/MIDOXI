@@ -85,6 +85,7 @@ export function PlayerNotes({ playerId, notes }: { playerId: string; notes: Play
                     </span>
                     <span className="label-tech !text-text-faint">
                       {new Date(n.createdAt).toLocaleDateString("en-GB", {
+                        timeZone: "UTC",
                         day: "numeric",
                         month: "short",
                         year: "numeric",

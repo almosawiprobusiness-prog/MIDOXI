@@ -112,7 +112,7 @@ export function BlockForm({
           />
         </div>
 
-        <div className="mt-3 grid grid-cols-3 gap-3">
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Field label="Name" span>
             <TextInput value={form.name} onChange={(v) => set({ name: v })} placeholder="Counter-press triggers" />
           </Field>

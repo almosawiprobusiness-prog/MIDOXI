@@ -73,6 +73,7 @@ export function PostCard({ post }: { post: Post }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(post.caption);
   const [done, setDone] = useState<string | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
 
   const like = () => {
     // Optimistic: the word moves now, the server catches up.
@@ -115,8 +116,9 @@ export function PostCard({ post }: { post: Post }) {
       const res = await updatePost(post.id, draft);
       if (res.ok) {
         setEditing(false);
+        setFailed(null);
         router.refresh();
-      } else setDone(res.error);
+      } else setFailed(res.error);
     });
 
   const profileHref = post.author.handle
@@ -153,6 +155,14 @@ export function PostCard({ post }: { post: Post }) {
             <MoreHorizontal className="size-4" />
           </button>
           {menu && (
+            <>
+              {/* Invisible backdrop: tap anywhere else to close, same as the role switcher. */}
+              <button
+                aria-hidden
+                tabIndex={-1}
+                onClick={() => setMenu(false)}
+                className="fixed inset-0 z-10 cursor-default"
+              />
             <div className="absolute right-0 top-6 z-20 w-52 overflow-hidden rounded-lg border border-line bg-ink-900 shadow-xl shadow-black/40">
               {post.mine ? (
                 <>
@@ -169,8 +179,12 @@ export function PostCard({ post }: { post: Post }) {
                   <button
                     onClick={() =>
                       start(async () => {
-                        await deletePost(post.id);
+                        const res = await deletePost(post.id);
                         setMenu(false);
+                        if (!res.ok) {
+                          setFailed(res.error);
+                          return;
+                        }
                         router.refresh();
                       })
                     }
@@ -193,18 +207,23 @@ export function PostCard({ post }: { post: Post }) {
                   <button
                     onClick={() =>
                       start(async () => {
-                        await blockUser(post.author.userId);
+                        const res = await blockUser(post.author.userId);
                         setMenu(false);
+                        if (!res.ok) {
+                          setFailed(res.error);
+                          return;
+                        }
                         router.refresh();
                       })
                     }
-                    className="flex w-full items-center gap-2 border-t border-line px-3 py-2.5 text-left text-sm text-correction transition-colors hover:bg-ink-850"
+                    className="flex w-full min-w-0 items-center gap-2 border-t border-line px-3 py-2.5 text-left text-sm text-correction transition-colors hover:bg-ink-850"
                   >
-                    <UserX className="size-3.5" /> Block {post.author.name}
+                    <UserX className="size-3.5 shrink-0" /> <span className="truncate">Block {post.author.name}</span>
                   </button>
                 </>
               )}
             </div>
+            </>
           )}
         </div>
       </header>
@@ -358,6 +377,7 @@ export function PostCard({ post }: { post: Post }) {
         />
       )}
       {done && <p className="px-1 pt-2 text-xs text-positive">{done}</p>}
+      {failed && <p className="px-1 pt-2 text-xs text-correction">{failed}</p>}
       {pending && <span className="sr-only">Working…</span>}
     </article>
   );
@@ -374,6 +394,7 @@ function ReportDialog({
 }) {
   const [reason, setReason] = useState(REPORT_REASONS[0].value);
   const [detail, setDetail] = useState("");
+  const [failed, setFailed] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
   return (
@@ -405,10 +426,15 @@ function ReportDialog({
         placeholder="Anything else worth knowing (optional)"
         className="mt-3 w-full resize-none rounded-lg border border-line bg-ink-900 px-3 py-2 text-sm text-text-hi placeholder:text-text-faint focus:border-signal-line focus:outline-none"
       />
+      {failed && <p className="mt-2 text-xs text-correction">{failed}</p>}
       <div className="mt-3 flex items-center gap-2">
         <button
           onClick={() => start(async () => {
-            await reportPost(postId, reason, detail);
+            const res = await reportPost(postId, reason, detail);
+            if (!res.ok) {
+              setFailed(res.error);
+              return;
+            }
             onDone();
           })}
           disabled={pending}

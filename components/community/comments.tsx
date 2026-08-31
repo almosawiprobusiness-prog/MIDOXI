@@ -80,12 +80,16 @@ export function Comments({
               <button
                 onClick={() =>
                   start(async () => {
-                    await deleteComment(c.id, postId);
+                    const res = await deleteComment(c.id, postId);
+                    if (!res.ok) {
+                      setError(res.error);
+                      return;
+                    }
                     router.refresh();
                   })
                 }
                 aria-label="Delete reply"
-                className="shrink-0 text-text-faint opacity-0 transition-all hover:text-correction group-hover:opacity-100"
+                className="shrink-0 text-text-faint opacity-60 transition-all hover:text-correction sm:opacity-0 sm:group-hover:opacity-100"
               >
                 <Trash2 className="size-3.5" />
               </button>

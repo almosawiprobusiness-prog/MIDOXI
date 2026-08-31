@@ -222,7 +222,12 @@ export function Telestration({
       return;
     }
 
-    e.currentTarget.setPointerCapture(e.pointerId);
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // Some browsers refuse capture for an already-released pointer;
+      // the stroke still works, it just loses the off-frame drag grace.
+    }
     start.current = p;
     setDraft(
       tool === "pen"
@@ -366,7 +371,9 @@ export function TelestrationTools({
               decides what a mark MEANS is not good enough.
             */
             className={cn(
-              "size-6 rounded-full transition-all",
+              // A 24px disc inside a 40px hit area: what a mark MEANS deserves a
+              // finger-sized target, not a desktop-sized one.
+              "size-10 rounded-full bg-clip-content p-2 transition-all sm:size-8 sm:p-1",
               color === c.key
                 ? "ring-2 ring-text-hi ring-offset-2 ring-offset-ink-900"
                 : "opacity-70 hover:opacity-100",

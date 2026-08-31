@@ -31,8 +31,8 @@ export async function signOut() {
  * if the account has never used that role before, so the user lands in a
  * working workspace rather than an error.
  */
-export async function switchRole(role: RoleId) {
-  if (!isRoleId(role)) return;
+export async function switchRole(role: RoleId): Promise<{ ok: boolean; error?: string }> {
+  if (!isRoleId(role)) return { ok: false, error: "Unknown role." };
 
   /*
     The gate, server-side.
@@ -49,7 +49,9 @@ export async function switchRole(role: RoleId) {
   */
   if (!isDemoMode) {
     const membership = await getMembership();
-    if (!canUseRole(membership.planId, role)) return;
+    if (!canUseRole(membership.planId, role)) {
+      return { ok: false, error: "Your plan does not include that operating system." };
+    }
   }
 
   const jar = await cookies();

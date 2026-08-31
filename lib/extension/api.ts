@@ -21,15 +21,23 @@ import { NextResponse } from "next/server";
   from a web page carries its own page's Origin and is refused before
   any handler logic runs.
 
-  MIDO_EXTENSION_IDS pins which extensions count. Unset (local dev,
-  unpacked builds with changing ids) any chrome-extension:// origin is
-  accepted — the remaining exposure is another *installed extension*
-  that also requested MIDO host permissions, which Chrome's install
-  warning already surfaces to the user. Production should set the id.
+  MIDO_EXTENSION_IDS pins which extensions count. The first version
+  failed OPEN when it was unset — any chrome-extension:// origin got a
+  credentialed pass, in production, on the strength of a docs checklist
+  nobody enforces. Now it fails open only outside production: in a
+  production build with the var missing, every extension origin is
+  refused, and the capture API tells the extension why.
 */
 
+const IS_PROD = process.env.NODE_ENV === "production";
+
 const APP_ORIGINS = new Set(
-  [process.env.NEXT_PUBLIC_APP_URL, "http://localhost:3000", "http://localhost:3100"]
+  [
+    process.env.NEXT_PUBLIC_APP_URL,
+    // Local dev origins only exist off production — shipping them in a
+    // production allowlist hands any local page a credentialed pass.
+    ...(IS_PROD ? [] : ["http://localhost:3000", "http://localhost:3100"]),
+  ]
     .filter((v): v is string => Boolean(v))
     .map((v) => {
       try {
@@ -43,7 +51,9 @@ const APP_ORIGINS = new Set(
 
 function allowedExtensionIds(): string[] | null {
   const raw = process.env.MIDO_EXTENSION_IDS?.trim();
-  if (!raw) return null; // null = any extension origin (dev default)
+  // Unset: any extension origin in dev (unpacked ids change constantly),
+  // NO extension origin in production. Fail closed where it matters.
+  if (!raw) return IS_PROD ? [] : null;
   return raw.split(",").map((s) => s.trim()).filter(Boolean);
 }
 

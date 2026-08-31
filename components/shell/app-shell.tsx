@@ -69,7 +69,7 @@ export function AppShell({
       <Sidebar identity={identity} />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar onOpenPalette={openPalette} identity={identity} dateLabel={dateLabel} notifications={notifications} notifUnread={notifUnread} />
-        <main id="main" tabIndex={-1} className="pitch-grid flex-1">
+        <main id="main" tabIndex={-1} className="pitch-grid flex-1 pb-[env(safe-area-inset-bottom)]">
           <div className="field-glow min-h-full">{children}</div>
         </main>
       </div>

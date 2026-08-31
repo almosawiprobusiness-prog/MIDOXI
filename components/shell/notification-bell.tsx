@@ -38,7 +38,7 @@ export function NotificationBell({ initial, initialUnread }: { initial: Notifica
     const id = setInterval(() => {
       // Only while the dropdown is closed — an unread badge that changes
       // count while somebody is mid-read of the open list is disorienting.
-      if (document.hidden) return;
+      if (document.hidden || open) return;
       refreshNotifications()
         .then(({ items, count }) => {
           setItems(items);
@@ -47,7 +47,10 @@ export function NotificationBell({ initial, initialUnread }: { initial: Notifica
         .catch(() => {});
     }, POLL_MS);
     return () => clearInterval(id);
-  }, []);
+    // Keyed on `open` so the interval's closure sees the CURRENT state —
+    // the mount-only version captured `open=false` forever, which is why
+    // the list mutated under a reader despite the comment above.
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;

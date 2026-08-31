@@ -1,0 +1,61 @@
+{
+  "configId": "H",
+  "passageId": "p1",
+  "model": "gemini-3.7-flash",
+  "source": "file",
+  "identity": true,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 17078,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 2604,
+    "thinkingTokens": 934,
+    "outputTokens": 425,
+    "total": 3963,
+    "detail": [
+      {
+        "modality": "VIDEO",
+        "tokenCount": 1188
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 1416
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "Clip 1 (00:00–00:08) shows a daytime match between a team in royal blue attacking to the right and a team in white defending. At 00:09, the footage cuts to a night match under floodlights featuring a team in white and a team in dark kits, where no royal blue outfield kit is present. Shirt numbers are not legible across the footage, and on-screen spotlight graphics highlight a player in white rather than blue, so basis is set to none.",
+    "observations": [
+      {
+        "atSeconds": 3,
+        "title": "Turnover in the attacking half",
+        "body": "In the daylight sequence, the blue team advances into the attacking third before white intervenes centrally and clears toward the right flank. Blue maintains a compact shape behind the ball to contest the clearance.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 9,
+        "title": "Mid-clip cut to different match",
+        "body": "The broadcast cuts from the daytime fixture to a night fixture under floodlights with entirely different kits (white against dark). Identification does not carry over across this cut.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 13,
+        "title": "Central transition into attacking space",
+        "body": "In the second fixture, the team in white breaks through midfield and plays forward into the right channel as the front runner moves across the defensive line to receive.",
+        "confidence": "observed",
+        "aboutViewer": false,
+        "concept": "runs-in-behind"
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "none",
+      "couldMatchOthers": 10
+    }
+  },
+  "at": "2026-08-31T12:55:06.486Z"
+}

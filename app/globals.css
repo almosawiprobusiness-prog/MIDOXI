@@ -539,3 +539,18 @@ a {
     break-before: page;
   }
 }
+
+/*
+  iOS zooms the whole viewport when a focused input's font-size is under
+  16px. Every form in the app uses text-sm (14px), so on a phone every
+  tap into a field lurched the page. One rule beats re-teaching every
+  input: on small screens, form controls render at 16px, and the visual
+  difference from 14px is invisible next to the zoom it prevents.
+*/
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}

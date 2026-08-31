@@ -1,0 +1,65 @@
+{
+  "configId": "E",
+  "passageId": "p1",
+  "model": "gemini-3.7-flash",
+  "source": "yt",
+  "identity": true,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 15813,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 3055,
+    "thinkingTokens": 933,
+    "outputTokens": 455,
+    "total": 4443,
+    "detail": [
+      {
+        "modality": "AUDIO",
+        "tokenCount": 451
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 1416
+      },
+      {
+        "modality": "VIDEO",
+        "tokenCount": 1188
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "The footage opens in daylight with a team in royal blue attacking from left to right against opponents in all-white, with the match official in bright yellow. In this opening passage, an attacker in blue makes an angled run into depth down the right channel. At 00:27, the footage cuts abruptly to a night game under floodlights featuring a different pitch with a large center-circle bird logo, where the highlighted player wears white rather than royal blue.",
+    "observations": [
+      {
+        "atSeconds": 19,
+        "title": "Diagonal run into depth",
+        "body": "As your midfielder turns inside at the 30-yard mark, you bend your run off the defender's outside shoulder into the right channel behind the backline. The run stretches the opposing defensive line and provides an immediate vertical passing lane into the penalty area.",
+        "confidence": "inferred",
+        "aboutViewer": true,
+        "concept": "runs-in-behind"
+      },
+      {
+        "atSeconds": 23,
+        "title": "First touch under defensive recovery",
+        "body": "You collect the through-ball on the move inside the right edge of the box while the recovery defender closes in. The heavy touch allows the covering defender to contest possession before a clean shot or cutback can be generated.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 27,
+        "title": "Scene cut to floodlit fixture",
+        "body": "The clip cuts to an entirely different match played under stadium floodlights on a pitch with a central logo. The highlighted player in this second segment wears white rather than royal blue, indicating a change of fixture and team kit.",
+        "confidence": "observed",
+        "aboutViewer": false
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "kit-and-role",
+      "couldMatchOthers": 9
+    }
+  },
+  "at": "2026-08-31T12:54:49.293Z"
+}

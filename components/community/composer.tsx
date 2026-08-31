@@ -355,7 +355,7 @@ export function CreateDoors({ fromMido = [] }: { fromMido?: FromMido[] }) {
       <button
         onClick={() => setOpen(true)}
         aria-label="Create a post"
-        className="fixed bottom-20 right-4 z-30 grid size-12 place-items-center rounded-full bg-signal text-white shadow-lg shadow-black/40 transition-colors hover:bg-signal-deep sm:hidden"
+        className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-4 z-30 grid size-12 place-items-center rounded-full bg-signal text-white shadow-lg shadow-black/40 transition-colors hover:bg-signal-deep sm:hidden"
       >
         <Plus className="size-5" />
       </button>

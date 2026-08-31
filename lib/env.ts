@@ -169,6 +169,21 @@ export function configIssues(nodeEnv = process.env.NODE_ENV): ConfigIssue[] {
   }
 
   /*
+    The extension allowlist. Unset in production the capture API now
+    fails CLOSED (no extension origin accepted), which is safe but
+    silently turns the shipped extension off — worth naming here rather
+    than being discovered as "capture stopped working".
+  */
+  if (inProduction && !process.env.MIDO_EXTENSION_IDS?.trim()) {
+    issues.push({
+      key: "MIDO_EXTENSION_IDS",
+      detail:
+        "Unset in a production build. The capture API refuses every chrome-extension:// origin until the shipped extension's id is listed here.",
+      breaks: ["MIDO XI Capture (connected mode)"],
+    });
+  }
+
+  /*
     Stripe key shapes. A key of the wrong shape is rejected by Stripe with a
     401 at the moment someone clicks Subscribe — which surfaces as a broken
     page rather than as the configuration mistake it is. Checking the prefix

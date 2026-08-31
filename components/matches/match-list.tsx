@@ -6,7 +6,9 @@ import { Star, ChevronRight } from "lucide-react";
 import type { Match } from "@/lib/types";
 
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" });
+  // timeZone pinned: a date-only ISO parses as UTC midnight, and an
+  // unpinned format shifts it a day for anyone west of Greenwich.
+  return new Date(iso).toLocaleDateString("en-GB", { timeZone: "UTC", day: "2-digit", month: "short", year: "2-digit" });
 }
 function outcome(m: Match): "W" | "D" | "L" {
   return m.goalsFor > m.goalsAgainst ? "W" : m.goalsFor === m.goalsAgainst ? "D" : "L";

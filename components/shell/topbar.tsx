@@ -31,7 +31,7 @@ export function Topbar({
   const PrimaryIcon = primary?.icon ?? Sparkles;
 
   return (
-    <header data-shell-topbar className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-line bg-ink-950/80 px-4 backdrop-blur-md md:gap-4 md:px-6">
+    <header data-shell-topbar className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-line bg-ink-950/80 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-md md:gap-4 md:px-6">
       <button
         onClick={() => setNavOpen(true)}
         aria-label="Open menu"

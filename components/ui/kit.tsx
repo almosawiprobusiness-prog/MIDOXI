@@ -106,7 +106,7 @@ export function StatBand({ stats, cols = 4 }: { stats: Stat[]; cols?: number }) 
   const colClass =
     cols === 8 ? "grid-cols-2 sm:grid-cols-4 lg:grid-cols-8"
     : cols === 6 ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-6"
-    : cols === 3 ? "grid-cols-3"
+    : cols === 3 ? "grid-cols-1 sm:grid-cols-3"
     : "grid-cols-2 sm:grid-cols-4";
   return (
     <div className={cn("panel grid gap-px overflow-hidden bg-line", colClass)}>

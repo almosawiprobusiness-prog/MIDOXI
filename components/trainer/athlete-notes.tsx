@@ -92,6 +92,7 @@ export function AthleteNotes({ athleteId, notes }: { athleteId: string; notes: A
                     </span>
                     <span className="label-tech !text-text-faint">
                       {new Date(n.createdAt).toLocaleDateString("en-GB", {
+                        timeZone: "UTC",
                         day: "numeric",
                         month: "short",
                         year: "numeric",

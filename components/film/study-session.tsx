@@ -72,6 +72,14 @@ export function StudySessionView({
   // The typed clock for page embeds, where no playhead is readable.
   const [manualMin, setManualMin] = useState("");
   const [manualSec, setManualSec] = useState("");
+  /*
+    A failed save must never LOOK like a success — the first version
+    cleared the note field and closed the completion panel whatever the
+    server answered, which quietly destroyed what the player typed.
+  */
+  const [saveError, setSaveError] = useState<string | null>(null);
+  /* A video that refuses to load must say so — a silent black embed reads as a bug. */
+  const [stageUnavailable, setStageUnavailable] = useState<string | null>(null);
 
   // completion
   const [summary, setSummary] = useState(session.summary ?? "");
@@ -91,8 +99,14 @@ export function StudySessionView({
     // `stamp` alone now — a YouTube playhead is as real as any other.
     // On a page embed the stamp is the clock the player typed.
     const at = stamp ? (isPage ? manualSeconds() : current) : null;
-    await addStudyNote(session.id, kind, body, at);
+    setSaveError(null);
+    const res = await addStudyNote(session.id, kind, body, at);
     setBusy(false);
+    if (!res.ok) {
+      // The text stays in the field — it is the player's work, not ours to drop.
+      setSaveError(res.error);
+      return;
+    }
     setBody("");
     router.refresh();
   };
@@ -104,8 +118,14 @@ export function StudySessionView({
 
   const finish = async () => {
     setCompleteBusy(true);
-    await completeStudySession(session.id, summary, session.goalId ?? null);
+    setSaveError(null);
+    const res = await completeStudySession(session.id, summary, session.goalId ?? null);
     setCompleteBusy(false);
+    if (!res.ok) {
+      // Keep the panel open with the summary intact and say what happened.
+      setSaveError(res.error);
+      return;
+    }
     setCompleting(false);
     router.refresh();
   };
@@ -116,7 +136,17 @@ export function StudySessionView({
       <div className="min-w-0">
         <div className="overflow-hidden rounded-xl border border-line bg-black shadow-2xl shadow-black/40">
           {isYouTube && video?.externalId ? (
-            <YouTubeStage externalId={video.externalId} {...youtubeHandlers} onUnavailable={() => {}} />
+            stageUnavailable ? (
+              <div className="grid aspect-video place-items-center p-6 text-center">
+                <p className="max-w-sm text-sm leading-relaxed text-text-dim">{stageUnavailable}</p>
+              </div>
+            ) : (
+              <YouTubeStage
+                externalId={video.externalId}
+                {...youtubeHandlers}
+                onUnavailable={(reason) => setStageUnavailable(reason || "This video refused to play here. Open it on YouTube, or add the footage another way.")}
+              />
+            )
           ) : video && isPage ? (
             <iframe
               src={video.url}
@@ -227,6 +257,7 @@ export function StudySessionView({
                 {busy ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />} Add note
               </button>
             </div>
+            {saveError && <p className="mt-2 text-sm text-correction">{saveError} — your note is still here.</p>}
           </div>
         )}
 
@@ -288,6 +319,7 @@ export function StudySessionView({
             <div className="label-tech mb-1">Session summary</div>
             <p className="mb-2 text-xs text-text-faint">What did you notice, and what will you apply?</p>
             <textarea value={summary} onChange={(e) => setSummary(e.target.value)} rows={3} placeholder="The one thing I'm taking from this…" className="w-full resize-y rounded-lg border border-line bg-ink-850 px-3 py-2 text-sm text-text-hi placeholder:text-text-faint focus:border-signal-line focus:outline-none" />
+            {saveError && <p className="mb-2 text-sm text-correction">{saveError} — nothing was lost; try again.</p>}
             <div className="mt-3 flex gap-3">
               <button onClick={() => setCompleting(false)} className="h-10 rounded-lg border border-line px-4 text-sm text-text-dim transition-colors hover:text-text-hi">Back</button>
               <button onClick={finish} disabled={completeBusy} className="flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-signal font-medium text-white transition-colors hover:bg-signal-deep disabled:opacity-60">

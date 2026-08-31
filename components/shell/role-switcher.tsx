@@ -25,16 +25,25 @@ export function RoleSwitcher({ identity, compact = false }: { identity: ShellIde
   const active = ROLES[identity.role];
   const ActiveIcon = active.icon;
 
+  const [refused, setRefused] = useState<string | null>(null);
+
   const choose = (role: RoleId) => {
     setOpen(false);
     if (role === identity.role) return;
-    startTransition(() => {
-      void switchRole(role);
+    setRefused(null);
+    startTransition(async () => {
+      // On success the action redirects and this never resolves normally;
+      // a resolved value is therefore always a refusal worth showing.
+      const res = await switchRole(role);
+      if (res && !res.ok) setRefused(res.error ?? "That switch was refused.");
     });
   };
 
   return (
     <div className="relative">
+      {refused && (
+        <p className="absolute -bottom-5 left-0 z-40 whitespace-nowrap text-[11px] text-correction">{refused}</p>
+      )}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}

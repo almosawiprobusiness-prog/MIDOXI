@@ -1,0 +1,61 @@
+{
+  "configId": "H",
+  "passageId": "p4",
+  "model": "gemini-3.7-flash",
+  "source": "file",
+  "identity": true,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 11849,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 2136,
+    "thinkingTokens": 398,
+    "outputTokens": 315,
+    "total": 2849,
+    "detail": [
+      {
+        "modality": "VIDEO",
+        "tokenCount": 726
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 1410
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "White team attacks left towards the goal against a dark kit defence. You receive in the final third, drive through central pressure, and release an effort that hits the frame of the goal before dropping over the line.",
+    "observations": [
+      {
+        "atSeconds": 2,
+        "title": "Direct drive into central space",
+        "body": "You receive facing forward and immediately attack the space between the defending centre-backs. The forward touch commits two defenders and breaks the defensive line.",
+        "confidence": "observed",
+        "aboutViewer": true,
+        "concept": "runs-in-behind"
+      },
+      {
+        "atSeconds": 4,
+        "title": "Early strike under pressure",
+        "body": "As the recovery defenders close in, you take the shot on without allowing them to establish a block. The ball is lifted over the retreating defence towards the far corner.",
+        "confidence": "observed",
+        "aboutViewer": true
+      },
+      {
+        "atSeconds": 6,
+        "title": "Outcome off the woodwork",
+        "body": "The effort strikes the underside of the crossbar and bounces down across the goal line. The goalkeeper and tracking defender are unable to clear it before it settles in the net.",
+        "confidence": "observed",
+        "aboutViewer": false
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "kit-and-role",
+      "couldMatchOthers": 2
+    }
+  },
+  "at": "2026-08-31T12:55:30.208Z"
+}

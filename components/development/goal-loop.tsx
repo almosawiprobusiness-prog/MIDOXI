@@ -42,7 +42,11 @@ export function GoalLoop({ goalId, evidence }: { goalId: string; evidence: Evide
   };
 
   const remove = async (id: string) => {
-    await deleteEvidence(id, goalId);
+    const res = await deleteEvidence(id, goalId);
+    if (!res.ok) {
+      setError(res.error);
+      return;
+    }
     router.refresh();
   };
 
@@ -144,7 +148,7 @@ export function GoalLoop({ goalId, evidence }: { goalId: string; evidence: Evide
                   <div className="flex items-center gap-2">
                     <span className="label-tech" style={{ color: meta.color }}>{meta.label}</span>
                     <span className="text-[11px] text-text-faint">
-                      {new Date(e.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                      {new Date(e.createdAt).toLocaleDateString("en-GB", { timeZone: "UTC", day: "numeric", month: "short" })}
                     </span>
                   </div>
                   <p className="mt-0.5 text-sm text-text">{e.note}</p>

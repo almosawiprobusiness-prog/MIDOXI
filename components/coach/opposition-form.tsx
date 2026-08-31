@@ -229,7 +229,7 @@ function KeyPlayerEditor({
           ))}
         </ul>
       )}
-      <div className="grid grid-cols-[1.2fr_0.6fr] gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-[1.2fr_0.6fr] gap-2">
         <TextInput value={draft.name} onChange={(v) => setDraft({ ...draft, name: v })} placeholder="Name or number" />
         <TextInput value={draft.position} onChange={(v) => setDraft({ ...draft, position: v })} placeholder="Position" />
       </div>

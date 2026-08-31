@@ -166,7 +166,7 @@ export function EmbeddedStage({
             />
             <span className="text-[11px] text-text-faint">the player&rsquo;s clock</span>
           </div>
-          <div className="mt-2 grid grid-cols-3 gap-1.5">
+          <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-3">
             {SENTIMENTS.map((s) => (
               <button
                 key={s.key}

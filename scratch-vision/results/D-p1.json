@@ -1,0 +1,74 @@
+{
+  "configId": "D",
+  "passageId": "p1",
+  "model": "gemini-2.5-pro",
+  "source": "yt",
+  "identity": true,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 35704,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 6194,
+    "thinkingTokens": 2673,
+    "outputTokens": 595,
+    "total": 9462,
+    "detail": [
+      {
+        "modality": "AUDIO",
+        "tokenCount": 450
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 1100
+      },
+      {
+        "modality": "VIDEO",
+        "tokenCount": 4644
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "The first part of the clip (00:18-00:27) shows a daytime game. A team in royal blue attacks right to left, against a team in white attacking left to right. The referee is in yellow. The second part (00:27-00:36) cuts to a night game between a team in white (attacking right to left) and a team in black. The viewer's stated royal blue kit is not present in this second scene.",
+    "observations": [
+      {
+        "atSeconds": 20,
+        "title": "Effective Pressing Trigger Leads to Turnover",
+        "body": "You correctly identify a slow, square pass between the opposition's centre-backs as a trigger to press. Your curved run cuts off the return pass and forces the defender into a hurried forward ball, which your team intercepts, winning possession in the middle third.",
+        "confidence": "observed",
+        "aboutViewer": true,
+        "concept": "pressing-triggers"
+      },
+      {
+        "atSeconds": 22,
+        "title": "Immediate Attacking Run After Turnover",
+        "body": "Directly after your press creates the turnover, you transition instantly into an attacking run. By running into the space behind the defence on the centre-back's blindside, you provide an immediate, dangerous option to penetrate, even though the pass doesn't ultimately connect.",
+        "confidence": "observed",
+        "aboutViewer": true,
+        "concept": "runs-in-behind"
+      },
+      {
+        "atSeconds": 27,
+        "title": "Clip Cuts to Different Match",
+        "body": "The footage cuts to a different match played at night. The teams are now in white and black kits. As your royal blue kit is not on the pitch, observations from this point on are about the general passage of play.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 30,
+        "title": "Run in Behind from Central Area",
+        "body": "In this second passage, the white team's central attacker makes a well-timed run into the channel between defenders. This movement successfully breaks the defensive line and creates a clear goalscoring opportunity from a through ball.",
+        "confidence": "observed",
+        "aboutViewer": false,
+        "concept": "runs-in-behind"
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "kit-and-role",
+      "couldMatchOthers": 2
+    }
+  },
+  "at": "2026-08-31T12:56:06.016Z"
+}

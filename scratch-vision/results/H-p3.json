@@ -1,0 +1,61 @@
+{
+  "configId": "H",
+  "passageId": "p3",
+  "model": "gemini-3.7-flash",
+  "source": "file",
+  "identity": true,
+  "mediaResolution": null,
+  "status": 200,
+  "latencyMs": 11648,
+  "finishReason": "STOP",
+  "usage": {
+    "promptTokens": 2270,
+    "thinkingTokens": 456,
+    "outputTokens": 373,
+    "total": 3099,
+    "detail": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 1412
+      },
+      {
+        "modality": "VIDEO",
+        "tokenCount": 858
+      }
+    ]
+  },
+  "error": null,
+  "result": {
+    "summary": "The match features one team in white kits attacking from right to left, and another team in green kits defending towards their own goal. The match official wears a bright blue shirt. Because no outfield player is wearing royal blue, no viewer can be identified; the read focuses on the collective attacking passage.",
+    "observations": [
+      {
+        "atSeconds": 1,
+        "title": "Central ball progression",
+        "body": "The white team's central midfielder carries the ball forward through the middle third against a retreating green defensive unit. Green midfielders drop rather than stepping up to pressure the ball carrier directly.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 6,
+        "title": "Passing lane opened wide",
+        "body": "The ball is circulated out towards the left channel as the white team's forward positions between defenders. The green back line remains compact horizontally, conceding space out wide.",
+        "confidence": "observed",
+        "aboutViewer": false
+      },
+      {
+        "atSeconds": 11,
+        "title": "Forward run into attacking third",
+        "body": "A white attacker makes a forward run into open space towards the penalty area as the ball is slipped through. Green defenders track back toward their box to cut off the central angle.",
+        "confidence": "observed",
+        "aboutViewer": false,
+        "concept": "runs-in-behind"
+      }
+    ],
+    "identification": {
+      "squadNumberLegible": false,
+      "basis": "none",
+      "couldMatchOthers": 0
+    }
+  },
+  "at": "2026-08-31T12:55:18.243Z"
+}

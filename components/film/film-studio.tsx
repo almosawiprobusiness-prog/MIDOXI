@@ -263,6 +263,26 @@ export function FilmStudio({
     return () => clearTimeout(timer);
   }, [isYouTube, unplayable, video.url, videoRef]);
 
+  /*
+    And the reverse: un-give-up when the footage arrives. On a slow
+    connection (or a throttled background tab) the timeout can fire
+    seconds before the file finishes loading — after which the player
+    was visibly playing while Draw and analysis stayed locked behind a
+    latch nothing ever cleared. Data arriving IS the retry.
+  */
+  useEffect(() => {
+    if (isYouTube || !unplayable) return;
+    const el = videoRef.current;
+    if (!el) return;
+    if (el.readyState > 0) {
+      setUnplayable(false);
+      return;
+    }
+    const revive = () => setUnplayable(false);
+    el.addEventListener("loadeddata", revive);
+    return () => el.removeEventListener("loadeddata", revive);
+  }, [isYouTube, unplayable, videoRef]);
+
   // `seek` and `togglePlay` come from the shared hook now.
   const nudge = (delta: number) => seek(current + delta);
   const setSpeed = (r: number) => {
@@ -949,7 +969,7 @@ export function FilmStudio({
 
                 <span className="data-mono text-sm text-text-dim">{fmtTime(duration)}</span>
               </div>
-              <div className="mt-3 flex items-center justify-between">
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-y-2">
                 <div className="flex items-center gap-1">
                   <Ctrl onClick={() => nudge(-5)} label="Back 5s"><Rewind className="size-4" /></Ctrl>
                   <Ctrl onClick={() => nudge(-0.1)} label="Frame back"><ChevronLeft className="size-4" /></Ctrl>
@@ -1000,7 +1020,7 @@ export function FilmStudio({
             {/* Drawing bar — only while drawing, so it is never in the way */}
             {drawing && (
               <div className="mt-3 rounded-lg border border-signal-line bg-ink-900 p-3">
-                <div className="mb-3 flex items-center gap-2">
+                <div className="mb-3 flex flex-wrap items-center gap-2">
                   <PenLine className="size-4 text-signal-bright" />
                   <span className="label-tech !text-text">Drawing on</span>
                   <span className="data-mono text-xs text-signal-bright">{atLabel(current)}</span>
@@ -1032,7 +1052,7 @@ export function FilmStudio({
                 {saveError && <p className="mt-2 text-sm text-correction">{saveError}</p>}
                 {posted && <p className="mt-2 text-sm text-positive">{posted}</p>}
 
-                <div className="mt-3 flex items-center gap-3">
+                <div className="mt-3 flex flex-wrap items-center gap-2 sm:gap-3">
                   <button
                     onClick={saveDrawing}
                     disabled={drawBusy || shapes.length === 0}

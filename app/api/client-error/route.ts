@@ -14,7 +14,27 @@ import { NextResponse } from "next/server";
   authored, and everything is truncated so this cannot become a channel
   for anything else.
 */
+/*
+  Flood control. The route stays unauthenticated on purpose — the errors
+  most worth hearing about include "auth is broken" — but an open,
+  unlimited log-writer is a log-flooding primitive. A small in-memory
+  token bucket per instance caps the damage: real error bursts fit
+  comfortably; a script pointed at it gets 204s that write nothing.
+*/
+let windowStart = 0;
+let windowCount = 0;
+const WINDOW_MS = 60_000;
+const WINDOW_MAX = 30;
+
 export async function POST(req: Request) {
+  const now = Date.now();
+  if (now - windowStart > WINDOW_MS) {
+    windowStart = now;
+    windowCount = 0;
+  }
+  if (++windowCount > WINDOW_MAX) {
+    return new NextResponse(null, { status: 204 });
+  }
   try {
     const body = (await req.json()) as {
       digest?: string;

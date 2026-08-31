@@ -87,7 +87,7 @@ export function TrainingFormDialog({ mode, entry }: { mode: "create" | "edit"; e
                 })}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <F label="Title" span><input value={form.title} onChange={(e) => set({ title: e.target.value })} className={inp} placeholder="e.g. Finishing · Individual" /></F>
                 <F label="Date & time"><input type="datetime-local" value={form.scheduledAt} onChange={(e) => set({ scheduledAt: e.target.value })} className={inp} /></F>
                 <F label="Duration (min)"><input type="number" value={form.durationMin ?? ""} onChange={(e) => set({ durationMin: numN(e.target.value) })} className={inp} /></F>
@@ -97,7 +97,7 @@ export function TrainingFormDialog({ mode, entry }: { mode: "create" | "edit"; e
               {/* Post-session log */}
               <div className="mt-4 border-t border-line pt-4">
                 <div className="label-tech mb-3">After the session</div>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <Slider label="RPE" max={10} value={form.rpe} onChange={(v) => set({ rpe: v })} />
                   <Slider label="Physical" max={5} value={form.physicalFeel} onChange={(v) => set({ physicalFeel: v })} />
                   <Slider label="Technical" max={5} value={form.technicalFeel} onChange={(v) => set({ technicalFeel: v })} />
