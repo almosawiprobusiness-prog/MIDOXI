@@ -20,6 +20,8 @@ export interface VideoInput {
   url: string;
   externalId?: string;
   matchId?: string | null;
+  /** Known length in seconds — from the YouTube API at add time, or the browser for uploads. */
+  durationSeconds?: number | null;
 }
 
 export interface FilmClip {

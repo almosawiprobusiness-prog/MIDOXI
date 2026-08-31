@@ -112,8 +112,20 @@ export async function addVideo(input: { title: string; url: string; matchId?: st
   const yt = detected.kind === "youtube" ? detected.id : null;
   const source = yt ? "youtube" : "url";
 
+  /*
+    A YouTube video's length is knowable at add time for one quota
+    unit, and knowing it is what lets MIDO Vision place spread
+    passages across the video later. Fail-soft: no key or a declined
+    call leaves it null, and the film room behaves exactly as before.
+  */
+  let durationSeconds: number | null = null;
+  if (yt) {
+    const { youtubeDurationSeconds } = await import("@/lib/ai/youtube");
+    durationSeconds = await youtubeDurationSeconds(yt);
+  }
+
   if (isDemoMode) {
-    const id = demoStore.createVideo({ title: input.title.trim(), source, url, externalId: yt ?? undefined, matchId: input.matchId ?? null });
+    const id = demoStore.createVideo({ title: input.title.trim(), source, url, externalId: yt ?? undefined, matchId: input.matchId ?? null, durationSeconds });
     await recordVideoAdded(id, input.title.trim(), source);
     revalidateFilm();
     return { ok: true, id, demo: true };
@@ -124,7 +136,7 @@ export async function addVideo(input: { title: string; url: string; matchId?: st
 
   const { data, error } = await supabase
     .from("videos")
-    .insert({ title: input.title.trim(), source, external_url: url, match_id: input.matchId ?? null, status: "ready" })
+    .insert({ title: input.title.trim(), source, external_url: url, match_id: input.matchId ?? null, duration_seconds: durationSeconds, status: "ready" })
     .select("id")
     .single();
   if (error) return { ok: false, error: error.message };

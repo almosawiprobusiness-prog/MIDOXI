@@ -8,7 +8,9 @@ import {
   nextPendingIndex,
 } from "@/lib/data/analysis-jobs";
 import { spreadWindows, type AnalysisJob } from "@/lib/data/analysis-job-types";
-import { getVideoWithClips } from "@/lib/data/film";
+import { getVideoWithClips, setVideoDuration } from "@/lib/data/film";
+import { youtubeId } from "@/lib/data/film-types";
+import { youtubeDurationSeconds } from "@/lib/ai/youtube";
 import { analyseVideo } from "./analysis-actions";
 import { track } from "@/lib/analytics/track";
 
@@ -36,11 +38,25 @@ export async function startSpreadJob(
 ): Promise<JobResponse> {
   const detail = await getVideoWithClips(videoId);
   if (!detail?.video) return { ok: false, error: "That video could not be found." };
-  const duration = detail.video.durationSeconds ?? 0;
+  let duration = detail.video.durationSeconds ?? 0;
+  if (!duration) {
+    /*
+      Videos added before duration fetching existed carry no length.
+      For YouTube the length is one API call away, so learn it here and
+      persist it — the alternative was telling the player to "play it
+      once", which never persisted anything and was therefore a lie.
+    */
+    const yt = detail.video.url ? youtubeId(detail.video.url) : null;
+    const fetched = yt ? await youtubeDurationSeconds(yt) : null;
+    if (fetched) {
+      duration = fetched;
+      await setVideoDuration(videoId, fetched);
+    }
+  }
   if (!duration) {
     return {
       ok: false,
-      error: "MIDO does not know this video's length yet — play it once, or analyse a passage by hand.",
+      error: "MIDO could not learn this video's length, so it cannot place passages — analyse a passage by hand instead.",
     };
   }
   const ranges = spreadWindows(duration, passages);

@@ -488,10 +488,17 @@ export const demoStore = {
       url: input.url,
       externalId: input.externalId,
       matchId: input.matchId ?? null,
+      durationSeconds: input.durationSeconds ?? undefined,
       status: "ready",
       createdAt: new Date().toISOString(),
     });
     return id;
+  },
+  setVideoDuration(id: string, seconds: number): boolean {
+    const v = db.videos.find((x) => x.id === id);
+    if (!v) return false;
+    v.durationSeconds = Math.round(seconds);
+    return true;
   },
   deleteVideo(id: string): boolean {
     const before = db.videos.length;

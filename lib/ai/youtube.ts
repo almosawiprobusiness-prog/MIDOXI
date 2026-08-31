@@ -99,6 +99,31 @@ export async function searchYoutube(query: string, max = 6): Promise<YoutubeResu
   }
 }
 
+/**
+ * One video's duration, in seconds. Costs 1 quota unit against the
+ * 10,000/day budget — negligible next to search's 100. Null when the
+ * key is absent, the API declines, or the video hides its details;
+ * callers treat null as "unknown", never as zero, because a video of
+ * unknown length is not a video of no length.
+ */
+export async function youtubeDurationSeconds(videoId: string): Promise<number | null> {
+  if (!features.youtube) return null;
+  try {
+    const params = new URLSearchParams({ part: "contentDetails", id: videoId, key: env.youtubeKey });
+    const res = await fetch(`https://www.googleapis.com/youtube/v3/videos?${params}`, {
+      next: { revalidate: 21600 },
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as { items?: { contentDetails?: { duration?: string } }[] };
+    const iso = json.items?.[0]?.contentDetails?.duration;
+    if (!iso) return null;
+    const seconds = parseIsoDuration(iso);
+    return seconds !== undefined && seconds > 0 ? seconds : null;
+  } catch {
+    return null;
+  }
+}
+
 async function withDurations(results: YoutubeResult[]): Promise<YoutubeResult[]> {
   if (results.length === 0) return results;
   try {

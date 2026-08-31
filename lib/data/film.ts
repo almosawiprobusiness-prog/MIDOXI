@@ -104,6 +104,21 @@ export async function getVideoWithClips(id: string): Promise<VideoDetail | null>
   return { video, clips };
 }
 
+/*
+  Backfill a video's length once it is learned after the fact — videos
+  added before duration fetching existed, or while the YouTube key was
+  down. Fail-soft: a false return means the length stays unknown, and
+  callers can still use the fetched value for the current request.
+*/
+export async function setVideoDuration(id: string, seconds: number): Promise<boolean> {
+  if (!Number.isFinite(seconds) || seconds <= 0) return false;
+  if (isDemoMode) return demoStore.setVideoDuration(id, seconds);
+  const supabase = await createClient();
+  if (!supabase) return false;
+  const { error } = await supabase.from("videos").update({ duration_seconds: Math.round(seconds) }).eq("id", id);
+  return !error;
+}
+
 export async function listClips(): Promise<FilmClip[]> {
   if (isDemoMode) return demoStore.listClips();
   const supabase = await createClient();
