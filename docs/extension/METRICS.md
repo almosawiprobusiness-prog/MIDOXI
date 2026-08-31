@@ -69,6 +69,30 @@ Alternatively, `study_captures` itself answers volume/goal-connection questions
 directly (`origin = 'chrome_extension'`), which is the more trustworthy source for
 counts since analytics is fire-and-forget.
 
+## The Capture → Training conversion funnel (v0.4)
+
+The one monetization experiment, specified in full in
+`docs/product/CAPTURE_TO_TRAINING_CONVERSION.md`. Three extension-side
+legs travel through `POST /api/extension/telemetry` — **connected mode
+only**, so "free mode phones home for nothing" still holds; a Free
+Mode CTA render or click sends nothing, and free-user conversions
+become visible server-side from `capture_training_upgrade_viewed`
+(membership page arrival) onward.
+
+| Event | Fired | Props |
+|---|---|---|
+| `capture_training_cta_shown` | The post-save CTA rendered (connected) | `surface`, `entitled` |
+| `capture_training_cta_clicked` | CTA or library "Train" pressed (connected) | `surface`, `entitled` |
+| `capture_training_upgrade_viewed` | The in-popup offer rendered (connected), or membership opened with `src=capture_training` | `surface` |
+| `capture_training_checkout_started` | Checkout created with the attribution | `plan` |
+| `capture_training_purchase_completed` | Stripe webhook, `metadata.source = capture_training` | `plan` |
+| `capture_training_handoff_opened` | `/app/training?focus=capture:<id>` rendered | `via` |
+| `capture_training_session_generated` | A session drafted around a loaded lesson | `category` |
+
+The telemetry route accepts exactly the first three events with two
+enum/boolean props (sanitizer: `lib/extension/telemetry.ts`, under unit
+test). Observation text remains untrackable by construction.
+
 ## What is deliberately NOT tracked
 
 - Popup renders, hovers, keystrokes, category browsing — vanity

@@ -35,10 +35,19 @@ import {
   updateCapture,
 } from "./lib/library";
 import { postCapture } from "./lib/api";
+import { trainingHandoffUrl } from "./lib/train-cta";
+import { sendTelemetry } from "./lib/telemetry";
 import { copyText, downloadText, el, icon, openTab } from "./lib/ui";
 
 export interface LibraryDeps {
   connected: boolean;
+  /** Server-verified; display state only. Always false when local. */
+  entitled: boolean;
+  /** The connected app origin, for the Training handoff. */
+  appUrl: string | null;
+  /** "Train" pressed without entitlement — the popup shows the offer.
+   *  `localId` lets the offer remember a handoff intent on-device. */
+  onTrainLocked: (ids: { midoId?: string; localId?: string }) => void;
   onBack: () => void;
 }
 
@@ -253,6 +262,54 @@ export async function renderLibraryView(container: HTMLElement, deps: LibraryDep
     if (c.syncState === "synced") foot.append(el("span", { class: "chip chip-signal" }, "In MIDO"));
 
     const actions = el("div", { class: "lib-actions" });
+
+    /*
+      The quiet, always-available half of the Capture → Training path
+      (the loud half is the one post-save CTA). Entitled players hand
+      the lesson straight to MIDO XI Training; a moment that only
+      exists on this device asks ONE explicit confirmation before it
+      is imported — nothing local ever uploads on a single tap of a
+      button that says "Train".
+    */
+    const train = el("button", { class: "lib-act lib-act-train", type: "button", title: "Build a training session from this moment" }, "Train");
+    let importArmed = false;
+    train.addEventListener("click", async () => {
+      if (!deps.connected) return deps.onTrainLocked({ localId: c.id });
+      sendTelemetry("capture_training_cta_clicked", { surface: "library", entitled: deps.entitled });
+      if (!deps.entitled) return deps.onTrainLocked({ midoId: c.midoId, localId: c.id });
+      if (c.syncState === "synced" && c.midoId && deps.appUrl) {
+        return openTab(trainingHandoffUrl(deps.appUrl, c.midoId));
+      }
+      // Local-only moment, entitled player: explicit two-step import.
+      if (!importArmed) {
+        importArmed = true;
+        train.classList.add("armed");
+        train.textContent = "Import to MIDO & build?";
+        setTimeout(() => {
+          importArmed = false;
+          train.classList.remove("armed");
+          train.textContent = "Train";
+        }, 5000);
+        return;
+      }
+      train.disabled = true;
+      train.textContent = "Importing…";
+      const result = await postCapture(toCaptureInput(c), "import");
+      if (result.kind === "saved") {
+        await updateCapture(c.id, { syncState: "synced", midoId: result.id });
+        state.all = await listLibrary();
+        if (deps.appUrl) openTab(trainingHandoffUrl(deps.appUrl, result.id));
+        paint();
+        return;
+      }
+      // The moment is untouched and stays local — say so, recover.
+      train.disabled = false;
+      importArmed = false;
+      train.classList.remove("armed");
+      train.textContent = "Couldn't import — still saved here";
+      setTimeout(() => (train.textContent = "Train"), 2500);
+    });
+
     const watch = el("button", { class: "lib-act lib-act-watch", type: "button" }, "Watch");
     watch.addEventListener("click", () => openTab(timestampedYoutubeUrl(c.videoId, c.timestampSeconds)));
     const copy = el("button", { class: "lib-act", type: "button", title: "Copy formatted note", "aria-label": "Copy" });
@@ -282,7 +339,7 @@ export async function renderLibraryView(container: HTMLElement, deps: LibraryDep
       state.all = await listLibrary();
       paint();
     });
-    actions.append(watch, copy, edit, del);
+    actions.append(train, watch, copy, edit, del);
     foot.append(actions);
     row.append(foot);
     return row;

@@ -357,7 +357,23 @@ export function GenerateSessionDialog({ initialFocus }: { initialFocus?: string 
                 </>
               )}
 
-              {error && <p className="mt-3 rounded-lg border border-correction/30 bg-correction/10 px-3 py-2 text-sm text-correction">{error}</p>}
+              {error && (
+                <div className="mt-3 rounded-lg border border-correction/30 bg-correction/10 px-3 py-2 text-sm text-correction">
+                  <p>{error}</p>
+                  {/* A failed draft must never strand the intent — the lesson
+                      and the brief are intact, so retry is one tap. Matters
+                      most right after a purchase (docs/product/
+                      CAPTURE_TO_TRAINING_CONVERSION.md §failure recovery). */}
+                  {!proposal && !busy && (
+                    <button
+                      onClick={() => void draft(brief)}
+                      className="mt-2 flex h-8 items-center gap-1.5 rounded-md border border-correction/40 px-3 text-xs font-medium transition-colors hover:bg-correction/10"
+                    >
+                      <RefreshCw className="size-3" /> Try again
+                    </button>
+                  )}
+                </div>
+              )}
 
               <div className="mt-5 flex items-center gap-3">
                 <button onClick={() => setOpen(false)} className="h-11 rounded-lg border border-line px-4 text-sm text-text-dim transition-colors hover:text-text-hi">Cancel</button>

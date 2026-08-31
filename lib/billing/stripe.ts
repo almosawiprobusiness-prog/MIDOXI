@@ -4,6 +4,7 @@ import { env, features } from "@/lib/env";
 import { logEvent } from "@/lib/observability/log";
 import { createAdminClient } from "@/lib/supabase/server";
 import { TIER_CARDS, tierOf, type PlanId } from "./plans";
+import type { CheckoutAttribution } from "./attribution";
 
 /*
   Stripe integration — code-first. Every entry point is guarded by
@@ -100,6 +101,13 @@ export async function createCheckoutSession(input: {
   userId: string;
   email: string | null;
   planId: PlanId;
+  /**
+   * Where this purchase came from (already sanitized — see
+   * lib/billing/attribution.ts). Rides Stripe metadata as a source
+   * enum plus, at most, a capture UUID in the success URL so the
+   * return can deliver the training the player paid for. Never text.
+   */
+  attribution?: CheckoutAttribution | null;
 }): Promise<{ url: string } | { error: string }> {
   const stripe = getStripe();
   if (!stripe) return { error: "Billing is not configured yet." };
@@ -127,21 +135,33 @@ export async function createCheckoutSession(input: {
   const trialDays = TIER_CARDS.find((c) => c.tier === tierOf(input.planId))?.trialDays;
 
   const base = env.appUrl;
+  /*
+    Attribution: the source enum reaches metadata so the webhook can say
+    which funnel produced the purchase; the capture id reaches only the
+    success URL, where the membership page uses it to send the player
+    straight back to "build the session from this lesson" — the outcome
+    they just paid for.
+  */
+  const metadata: Record<string, string> = { user_id: input.userId, plan_id: input.planId };
+  if (input.attribution) metadata.source = input.attribution.source;
+  const successUrl =
+    `${base}/app/membership?checkout=success` +
+    (input.attribution?.captureId ? `&train_capture=${input.attribution.captureId}` : "");
   let session;
   try {
     session = await stripe.checkout.sessions.create({
     mode: "subscription",
     customer: customerId,
     line_items: [{ price, quantity: 1 }],
-    success_url: `${base}/app/membership?checkout=success`,
+    success_url: successUrl,
     cancel_url: `${base}/app/membership?checkout=cancelled`,
     // Lets FOUNDING50 and any later code be entered at checkout.
     allow_promotion_codes: true,
     subscription_data: {
       ...(trialDays ? { trial_period_days: trialDays } : {}),
-      metadata: { user_id: input.userId, plan_id: input.planId },
+      metadata,
     },
-    metadata: { user_id: input.userId, plan_id: input.planId },
+    metadata,
     });
   } catch (err) {
     logEvent("error", "stripe.checkout.failed", {

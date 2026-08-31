@@ -38,9 +38,16 @@ const RANK: Record<Tier, number> = { free: 0, player: 1, touchline: 2, club: 3 }
 export function PlanCards({
   currentPlan,
   billingConfigured,
+  attribution,
 }: {
   currentPlan: PlanId;
   billingConfigured: boolean;
+  /**
+   * Conversion-source breadcrumb (e.g. Capture → Training) already
+   * validated by the page; passed through to checkout untouched so the
+   * purchase can be attributed and the return can deliver the outcome.
+   */
+  attribution?: { source: string; captureId?: string } | null;
 }) {
   const [interval, setInterval] = useState<"month" | "year">("month");
   const [pending, start] = useTransition();
@@ -53,7 +60,7 @@ export function PlanCards({
     setErr(null);
     setPendingId(planId);
     start(async () => {
-      const res = await startCheckout(planId);
+      const res = await startCheckout(planId, attribution ?? undefined);
       if (!res.ok) {
         setErr(res.error);
         setPendingId(null);

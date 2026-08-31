@@ -63,6 +63,33 @@ export interface PlayerContext {
    * `memoryPromptBlock`. Null when there is none.
    */
   memoryBlock: string | null;
+  /**
+   * One saved Capture moment the session was asked to be built around
+   * ("Build a training session" from the extension). Loaded on demand
+   * by the engine when the brief's focusKey is `capture:<id>` — never
+   * part of the default context, so ordinary drafts pay nothing for it.
+   * The observation is the PLAYER'S OWN note, not an AI analysis, and
+   * the prompt block says so.
+   */
+  captureLesson?: CaptureLesson;
+}
+
+export interface CaptureLesson {
+  id: string;
+  videoTitle: string;
+  /** Capture category enum value, or null. */
+  category: string | null;
+  /** The player's own words, bounded before prompting. */
+  observation: string;
+  goalId: string | null;
+}
+
+/** Bound on the lesson text as rendered into a prompt. */
+export const CAPTURE_LESSON_MAX_CHARS = 400;
+
+/** A saved capture's citation key. */
+export function captureKey(id: string): string {
+  return `capture:${id}`;
 }
 
 /**
@@ -135,6 +162,7 @@ export function validSourceKeys(ctx: PlayerContext): Set<string> {
   for (const g of ctx.goals) keys.add(`goal:${g.id}`);
   for (const c of ctx.filmConcepts) keys.add(`film:${c.concept}`);
   for (const st of ctx.studies) keys.add(studyKey(st.subject));
+  if (ctx.captureLesson) keys.add(captureKey(ctx.captureLesson.id));
   return keys;
 }
 
@@ -150,6 +178,20 @@ export const CONTEXT_BLOCK_MAX_CHARS = 2400;
  */
 export function contextPromptBlock(ctx: PlayerContext): string {
   const lines: string[] = ["PLAYER RECORD (from the product's own log — cite by key):"];
+
+  /*
+    The saved lesson leads when there is one — the session was asked to
+    be built around it, and being first means the 2400-char ceiling can
+    never silently drop it. Stated as what it is: the player's own
+    noticing, never "analysis" — no model has watched this footage.
+  */
+  if (ctx.captureLesson) {
+    const c = ctx.captureLesson;
+    const note = c.observation.slice(0, CAPTURE_LESSON_MAX_CHARS);
+    lines.push(
+      `- [${captureKey(c.id)}] Saved lesson — the player's OWN observation while watching "${c.videoTitle.slice(0, 120)}"${c.category ? ` (${c.category})` : ""}: "${note}". This is what they noticed, not an AI analysis.`,
+    );
+  }
 
   const s = ctx.situation;
   if (s.daysSinceLastMatch !== null) {

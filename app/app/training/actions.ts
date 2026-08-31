@@ -153,9 +153,20 @@ export async function generateSession(
     // The beta's key AI-value question is "generated → started?"; the
     // generation half of that funnel was invisible until this.
     await track("training_generated", { blocks: proposal.blocks.length });
+    /*
+      The Capture → Training funnel's delivery step: a session was
+      actually drafted around a saved lesson (the lesson loaded — a
+      stale link that got dropped doesn't count as delivery). Category
+      enum only, never the observation.
+    */
+    if (context.captureLesson) {
+      await track("capture_training_session_generated", {
+        category: context.captureLesson.category ?? "none",
+      });
+    }
     return { ok: true, proposal, sources };
   } catch {
-    return { ok: false, error: "MIDO could not draft a session just now." };
+    return { ok: false, error: "MIDO couldn't build this session yet — nothing was lost. Try again." };
   }
 }
 

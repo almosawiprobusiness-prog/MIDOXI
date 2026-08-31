@@ -10,6 +10,7 @@ import { TrainingFormDialog } from "@/components/training/training-form-dialog";
 import { GenerateSessionDialog } from "@/components/training/generate-session-dialog";
 import { DeleteTrainingButton } from "@/components/training/delete-training-button";
 import { SessionRunner } from "@/components/training/session-runner";
+import { track } from "@/lib/analytics/track";
 
 export const metadata = { title: "Training — MIDO XI" };
 
@@ -94,9 +95,22 @@ function SessionRow({ e }: { e: TrainingEntry }) {
 export default async function TrainingPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ focus?: string }>;
+  searchParams?: Promise<{ focus?: string; src?: string }>;
 }) {
-  const focus = (await searchParams)?.focus ?? null;
+  const params = await searchParams;
+  const focus = params?.focus ?? null;
+  /*
+    Arriving with a `capture:` focus IS the Capture → Training handoff —
+    the extension (or the post-checkout return) landed the player here
+    with a saved lesson to train. Counted before entitlement gates so
+    "handed off but never generated" is visible in the funnel. The id
+    stays out of props; `via` is a closed enum.
+  */
+  if (focus?.startsWith("capture:")) {
+    await track("capture_training_handoff_opened", {
+      via: params?.src === "post_checkout" ? "post_checkout" : "extension",
+    });
+  }
   const entries = await listTraining();
   const week = entries.filter((e) => isThisWeek(e.scheduledAt));
   const earlier = entries.filter((e) => !isThisWeek(e.scheduledAt));

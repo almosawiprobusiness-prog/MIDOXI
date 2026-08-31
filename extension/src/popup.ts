@@ -28,8 +28,17 @@ import {
 import { fetchSession, postCapture, type SessionState } from "./lib/api";
 import { readCurrentPage, rereadSeconds, type VideoContext } from "./lib/page-reader";
 import { clearDraft, readDraft, writeDraft } from "./lib/draft";
-import { addToLibrary, clearLibrary, libraryCount, listLibrary } from "./lib/library";
-import { cryptoRandomId, formatLibraryMarkdown, type LocalCapture } from "./lib/library-core";
+import { addToLibrary, clearLibrary, getFlag, libraryCount, listLibrary, setFlag, updateCapture } from "./lib/library";
+import {
+  asTrainIntent,
+  connectForTrainingUrl,
+  formatPriceCents,
+  membershipUpgradeUrl,
+  shouldShowSavedCta,
+  trainingHandoffUrl,
+} from "./lib/train-cta";
+import { sendTelemetry } from "./lib/telemetry";
+import { cryptoRandomId, formatLibraryMarkdown, toCaptureInput, type LocalCapture } from "./lib/library-core";
 import { renderLibraryView } from "./library-view";
 import { ENVIRONMENTS, EXTENSION_VERSION, activeEnv, apiBase, setActiveEnv, type EnvName } from "./lib/config";
 import { downloadText, el, icon, openTab } from "./lib/ui";
@@ -39,7 +48,15 @@ type View =
   | { kind: "not-youtube" }
   | { kind: "capture" }
   | { kind: "library" }
-  | { kind: "saved"; stampLabel: string; where: "mido" | "local"; openUrl?: string; count?: number };
+  | { kind: "saved"; stampLabel: string; where: "mido" | "local"; openUrl?: string; count?: number; midoId?: string; localId?: string }
+  /*
+    The one conversion surface: "this lesson wants to become training,
+    and that is MIDO XI Player". `back` restores exactly where the
+    player was — the offer never consumes their place, let alone their
+    moment. `localId` names the on-device lesson so the handoff INTENT
+    can be remembered locally; it never leaves the device.
+  */
+  | { kind: "train-offer"; surface: "saved" | "library"; midoId?: string; localId?: string; back: View };
 
 interface AppState {
   video: VideoContext | null;
@@ -55,6 +72,14 @@ interface AppState {
   offerLocalFallback: boolean;
   allCategories: boolean;
   libCount: number;
+  /** Last "Not now" on the training offer — cools the post-save CTA. */
+  trainDismissedAt: string | null;
+  /**
+   * A lesson the player asked to train BEFORE they were entitled,
+   * resolved from the stored handoff intent at boot. Non-null only
+   * when connected + entitled and the moment still exists locally.
+   */
+  pendingIntent: LocalCapture | null;
 }
 
 const state: AppState = {
@@ -71,6 +96,8 @@ const state: AppState = {
   offerLocalFallback: false,
   allCategories: false,
   libCount: 0,
+  trainDismissedAt: null,
+  pendingIntent: null,
 };
 
 const viewEl = document.getElementById("view") as HTMLElement;
@@ -83,14 +110,31 @@ const modeBadge = document.getElementById("mode-badge") as HTMLElement;
 
 async function boot() {
   render({ kind: "loading" });
-  const [page, session, count] = await Promise.all([
+  const [page, session, count, trainDismissedAt] = await Promise.all([
     readCurrentPage(),
     fetchSession(),
     libraryCount(),
+    getFlag<string>("trainCtaDismissedAt"),
   ]);
   state.session = session;
   state.mode = session.kind === "connected" ? "connected" : "local";
   state.libCount = count;
+  state.trainDismissedAt = trainDismissedAt ?? null;
+
+  /*
+    The handoff intent resolves ONLY here, only when the promised
+    outcome is deliverable: connected AND entitled. A free reconnect
+    keeps the intent quietly for later; a deleted lesson clears it.
+  */
+  state.pendingIntent = null;
+  if (session.kind === "connected" && session.entitled) {
+    const intent = asTrainIntent(await getFlag("trainIntent"), Date.now());
+    if (intent) {
+      const lesson = (await listLibrary()).find((c) => c.id === intent.localId) ?? null;
+      state.pendingIntent = lesson;
+      if (!lesson) await setFlag("trainIntent", null);
+    }
+  }
   syncHeader();
 
   if (page.kind !== "video") return render({ kind: "not-youtube" });
@@ -260,6 +304,10 @@ function render(view: View): void {
     case "library":
       void renderLibraryView(viewEl, {
         connected: state.mode === "connected",
+        entitled: state.session?.kind === "connected" && state.session.entitled,
+        appUrl: state.session?.kind === "connected" ? state.session.appUrl : null,
+        onTrainLocked: ({ midoId, localId }) =>
+          render({ kind: "train-offer", surface: "library", midoId, localId, back: { kind: "library" } }),
         onBack: async () => {
           state.libCount = await libraryCount();
           syncHeader();
@@ -269,10 +317,13 @@ function render(view: View): void {
       return;
     case "saved":
       return renderSaved(view);
+    case "train-offer":
+      return renderTrainOffer(view);
   }
 }
 
 function renderNotYoutube() {
+  if (state.pendingIntent) viewEl.append(intentBanner(state.pendingIntent));
   const wrap = el("div", { class: "state panel rise-in" });
   const tile = el("div", { class: "state-icon" });
   tile.append(icon("play"));
@@ -330,6 +381,8 @@ function renderCapture(): void {
   const session = state.session;
   const connected = state.mode === "connected";
   const wrap = el("div", { class: "rise-in" });
+
+  if (state.pendingIntent) wrap.append(intentBanner(state.pendingIntent));
 
   if (session?.kind === "connected" && session.demo) {
     const note = el("div", { class: "demo-note" });
@@ -651,7 +704,7 @@ async function saveLocal(button?: HTMLButtonElement): Promise<void> {
   state.libCount = result.count;
   syncHeader();
   const { stampLabel } = resetAfterSave();
-  render({ kind: "saved", where: "local", stampLabel, count: result.count });
+  render({ kind: "saved", where: "local", stampLabel, count: result.count, localId: capture.id });
 }
 
 /** Connected save: to MIDO XI, with the library as the safety net. */
@@ -672,7 +725,7 @@ async function submitConnected(button: HTMLButtonElement): Promise<void> {
   if (result.kind === "saved") {
     await clearDraft();
     const { stampLabel } = resetAfterSave();
-    render({ kind: "saved", where: "mido", stampLabel, openUrl: result.openUrl });
+    render({ kind: "saved", where: "mido", stampLabel, openUrl: result.openUrl, midoId: result.id });
     return;
   }
 
@@ -714,6 +767,29 @@ function renderSaved(view: Extract<View, { kind: "saved" }>): void {
     wrap.append(el("p", {}, "Added to your library on this device."));
   }
 
+  /*
+    THE conversion surface. "I noticed something important" is the
+    moment "how do I train this?" is real — the CTA lives here, after
+    the save is banked, and nowhere louder. Entitled players get a
+    capability; everyone else gets one restrained offer that a "Not
+    now" quiets for a week. A connected-mode save that fell back to
+    local (server unreachable) skips it: the bridge it advertises is
+    down.
+  */
+  const offerHere = view.where === "mido" || state.mode === "local";
+  if (
+    offerHere &&
+    shouldShowSavedCta({
+      entitled: state.session?.kind === "connected" && state.session.entitled,
+      mode: state.mode,
+      savedCount: view.count ?? state.libCount,
+      dismissedAt: state.trainDismissedAt,
+      nowMs: Date.now(),
+    })
+  ) {
+    wrap.append(trainCtaBlock({ surface: "saved", midoId: view.midoId, localId: view.localId, back: view }));
+  }
+
   const actions = el("div", { class: "actions" });
   if (view.where === "mido" && view.openUrl) {
     const open = el("button", { class: "btn-outline", type: "button" });
@@ -738,6 +814,176 @@ function renderSaved(view: Extract<View, { kind: "saved" }>): void {
     }
   });
   actions.append(again);
+  wrap.append(actions);
+  viewEl.append(wrap);
+}
+
+/* ── the Capture → Training bridge ─────────────────────────── */
+
+/**
+ * The compact CTA. One button, one line of copy, styled like every
+ * other panel — no modal, no countdown, no interruption. Entitled
+ * players go straight to MIDO XI Training with this lesson loaded;
+ * everyone else sees the offer view.
+ */
+function trainCtaBlock(opts: { surface: "saved" | "library"; midoId?: string; localId?: string; back: View }): HTMLElement {
+  const connected = state.mode === "connected";
+  const entitled = state.session?.kind === "connected" && state.session.entitled;
+  if (connected) sendTelemetry("capture_training_cta_shown", { surface: opts.surface, entitled });
+
+  const box = el("div", { class: "train-cta panel" });
+  const head = el("div", { class: "label-tech train-cta-eyebrow" }, entitled ? "From this lesson" : "Next step");
+  const btn = el("button", { class: "train-cta-btn", type: "button" });
+  btn.append(icon("target"), document.createTextNode("Build a training session"));
+  const sub = el("p", { class: "train-cta-sub" }, "Turn this lesson into a session built around your game.");
+  btn.addEventListener("click", () => {
+    if (connected) sendTelemetry("capture_training_cta_clicked", { surface: opts.surface, entitled });
+    if (entitled && opts.midoId && state.session?.kind === "connected") {
+      openTab(trainingHandoffUrl(state.session.appUrl, opts.midoId));
+      return;
+    }
+    render({ kind: "train-offer", surface: opts.surface, midoId: opts.midoId, localId: opts.localId, back: opts.back });
+  });
+  box.append(head, btn, sub);
+  return box;
+}
+
+/** Remember WHICH local lesson asked to be trained — locally, only. */
+async function rememberTrainIntent(localId: string): Promise<void> {
+  await setFlag("trainIntent", { localId, savedAt: new Date().toISOString() });
+}
+
+/**
+ * The kept promise. A player who pressed BUILD A TRAINING SESSION
+ * before they were entitled comes back to exactly that lesson: one
+ * explicit "Use this lesson" imports the single Moment and opens
+ * Training with its server id. Failure leaves the local copy — and the
+ * intent — untouched, so retry is always possible.
+ */
+function intentBanner(lesson: LocalCapture): HTMLElement {
+  const session = state.session;
+  const box = el("div", { class: "train-intent panel" });
+  box.append(el("div", { class: "label-tech train-cta-eyebrow" }, "Your saved lesson"));
+  const title = el("div", { class: "train-intent-title" }, lesson.videoTitle);
+  title.append(el("span", { class: "data-mono train-intent-stamp" }, ` · ${formatTimestamp(lesson.timestampSeconds)}`));
+  box.append(title);
+  box.append(el("p", { class: "train-cta-sub" }, "Ready to turn into a training session."));
+  const err = el("p", { class: "train-intent-err" });
+  err.hidden = true;
+  const row = el("div", { class: "train-intent-row" });
+  const use = el("button", { class: "train-cta-btn", type: "button" }, "Use this lesson");
+  use.addEventListener("click", async () => {
+    if (session?.kind !== "connected") return;
+    sendTelemetry("capture_training_cta_clicked", { surface: "intent", entitled: true });
+    use.disabled = true;
+    use.textContent = "Importing…";
+    // Already in MIDO (imported some other way)? Just deliver.
+    if (lesson.syncState === "synced" && lesson.midoId) {
+      await setFlag("trainIntent", null);
+      state.pendingIntent = null;
+      openTab(trainingHandoffUrl(session.appUrl, lesson.midoId));
+      box.remove();
+      return;
+    }
+    const result = await postCapture(toCaptureInput(lesson), "import");
+    if (result.kind === "saved") {
+      await updateCapture(lesson.id, { syncState: "synced", midoId: result.id });
+      await setFlag("trainIntent", null);
+      state.pendingIntent = null;
+      openTab(trainingHandoffUrl(session.appUrl, result.id));
+      box.remove();
+      return;
+    }
+    use.disabled = false;
+    use.textContent = "Use this lesson";
+    err.textContent = "Couldn't import this lesson. Your local copy is safe — try again.";
+    err.hidden = false;
+  });
+  const dismiss = el("button", { class: "btn-ghost lib-mini", type: "button" }, "Dismiss");
+  dismiss.addEventListener("click", async () => {
+    await setFlag("trainIntent", null);
+    state.pendingIntent = null;
+    box.remove();
+  });
+  row.append(use, dismiss);
+  box.append(err, row);
+  return box;
+}
+
+/**
+ * The offer itself — the honest version of a paywall. Connected-free
+ * sees the canonical price and an unlock button; Free Mode sees an
+ * explanation and a connect button, with its local moment explicitly
+ * untouched. "Not now" quiets the automatic post-save CTA for a week
+ * and returns the player exactly where they were.
+ */
+function renderTrainOffer(view: Extract<View, { kind: "train-offer" }>): void {
+  const session = state.session;
+  const connected = state.mode === "connected" && session?.kind === "connected";
+  if (connected) sendTelemetry("capture_training_upgrade_viewed", { surface: view.surface });
+
+  const wrap = el("div", { class: "state panel rise-in train-offer" });
+  const tile = el("div", { class: "state-icon" });
+  tile.append(icon("target"));
+  wrap.append(tile);
+
+  const actions = el("div", { class: "actions" });
+
+  if (state.mode === "connected" && session?.kind === "connected") {
+    wrap.append(
+      el("h2", {}, "You saw the lesson. Now train it."),
+      el(
+        "p",
+        {},
+        "Your lesson is saved. MIDO XI Player can turn it into a personalized training session using your position, development goals, studies and recent work.",
+      ),
+    );
+    const pricing = session.pricing;
+    if (pricing) {
+      const priceRow = el("div", { class: "train-price" });
+      priceRow.append(
+        el("span", { class: "stat-figure train-price-figure" }, formatPriceCents(pricing.monthlyCents)),
+        el("span", { class: "train-price-unit" }, "/month"),
+      );
+      wrap.append(priceRow);
+      wrap.append(el("p", { class: "train-price-alt" }, `or ${formatPriceCents(pricing.annualCents)}/year`));
+    }
+    const unlock = el("button", { class: "btn-primary", type: "button" }, "Unlock MIDO XI");
+    unlock.addEventListener("click", async () => {
+      // A moment that lives only on this device can't ride the checkout
+      // return URL — remember it locally so the entitled reconnect can
+      // offer exactly this lesson. Ids already in MIDO ride the URL.
+      if (!view.midoId && view.localId) await rememberTrainIntent(view.localId);
+      openTab(membershipUpgradeUrl(session.appUrl, view.midoId));
+    });
+    actions.append(unlock);
+  } else {
+    wrap.append(
+      el("h2", {}, "Build a training session"),
+      el(
+        "p",
+        {},
+        "Your moment is saved on this device — nothing has been uploaded. Turning a lesson into a session built around your position, goals and development history is MIDO XI Player.",
+      ),
+    );
+    const connect = el("button", { class: "btn-primary", type: "button" }, "Continue to MIDO XI");
+    connect.addEventListener("click", async () => {
+      // The lesson stays on this device; only its LOCAL id is kept, so
+      // the entitled return can offer "Use this lesson" explicitly.
+      if (view.localId) await rememberTrainIntent(view.localId);
+      openTab(connectForTrainingUrl(await apiBase()));
+    });
+    actions.append(connect);
+  }
+
+  const notNow = el("button", { class: "btn-ghost", type: "button" }, "Not now");
+  notNow.addEventListener("click", async () => {
+    const iso = new Date().toISOString();
+    state.trainDismissedAt = iso;
+    await setFlag("trainCtaDismissedAt", iso);
+    render(view.back);
+  });
+  actions.append(notNow);
   wrap.append(actions);
   viewEl.append(wrap);
 }

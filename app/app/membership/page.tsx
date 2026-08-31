@@ -8,6 +8,10 @@ import { UsageMeters } from "@/components/membership/usage-meters";
 import { ManageButton } from "@/components/membership/manage-button";
 import { WhatMidoBuilds } from "@/components/membership/what-mido-builds";
 import { getCurrentUser } from "@/lib/auth/session";
+import { sanitizeCheckoutAttribution, isUuid } from "@/lib/billing/attribution";
+import { track } from "@/lib/analytics/track";
+import { redirect } from "next/navigation";
+import Link from "next/link";
 
 export const metadata = { title: "Membership — MIDO XI" };
 
@@ -19,13 +23,38 @@ function fmtDate(iso: string | null): string | null {
 export default async function MembershipPage({
   searchParams,
 }: {
-  searchParams: Promise<{ checkout?: string }>;
+  searchParams: Promise<{ checkout?: string; src?: string; capture?: string; train_capture?: string }>;
 }) {
-  const { checkout } = await searchParams;
+  const { checkout, src, capture, train_capture } = await searchParams;
   const [{ membership, usage }, user] = await Promise.all([
     getMembershipOverview(),
     getCurrentUser(),
   ]);
+
+  /*
+    The Capture → Training arrival. `src`/`capture` come off the URL the
+    extension opened, so they are sanitized before anything reads them —
+    and only a source enum plus a UUID survive.
+  */
+  const attribution = sanitizeCheckoutAttribution({ source: src, captureId: capture });
+  if (attribution && !membership.isPro) {
+    await track("capture_training_upgrade_viewed", { surface: "membership" });
+  }
+
+  /*
+    The purchase return. The player paid to turn a saved lesson into a
+    session — when the webhook has already landed the entitlement, take
+    them straight to that outcome rather than leaving them on a banner.
+    When it hasn't yet, the banner below carries the same link, so the
+    lesson is one click away either way and nothing is lost to timing.
+  */
+  const trainCapture = isUuid(train_capture) ? train_capture.toLowerCase() : null;
+  const buildUrl = trainCapture
+    ? `/app/training?focus=${encodeURIComponent(`capture:${trainCapture}`)}&src=post_checkout`
+    : null;
+  if (checkout === "success" && buildUrl && membership.isPro) {
+    redirect(buildUrl);
+  }
   const renew = fmtDate(membership.currentPeriodEnd);
   const tier = tierOf(membership.planId);
   const isTopTier = tier === "club";
@@ -53,9 +82,17 @@ export default async function MembershipPage({
       </div>
 
       {checkout === "success" && (
-        <p className="mb-6 rounded-lg border border-positive/30 bg-positive/10 px-3 py-2 text-sm text-positive">
-          Welcome aboard — your AI analyst is now live. It can take a moment to activate.
-        </p>
+        <div className="mb-6 rounded-lg border border-positive/30 bg-positive/10 px-3 py-2 text-sm text-positive">
+          <p>Welcome aboard — your AI analyst is now live. It can take a moment to activate.</p>
+          {buildUrl && (
+            <Link
+              href={buildUrl}
+              className="mt-2 inline-flex h-9 items-center gap-2 rounded-lg bg-signal px-3.5 text-sm font-medium text-white transition-colors hover:bg-signal-deep"
+            >
+              Build the session from your saved lesson →
+            </Link>
+          )}
+        </div>
       )}
       {checkout === "cancelled" && (
         <p className="mb-6 rounded-lg border border-line bg-ink-850 px-3 py-2 text-sm text-text-dim">
@@ -101,7 +138,7 @@ export default async function MembershipPage({
       {/* Plans */}
       <section>
         <SectionHeader label={membership.isPro ? "Change plan" : "Plans"} />
-        <PlanCards currentPlan={membership.planId} billingConfigured={features.billing} />
+        <PlanCards currentPlan={membership.planId} billingConfigured={features.billing} attribution={attribution} />
       </section>
 
       {isDemoMode && (

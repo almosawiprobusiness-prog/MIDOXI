@@ -70,6 +70,18 @@ console.log("SESSION");
   if (body.authenticated) {
     ok("carries goals", Array.isArray(body.goals));
     ok("carries the app url", typeof body.appUrl === "string");
+    // The Capture → Training contract: entitlement decided server-side,
+    // pricing from the canonical plan config — never extension guesses.
+    ok("reports entitlement as a boolean", typeof body.entitled === "boolean");
+    ok(
+      "carries canonical Player pricing",
+      body.pricing &&
+        typeof body.pricing.monthlyCents === "number" &&
+        body.pricing.monthlyCents > 0 &&
+        typeof body.pricing.annualCents === "number" &&
+        body.pricing.annualCents > 0,
+      JSON.stringify(body.pricing),
+    );
   } else {
     console.log("  · not signed in (real mode without cookies) — capture tests will expect 401");
   }
@@ -99,6 +111,42 @@ console.log("\nCAPTURE — validation");
 
   const huge = await post({ ...VALID, observation: "x".repeat(30000) });
   ok("refuses an oversized body", huge.status === 400 || huge.status === 422, `status ${huge.status}`);
+}
+
+/* ── telemetry — the Capture → Training funnel legs ─────────── */
+console.log("\nTELEMETRY");
+{
+  const tPost = (body, origin = EXT_ORIGIN) =>
+    fetch(`${base}/api/extension/telemetry`, {
+      method: "POST",
+      headers: { "content-type": "application/json", ...(origin ? { origin } : {}) },
+      body: typeof body === "string" ? body : JSON.stringify(body),
+    });
+
+  const evil = await tPost({ event: "capture_training_cta_shown" }, EVIL_ORIGIN);
+  ok("refuses a web Origin with 403", evil.status === 403, `status ${evil.status}`);
+
+  const unknown = await tPost({ event: "capture_saved" });
+  ok("refuses events outside the extension vocabulary (422)", unknown.status === 422, `status ${unknown.status}`);
+
+  const invented = await tPost({ event: "totally_made_up" });
+  ok("refuses invented events (422)", invented.status === 422, `status ${invented.status}`);
+
+  const oversized = await tPost({ event: "capture_training_cta_shown", props: { pad: "x".repeat(600) } });
+  ok("refuses an oversized body (422)", oversized.status === 422, `status ${oversized.status}`);
+
+  const valid = await tPost({
+    event: "capture_training_cta_shown",
+    props: { surface: "saved", entitled: false },
+  });
+  const validBody = await valid.json().catch(() => ({}));
+  // Demo answers 200 (and learns nothing from itself); real mode
+  // without cookies answers 401 — Free Mode can never phone home.
+  ok(
+    "accepts a valid event only for a session (200 demo/signed-in, 401 signed-out)",
+    (valid.status === 200 && validBody.ok === true) || valid.status === 401,
+    `status ${valid.status}`,
+  );
 }
 
 if (!authenticated) {

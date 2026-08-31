@@ -206,6 +206,7 @@ button:disabled { opacity: 0.5; cursor: default; }
   transition: background-color 0.15s;
 }
 .btn-outline:hover { background: rgba(123, 97, 255, 0.2); }
+.btn-outline svg { width: 14px; height: 14px; }
 
 .btn-ghost {
   display: inline-flex;
@@ -661,3 +662,75 @@ textarea:focus { border-color: var(--signal-line); outline: none; }
   margin-bottom: 10px;
 }
 .demo-dot { width: 6px; height: 6px; border-radius: 999px; background: var(--review); flex: none; }
+
+/* ── Capture → Training ──────────────────────────────────── */
+
+/* The compact post-save CTA — a panel, never a modal. Left-aligned
+   inside the centred saved state on purpose: it reads as the next
+   step of the product, not an interstitial. */
+.train-cta {
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px 14px;
+  text-align: left;
+  border-color: var(--signal-line);
+  background: linear-gradient(180deg, var(--signal-wash), var(--ink-900) 85%);
+}
+.train-cta-eyebrow { margin-bottom: 8px; }
+.train-cta-btn {
+  display: flex;
+  width: 100%;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: var(--r-md);
+  background: var(--signal);
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #fff;
+  transition: background 0.15s;
+}
+.train-cta-btn:hover { background: var(--signal-deep); }
+.train-cta-btn svg { width: 15px; height: 15px; }
+.train-cta-sub { margin-top: 8px; font-size: 12px; color: var(--text-dim); }
+
+/* The offer view (paywall / connect explainer). */
+.train-offer p { max-width: 280px; }
+.train-price { display: flex; align-items: baseline; gap: 4px; margin-top: 6px; }
+.train-price-figure { font-size: 30px; }
+.train-price-unit { font-size: 13px; color: var(--text-dim); }
+.train-price-alt { font-size: 12px; color: var(--text-faint); }
+
+/* The per-moment library action. */
+.lib-act-train { color: var(--signal-bright); font-weight: 500; }
+.lib-act-train:hover { color: var(--signal); }
+.lib-act-train.armed { color: var(--review); }
+.lib-act-train:disabled { color: var(--text-faint); }
+
+/* The kept-promise banner: the lesson that asked to be trained,
+   surfacing once the account can deliver it. */
+.train-intent {
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border-color: var(--signal-line);
+  background: linear-gradient(180deg, var(--signal-wash), var(--ink-900) 85%);
+}
+.train-intent-title {
+  margin: 6px 0 2px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-hi);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.train-intent-stamp { color: var(--text-dim); font-size: 12px; }
+.train-intent-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.train-intent-row .train-cta-btn { flex: 1; }
+.train-intent-err {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--correction);
+}

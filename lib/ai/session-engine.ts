@@ -99,6 +99,26 @@ export async function draftSession(rawBrief?: SessionBrief): Promise<DraftSessio
   const context = await buildPlayerContext();
   const brief = sanitizeBrief(rawBrief);
   /*
+    A `capture:` focus is the Capture → Training arrow: the extension
+    hands over an id, and the lesson itself is fetched HERE — RLS scopes
+    the read to the owner, so a foreign or deleted id simply loads
+    nothing and the focus is dropped like any other stale link. The
+    observation travels server-side only; it never rides a URL.
+  */
+  if (brief.focusKey?.startsWith("capture:")) {
+    const { getCapture } = await import("@/lib/data/captures");
+    const lesson = await getCapture(brief.focusKey.slice("capture:".length));
+    if (lesson) {
+      context.captureLesson = {
+        id: lesson.id,
+        videoTitle: lesson.videoTitle,
+        category: lesson.category,
+        observation: lesson.observation,
+        goalId: lesson.goalId,
+      };
+    }
+  }
+  /*
     A focus the record cannot back is dropped before anything is built
     around it — the key came from a link, and links outlive the
     evidence windows they point into.

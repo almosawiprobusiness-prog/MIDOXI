@@ -1,5 +1,5 @@
 import "server-only";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
 
 /*
@@ -103,7 +103,28 @@ export type ProductEvent =
     payment link created (with its fee tier, never its amount).
   */
   | "trainer_onboarding_started"
-  | "trainer_payment_link_created";
+  | "trainer_payment_link_created"
+  /*
+    The Capture → Training conversion experiment
+    (docs/product/CAPTURE_TO_TRAINING_CONVERSION.md). One question:
+    does "I noticed something" become "build me a session", and does
+    that become a subscription that gets USED? The funnel is
+    saved → cta_shown → cta_clicked → upgrade_viewed →
+    checkout_started → purchase_completed → handoff_opened →
+    session_generated → training_completed (existing).
+
+    CTA_SHOWN/CLICKED/UPGRADE_VIEWED arrive from the extension via
+    /api/extension/telemetry — authenticated users only; Free Mode
+    stays analytics-silent per docs/extension/METRICS.md. Props are
+    a surface enum and an entitled flag, never observation text.
+  */
+  | "capture_training_cta_shown"
+  | "capture_training_cta_clicked"
+  | "capture_training_upgrade_viewed"
+  | "capture_training_checkout_started"
+  | "capture_training_purchase_completed"
+  | "capture_training_handoff_opened"
+  | "capture_training_session_generated";
 
 /**
  * Record one product action. Fire-and-forget by design.
@@ -134,6 +155,29 @@ export async function track(
     */
     const rv = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? null;
     await supabase.from("product_analytics").insert({ event, props: { ...props, rv } });
+  } catch {
+    // A lost data point, accepted silently.
+  }
+}
+
+/**
+ * track(), for contexts with no user session. The insert policy is
+ * `user_id = auth.uid()`, so a webhook handler calling track() would
+ * silently insert nothing — this variant names the user explicitly and
+ * writes with the service role. Same contract otherwise: fire-and-forget,
+ * never throws, ids and enums only in props.
+ */
+export async function trackFor(
+  userId: string,
+  event: ProductEvent,
+  props: Record<string, string | number | boolean> = {},
+): Promise<void> {
+  if (isDemoMode || !userId) return;
+  try {
+    const admin = createAdminClient();
+    if (!admin) return;
+    const rv = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? null;
+    await admin.from("product_analytics").insert({ user_id: userId, event, props: { ...props, rv } });
   } catch {
     // A lost data point, accepted silently.
   }

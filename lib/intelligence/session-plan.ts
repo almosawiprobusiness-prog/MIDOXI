@@ -1,6 +1,6 @@
 import type { SessionKind } from "@/lib/types";
 import type { PlayerContext } from "./context";
-import { validSourceKeys, studyKey } from "./context";
+import { validSourceKeys, studyKey, captureKey } from "./context";
 
 /*
   THE SESSION PLAN — the shape of a generated training session, its
@@ -96,7 +96,7 @@ export function sanitizeBrief(raw: SessionBrief | null | undefined): SessionBrie
     const eq = raw.equipment.filter((e) => (BRIEF_EQUIPMENT as readonly string[]).includes(e));
     if (eq.length) brief.equipment = eq;
   }
-  if (typeof raw.focusKey === "string" && /^(goal|film|study):.{1,80}$/.test(raw.focusKey)) {
+  if (typeof raw.focusKey === "string" && /^(goal|film|study|capture):.{1,80}$/.test(raw.focusKey)) {
     brief.focusKey = raw.focusKey;
   }
   return brief;
@@ -130,6 +130,10 @@ export function sourceLabel(key: string, ctx: PlayerContext): string {
   if (key.startsWith("study:")) {
     const st = ctx.studies.find((s) => studyKey(s.subject) === key);
     return st ? `Study: ${st.subject}` : "Study";
+  }
+  if (key.startsWith("capture:")) {
+    const c = ctx.captureLesson;
+    return c && captureKey(c.id) === key ? `Your lesson: ${c.videoTitle.slice(0, 60)}` : "Your lesson";
   }
   return key;
 }
@@ -217,6 +221,28 @@ export function composeSessionPlan(ctx: PlayerContext, brief: SessionBrief = {})
       work: lowReadiness ? "8 minutes, low intensity" : "10 minutes",
       sourceKey: brief.focusKey!,
       why: `You studied ${focusedStudy.subject} ${focusedStudy.daysAgo} day(s) ago — today it goes on grass.`,
+    });
+  }
+
+  /*
+    "Build a training session" from a saved Capture moment arrives the
+    same way a study focus does. The composed path honours it with a
+    dedicated block built from the player's own note — the free fallback
+    must close the Capture → Training arrow too, not only the model path.
+  */
+  const focusedCapture =
+    brief.focusKey?.startsWith("capture:") &&
+    ctx.captureLesson &&
+    captureKey(ctx.captureLesson.id) === brief.focusKey
+      ? ctx.captureLesson
+      : undefined;
+  if (focusedCapture) {
+    blocks.push({
+      name: "Train your lesson",
+      detail: `Recreate what you noticed watching "${focusedCapture.videoTitle.slice(0, 80)}" — walk the situation slowly first, then repeat it at match speed until it looks like your note.`,
+      work: lowReadiness ? "8 minutes, low intensity" : "12 minutes",
+      sourceKey: brief.focusKey!,
+      why: "Built from the moment you captured — your own observation, taken onto the pitch.",
     });
   }
 

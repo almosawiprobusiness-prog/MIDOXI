@@ -12,6 +12,7 @@
   rendered as HTML.
 */
 import { apiBase } from "./config";
+import { asPricing, type PlayerPricing } from "./train-cta";
 import type { CaptureInput } from "../../../lib/data/capture-types";
 
 export interface SessionGoal {
@@ -21,7 +22,21 @@ export interface SessionGoal {
 }
 
 export type SessionState =
-  | { kind: "connected"; name: string | null; goals: SessionGoal[]; appUrl: string; demo: boolean }
+  | {
+      kind: "connected";
+      name: string | null;
+      goals: SessionGoal[];
+      appUrl: string;
+      demo: boolean;
+      /**
+       * Server-verified: can this account build AI training sessions?
+       * Display state only — the popup never grants anything on it, and
+       * every gated action is re-verified by its own server route.
+       */
+      entitled: boolean;
+      /** Canonical Player pricing for the paywall; null = show no price. */
+      pricing: PlayerPricing | null;
+    }
   | { kind: "signed-out" }
   | { kind: "offline" }
   | { kind: "error"; message: string };
@@ -68,6 +83,8 @@ export async function fetchSession(): Promise<SessionState> {
       goals: asGoals(body.goals),
       appUrl: typeof body.appUrl === "string" ? body.appUrl : base,
       demo: body.demo === true,
+      entitled: body.entitled === true,
+      pricing: asPricing(body.pricing),
     };
   } catch {
     return { kind: "error", message: "Unexpected response from MIDO XI." };

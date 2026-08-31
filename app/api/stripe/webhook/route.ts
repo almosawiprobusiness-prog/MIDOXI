@@ -7,6 +7,7 @@ import { logEvent } from "@/lib/observability/log";
 import { tierOf } from "@/lib/billing/plans";
 import { recordAccountUpdated, recordTrainerPurchasePaid } from "@/lib/billing/connect";
 import { REWARD } from "@/lib/data/referral-types";
+import { trackFor } from "@/lib/analytics/track";
 
 /*
   Stripe webhook. Stripe is the source of truth for subscription state — we
@@ -184,6 +185,18 @@ export async function POST(req: Request) {
             typeof session.subscription === "string" ? session.subscription : session.subscription.id;
           const sub = await stripe.subscriptions.retrieve(subId);
           await upsertSubscription(sub);
+          /*
+            Capture → Training attribution: the purchase closed and it
+            began at a saved lesson. `trackFor` because a webhook has no
+            user session and the RLS insert path would silently no-op.
+            After the entitlement write, so a tracking hiccup can never
+            make Stripe retry a recorded subscription.
+          */
+          if (session.metadata?.source === "capture_training" && session.metadata.user_id) {
+            await trackFor(session.metadata.user_id, "capture_training_purchase_completed", {
+              plan: session.metadata.plan_id ?? "unknown",
+            });
+          }
         } else if (session.metadata?.kind === "trainer_product") {
           /*
             Gated on payment_status, per Stripe's fulfillment rule: an

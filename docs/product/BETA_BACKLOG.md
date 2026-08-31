@@ -8,6 +8,14 @@ docs/releases/PLAYER_OS_BETA_RC1.md.
 - (empty — beta has not started)
 
 ## NEEDS MORE DATA
+- Capture → Training copy variants B/C (documented in
+  CAPTURE_TO_TRAINING_CONVERSION.md): A/B only when funnel traffic
+  justifies it.
+- Dedicated `training_started` event (runner opened): add only if the
+  generated→completed gap proves unreadable with existing events.
+- Intent banner for connected-FREE reconnects (today it waits for
+  entitlement): add only if funnel shows paid users who never reopen
+  the popup.
 - Vision feedback reason chips (wrong player / missed action / wrong
   interpretation): add only if free-text thumbs-down proves too vague.
 - Runner-level "training finished" event: add if the generated→logged

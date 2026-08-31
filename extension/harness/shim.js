@@ -110,6 +110,49 @@
   }
 
   const auth = params.get("auth");
+
+  // ?auth=paid | ?auth=free — a fake CONNECTED session (entitled or
+  // not), plus canned capture/telemetry responses, so the Capture →
+  // Training surfaces can be exercised without a signed-in dev server.
+  if (auth === "paid" || auth === "free") {
+    const realFetch = window.fetch.bind(window);
+    const json = (body) =>
+      Promise.resolve(
+        new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } }),
+      );
+    window.fetch = (url, init) => {
+      const u = String(url);
+      if (u.includes("/api/extension/session")) {
+        return json({
+          authenticated: true,
+          user: { name: "Harness Player" },
+          goals: [{ id: "g1", title: "Sharper first touch", category: "receiving" }],
+          appUrl: "http://localhost:3000/harness",
+          entitled: auth === "paid",
+          pricing: { monthlyCents: 999, annualCents: 8900 },
+        });
+      }
+      if (u.includes("/api/extension/captures")) {
+        // ?fail=save applies in connected scenarios too — the import-
+        // failure recovery paths need a server that says no.
+        if (params.get("fail") === "save") {
+          return Promise.reject(new TypeError("harness: save blocked"));
+        }
+        return json({
+          ok: true,
+          id: "3f2504e0-4f89-41d3-9a0c-0305e82c3301",
+          deduped: false,
+          openUrl: "http://localhost:3000/harness/harness.html#moment",
+        });
+      }
+      if (u.includes("/api/extension/telemetry")) {
+        console.log("[harness] telemetry:", init && init.body);
+        return json({ ok: true });
+      }
+      return realFetch(url, init);
+    };
+  }
+
   if (auth === "out" || auth === "offline") {
     const realFetch = window.fetch.bind(window);
     window.fetch = (url, init) => {
