@@ -40,6 +40,13 @@ export type ProductEvent =
   | "vision_identity_confirmed"
   | "vision_uncertain_identity"
   | "vision_provider_fallback"
+  | "training_generated"
+  | "training_adapted"
+  | "community_post_created"
+  | "publish_exported"
+  | "clip_created"
+  | "annotation_saved"
+  | "film_observation_filed"
   /*
     The Vision job pipeline: STARTED with the window count (how much
     film players actually ask MIDO to read), FINISHED with the terminal
@@ -120,7 +127,13 @@ export async function track(
   try {
     const supabase = await createClient();
     if (!supabase) return;
-    await supabase.from("product_analytics").insert({ event, props });
+    /*
+      Every event carries the release that produced it (`rv`), so a metric
+      that moves can be tied to the deploy that moved it. Seven chars of
+      commit SHA — null locally, which is itself informative.
+    */
+    const rv = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? null;
+    await supabase.from("product_analytics").insert({ event, props: { ...props, rv } });
   } catch {
     // A lost data point, accepted silently.
   }

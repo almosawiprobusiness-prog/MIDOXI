@@ -6,6 +6,7 @@ import { isDemoMode } from "@/lib/env";
 import { getProfileSettings } from "@/lib/data/profile";
 import { postIssue, mediaIssue, captionIssue, youtubeId, type Visibility, type PostKind, POST_KINDS } from "@/lib/data/feed-types";
 import { notify } from "@/lib/notifications/notify";
+import { track } from "@/lib/analytics/track";
 
 /*
   Everything a person can do in the feed.
@@ -125,6 +126,7 @@ export async function createPost(input: NewPost): Promise<FeedResult> {
     .maybeSingle();
 
   if (error) return { ok: false, error: error.message };
+  await track("community_post_created", { kind: input.kind ?? "general", hasMedia: Boolean(mediaUrl) });
   refresh();
   return { ok: true, id: data?.id as string };
 }

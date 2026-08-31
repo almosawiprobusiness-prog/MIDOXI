@@ -50,6 +50,7 @@ export async function POST(req: Request) {
         path: String(body.path ?? "").slice(0, 200),
         digest: String(body.digest ?? "").slice(0, 100),
         message: String(body.message ?? "").slice(0, 500),
+        rv: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 12) ?? null,
         at: new Date().toISOString(),
       }),
     );

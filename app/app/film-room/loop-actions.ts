@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { track } from "@/lib/analytics/track";
 import { createClient } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
 import { demoStore } from "@/lib/data/store";
@@ -207,6 +208,9 @@ export async function confirmObservation(input: {
 
   if (error) return { ok: false, error: `The evidence could not be saved: ${error.message}` };
 
+  // The loop closing — a Vision/film finding becoming development evidence —
+  // is the single most important downstream action the beta can measure.
+  await track("film_observation_filed", { hasConcept: Boolean(obs.concept) });
   revalidate(obs.videoId, goalId);
   return { ok: true, goalId, evidenceId: ev.id as string };
 }

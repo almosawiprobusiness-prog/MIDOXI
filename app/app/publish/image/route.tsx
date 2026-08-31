@@ -96,6 +96,12 @@ export async function GET(req: Request) {
   // one visual system rather than four hand-tuned ones.
   const s = Math.min(width, height) / 1080;
 
+  // The export funnel's terminal event. The preview <img> also hits this
+  // route, so "exported" here means "rendered a card" — the honest,
+  // available signal without client beacons; downloads are a superset.
+  const { track } = await import("@/lib/analytics/track");
+  await track("publish_exported", { template, format });
+
   const display = await displayFont();
 
   return new ImageResponse(

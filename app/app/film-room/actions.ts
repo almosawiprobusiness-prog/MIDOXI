@@ -237,6 +237,7 @@ export async function createClip(input: ClipInput): Promise<Result> {
     await supabase.from("development_evidence").insert({ goal_id: input.goalId, kind: "film", note: input.title.trim(), ref_id: data.id });
   }
 
+  await track("clip_created", { linkedToGoal: Boolean(input.goalId) });
   revalidateFilm(input.videoId);
   if (input.goalId) revalidatePath(`/app/development/${input.goalId}`);
   return { ok: true, id: data.id };

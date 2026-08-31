@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { track } from "@/lib/analytics/track";
 import {
   saveAnnotation as save,
   deleteAnnotation as remove,
@@ -42,6 +43,7 @@ export async function createAnnotation(input: {
   });
   if (!annotation) return { ok: false, error: "Could not save the drawing." };
 
+  await track("annotation_saved", { shapes: input.shapes.length });
   revalidatePath(`/app/film-room/${input.videoId}`);
   return { ok: true, annotation };
 }

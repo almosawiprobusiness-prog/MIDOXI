@@ -95,6 +95,15 @@ const REACH_LABELS: [string, string][] = [
   ["training_completed", "Logged training"],
   ["film_uploaded", "Added film"],
   ["film_analysis_completed", "Ran film analysis"],
+  ["vision_quick_read", "Vision quick read"],
+  ["vision_deep_read", "Vision deep read"],
+  ["vision_identity_corrected", "Corrected a Vision identity"],
+  ["annotation_saved", "Drew on a frame"],
+  ["clip_created", "Cut a clip"],
+  ["film_observation_filed", "Filed a film finding as evidence"],
+  ["training_generated", "Had MIDO draft training"],
+  ["community_post_created", "Posted to the community"],
+  ["publish_exported", "Rendered a share card"],
 ];
 
 export async function getBetaDashboard(): Promise<BetaDashboard> {

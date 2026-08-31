@@ -150,6 +150,9 @@ export async function generateSession(
     const { proposal, context } = await draftSession(brief);
     const sources: Record<string, string> = {};
     for (const b of proposal.blocks) sources[b.sourceKey] = sourceLabel(b.sourceKey, context);
+    // The beta's key AI-value question is "generated → started?"; the
+    // generation half of that funnel was invisible until this.
+    await track("training_generated", { blocks: proposal.blocks.length });
     return { ok: true, proposal, sources };
   } catch {
     return { ok: false, error: "MIDO could not draft a session just now." };
@@ -174,6 +177,7 @@ export async function adaptGeneratedSession(
     const { proposal: adapted, context } = await adaptSession(proposal, directive);
     const sources: Record<string, string> = {};
     for (const b of adapted.blocks) sources[b.sourceKey] = sourceLabel(b.sourceKey, context);
+    await track("training_adapted", { directive });
     return { ok: true, proposal: adapted, sources };
   } catch {
     return { ok: false, error: "MIDO could not adapt the session just now." };

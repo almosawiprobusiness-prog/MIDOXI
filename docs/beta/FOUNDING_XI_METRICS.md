@@ -73,7 +73,7 @@ select subject,
        count(*) filter (where rating = 1)  as useful,
        count(*) filter (where rating = -1) as not_useful,
        array_agg(body) filter (where rating = -1 and body is not null) as reasons
-from beta_feedback where kind = 'ai_rating'
+from beta_feedback where kind = 'ai_feedback'
 group by subject;
 ```
 
