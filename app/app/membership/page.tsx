@@ -9,6 +9,10 @@ import { ManageButton } from "@/components/membership/manage-button";
 import { WhatMidoBuilds } from "@/components/membership/what-mido-builds";
 import { getCurrentUser } from "@/lib/auth/session";
 import { sanitizeCheckoutAttribution, isUuid } from "@/lib/billing/attribution";
+import {
+  REFERRAL_ATTRIBUTION_MESSAGE,
+  isReferralAttributionReason,
+} from "@/lib/data/referral-types";
 import { track } from "@/lib/analytics/track";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -23,9 +27,15 @@ function fmtDate(iso: string | null): string | null {
 export default async function MembershipPage({
   searchParams,
 }: {
-  searchParams: Promise<{ checkout?: string; src?: string; capture?: string; train_capture?: string }>;
+  searchParams: Promise<{
+    checkout?: string;
+    src?: string;
+    capture?: string;
+    train_capture?: string;
+    referral?: string;
+  }>;
 }) {
-  const { checkout, src, capture, train_capture } = await searchParams;
+  const { checkout, src, capture, train_capture, referral } = await searchParams;
   const [{ membership, usage }, user] = await Promise.all([
     getMembershipOverview(),
     getCurrentUser(),
@@ -80,6 +90,22 @@ export default async function MembershipPage({
           </span>
         )}
       </div>
+
+      {/* A referral link followed while already signed in — attached on the
+          way here by /join/[code], reported here so the outcome is never
+          silent. Copy comes from the shared table, so the database, the
+          route and this page cannot drift. */}
+      {isReferralAttributionReason(referral) && (
+        <p
+          className={`mb-6 rounded-lg border px-3 py-2 text-sm ${
+            REFERRAL_ATTRIBUTION_MESSAGE[referral].tone === "positive"
+              ? "border-positive/30 bg-positive/10 text-positive"
+              : "border-line bg-ink-850 text-text-dim"
+          }`}
+        >
+          {REFERRAL_ATTRIBUTION_MESSAGE[referral].text}
+        </p>
+      )}
 
       {checkout === "success" && (
         <div className="mb-6 rounded-lg border border-positive/30 bg-positive/10 px-3 py-2 text-sm text-positive">

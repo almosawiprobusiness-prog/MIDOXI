@@ -30,7 +30,7 @@ const { NEXT_PUBLIC_SUPABASE_URL: url, SUPABASE_SERVICE_ROLE_KEY: key } = env();
 const QUERIES = [
   ["comped_access", "tier, source, ends_at", "billing/membership.ts · compedMembership"],
   ["comped_access", "user_id, tier, source, starts_at, ends_at", "0011 apply_referral_reward"],
-  ["referrals", "id, code, referrer_id, referred_id, status, converted_at, hold_until, tier", "0011 my_referrals"],
+  ["referrals", "id, code, referrer_id, referred_id, status, converted_at, hold_until, tier, joiner_credited_at", "0011 my_referrals, 0042 joiner credit"],
   ["referral_rewards", "id, user_id, referral_id, kind, months, status, earned_at, applied_at", "0011 my_referrals"],
   ["referral_codes", "user_id, code, created_at", "0011 my_referral_code"],
   ["referral_visits", "code, day, hits", "0011 record_referral_visit"],

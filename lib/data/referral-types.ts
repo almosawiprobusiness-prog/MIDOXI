@@ -82,7 +82,17 @@ export interface ReferralOverview {
 export const REWARD = {
   /** Months of Pro the referrer earns per conversion. */
   monthsPerConversion: 1,
-  /** Months of Pro the person who joins gets, on their first paid month. */
+  /**
+   * Months the person who joins gets, on their first paid month —
+   * delivered as a CREDIT on their Stripe balance, not as comped time.
+   *
+   * Comped access would be worth nothing to them: `getMembership()`
+   * reads comped and paid side by side and takes the better, but Stripe
+   * carries on charging either way, so a comped month handed to someone
+   * actively paying is a number on a page. Money back on the next
+   * invoice is the only reading of "a free month" that is true for a
+   * paying customer. Applied by the Stripe webhook at conversion.
+   */
   monthsForJoiner: 1,
   /**
    * A conversion is only counted once the subscription has survived this long.
@@ -183,6 +193,65 @@ export function funnel(stats: ReferralStats): { label: string; value: number; hi
     { label: "Started paying", value: stats.conversions, hint: `Counted after ${REWARD.holdDays} days` },
   ];
 }
+
+// ---------------------------------------------------------------------------
+// Attaching a code to an account
+// ---------------------------------------------------------------------------
+
+/**
+ * Why `attribute_referral` answered the way it did.
+ *
+ * The database returns the machine-readable reason alongside its own
+ * message so the interface never has to pattern-match on prose — the
+ * bug that appears the first time somebody rewords an error string.
+ */
+export type ReferralAttributionReason =
+  | "applied"
+  | "signed_out"
+  | "unknown_code"
+  | "own_code"
+  | "already_credited"
+  | "already_subscribed"
+  | "failed";
+
+const REASONS: ReferralAttributionReason[] = [
+  "applied",
+  "signed_out",
+  "unknown_code",
+  "own_code",
+  "already_credited",
+  "already_subscribed",
+  "failed",
+];
+
+export function isReferralAttributionReason(v: unknown): v is ReferralAttributionReason {
+  return typeof v === "string" && (REASONS as string[]).includes(v);
+}
+
+/**
+ * What the player is told, in one place.
+ *
+ * `applied` is the only positive tone, and it states both halves of the
+ * deal — a promise the product now actually keeps on both sides.
+ */
+export const REFERRAL_ATTRIBUTION_MESSAGE: Record<
+  ReferralAttributionReason,
+  { tone: "positive" | "dim"; text: string }
+> = {
+  applied: {
+    tone: "positive",
+    text: `Referral code applied. Your first paid month comes with ${REWARD.monthsForJoiner} free month credited to your next invoice — and it earns the person who sent you one too.`,
+  },
+  signed_out: { tone: "dim", text: "Sign in to attach a referral code." },
+  unknown_code: { tone: "dim", text: "That referral code is not recognised." },
+  own_code: { tone: "dim", text: "That is your own referral code." },
+  already_credited: { tone: "dim", text: "This account is already credited to someone." },
+  already_subscribed: {
+    tone: "dim",
+    text: "Referral codes apply before your first subscription.",
+  },
+  failed: { tone: "dim", text: "That code could not be applied just now." },
+};
 
 export const REFERRAL_STATUS_META: Record<
   ReferralStatus,

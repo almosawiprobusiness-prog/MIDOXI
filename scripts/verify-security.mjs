@@ -69,6 +69,14 @@ for (const [fn, body] of MUST_EXIST) {
 const MUST_BE_LOCKED = [
   ["convert_referral", { p_user: "00000000-0000-0000-0000-000000000000", p_tier: "pro", p_hold_days: 14 }],
   ["void_referral", { p_user: "00000000-0000-0000-0000-000000000000", p_reason: "test" }],
+  /*
+    0042's joiner credit. Same rule, same reason: claiming it is what makes
+    the webhook pay real money onto a Stripe balance, so a client role able to
+    call it could mint itself a credit — and `release` could hand a claim back
+    for a credit already paid, which is the same hole facing the other way.
+  */
+  ["claim_joiner_credit", { p_user: "00000000-0000-0000-0000-000000000000" }],
+  ["release_joiner_credit", { p_user: "00000000-0000-0000-0000-000000000000" }],
 ];
 
 console.log("\nlocked to the service role only");

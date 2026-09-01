@@ -4,7 +4,7 @@ import { env, features } from "@/lib/env";
 import { getStripe, planIdForPrice } from "@/lib/billing/stripe";
 import { createAdminClient } from "@/lib/supabase/server";
 import { logEvent } from "@/lib/observability/log";
-import { tierOf } from "@/lib/billing/plans";
+import { tierOf, TIER_CARDS } from "@/lib/billing/plans";
 import { recordAccountUpdated, recordTrainerPurchasePaid } from "@/lib/billing/connect";
 import { REWARD } from "@/lib/data/referral-types";
 import { trackFor } from "@/lib/analytics/track";
@@ -115,7 +115,7 @@ async function upsertSubscription(sub: Stripe.Subscription) {
 
   logEvent("info", "stripe.webhook.subscription_recorded", { userId, planId, status: sub.status });
 
-  await settleReferral(admin, userId, sub.status, planId);
+  await settleReferral(admin, userId, sub, planId);
 }
 
 /*
@@ -130,9 +130,10 @@ async function upsertSubscription(sub: Stripe.Subscription) {
 async function settleReferral(
   admin: NonNullable<ReturnType<typeof createAdminClient>>,
   userId: string,
-  status: Stripe.Subscription.Status,
+  sub: Stripe.Subscription,
   planId: NonNullable<ReturnType<typeof planIdForPrice>>,
 ) {
+  const status = sub.status;
   try {
     if (status === "active" || status === "trialing") {
       await admin.rpc("convert_referral", {
@@ -140,6 +141,7 @@ async function settleReferral(
         p_tier: tierOf(planId),
         p_hold_days: REWARD.holdDays,
       });
+      await creditJoiner(admin, userId, sub, planId);
     } else if (status === "canceled" || status === "incomplete_expired" || status === "unpaid") {
       await admin.rpc("void_referral", { p_user: userId, p_reason: status });
     }
@@ -148,6 +150,90 @@ async function settleReferral(
     // the money is the part that matters, and ripening is idempotent and
     // retried whenever the referrer opens their dashboard.
     logEvent("warn", "stripe.webhook.referral_settle_failed", {
+      message: (err as Error).message,
+    });
+  }
+}
+
+/*
+  Pay the joiner the free month the signup page promised them.
+
+  "Your first paid month comes with 1 free month" was written on the signup
+  screen and delivered to nobody: `ripen_referral_rewards` mints a reward row
+  for the referrer and for no one else. Migration 0042 explains why comped
+  access cannot fix it — Stripe keeps charging alongside it — so the month is
+  paid as money: a negative customer balance transaction, which Stripe applies
+  to the next invoice on its own.
+
+  That timing also disposes of the refund risk without a hold. The credit can
+  only ever be consumed by an invoice that has not happened yet, so somebody
+  who cancels inside the hold window simply never has one — the money stays
+  unspent rather than being clawed back.
+
+  Claimed in the database before it is spent in Stripe, and handed back if
+  Stripe refuses, so the pair of events Stripe sends on every new subscription
+  (created and updated, plus retries) can credit exactly once.
+*/
+async function creditJoiner(
+  admin: NonNullable<ReturnType<typeof createAdminClient>>,
+  userId: string,
+  sub: Stripe.Subscription,
+  planId: NonNullable<ReturnType<typeof planIdForPrice>>,
+) {
+  const months = REWARD.monthsForJoiner;
+  if (months < 1) return;
+
+  const stripe = getStripe();
+  const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer?.id;
+  if (!stripe || !customerId) return;
+
+  /*
+    A month of the tier they actually bought, at that tier's monthly price —
+    read from the canonical plan cards rather than the price they happen to be
+    paying, so an annual subscriber gets a month rather than a twelfth of one.
+  */
+  const monthlyCents = TIER_CARDS.find((c) => c.tier === tierOf(planId))?.monthlyCents ?? 0;
+  const amount = monthlyCents * months;
+  if (amount <= 0) return;
+
+  const currency = sub.items.data[0]?.price?.currency ?? "usd";
+
+  const { data } = await admin.rpc("claim_joiner_credit", { p_user: userId });
+  if ((data as { claimed?: boolean } | null)?.claimed !== true) return;
+
+  try {
+    await stripe.customers.createBalanceTransaction(
+      customerId,
+      {
+        // Negative is a credit: it reduces what the next invoice asks for.
+        amount: -amount,
+        currency,
+        description: `MIDO XI referral — ${months} free month`,
+        metadata: { kind: "referral_joiner_credit", user_id: userId, plan_id: planId },
+      },
+      { idempotencyKey: `referral-joiner-credit-${userId}` },
+    );
+    logEvent("info", "stripe.webhook.referral_joiner_credited", {
+      userId,
+      planId,
+      amount,
+      currency,
+    });
+  } catch (err) {
+    /*
+      Give the claim back. Keeping it would mark the month paid on the strength
+      of a call that failed, and the joiner would never see the credit — the
+      exact silent non-delivery this whole change exists to end.
+    */
+    try {
+      await admin.rpc("release_joiner_credit", { p_user: userId });
+    } catch {
+      // Both calls failing leaves the claim set and the month unpaid; the log
+      // below is what makes that visible rather than silent.
+    }
+    logEvent("error", "stripe.webhook.referral_joiner_credit_failed", {
+      userId,
+      planId,
       message: (err as Error).message,
     });
   }

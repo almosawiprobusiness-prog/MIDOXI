@@ -1,16 +1,19 @@
 import { describe, it, expect } from "vitest";
 import {
   PAYOUT_GAP,
+  REFERRAL_ATTRIBUTION_MESSAGE,
   REWARD,
   REWARD_LADDER,
   funnel,
   generateReferralCode,
   isPlausibleReferralCode,
+  isReferralAttributionReason,
   nextRung,
   normaliseReferralCode,
   referralUrl,
   statsFrom,
   type Referral,
+  type ReferralAttributionReason,
   type Reward,
 } from "../../lib/data/referral-types";
 
@@ -123,8 +126,63 @@ describe("honesty", () => {
     expect(REWARD.holdDays).toBeGreaterThanOrEqual(14);
   });
 
+  /*
+    This assertion used to be the whole of the joiner's guarantee, and it
+    passed for months while `ripen_referral_rewards` minted a reward for the
+    referrer and nobody else — the constant was pinned, the delivery was not.
+    Migration 0042 pays it as a Stripe credit in the webhook; what can be held
+    still here is that the promise and the sentence describing it agree.
+  */
   it("rewards the person who joins too, not only the referrer", () => {
     expect(REWARD.monthsForJoiner).toBeGreaterThan(0);
+  });
+
+  it("tells the joiner where their month actually arrives", () => {
+    const applied = REFERRAL_ATTRIBUTION_MESSAGE.applied;
+    expect(applied.tone).toBe("positive");
+    expect(applied.text.toLowerCase()).toContain("invoice");
+    // Both halves of the deal, in the one sentence they are shown.
+    expect(applied.text.toLowerCase()).toContain("free month");
+    expect(applied.text.toLowerCase()).toContain("sent you");
+  });
+});
+
+describe("attribution outcomes", () => {
+  it("recognises exactly the reasons the database can return", () => {
+    for (const reason of [
+      "applied",
+      "signed_out",
+      "unknown_code",
+      "own_code",
+      "already_credited",
+      "already_subscribed",
+      "failed",
+    ]) {
+      expect(isReferralAttributionReason(reason), reason).toBe(true);
+      expect(REFERRAL_ATTRIBUTION_MESSAGE[reason as ReferralAttributionReason]).toBeDefined();
+    }
+  });
+
+  it("refuses anything else, so a URL cannot put words on the page", () => {
+    expect(isReferralAttributionReason("applied; drop table")).toBe(false);
+    expect(isReferralAttributionReason("")).toBe(false);
+    expect(isReferralAttributionReason(null)).toBe(false);
+    expect(isReferralAttributionReason(7)).toBe(false);
+  });
+
+  it("says the code applies before the first subscription, not before signup", () => {
+    // The seven-day rule is gone; the copy must not resurrect it.
+    const text = REFERRAL_ATTRIBUTION_MESSAGE.already_subscribed.text.toLowerCase();
+    expect(text).toContain("first subscription");
+    for (const m of Object.values(REFERRAL_ATTRIBUTION_MESSAGE)) {
+      expect(m.text.toLowerCase(), m.text).not.toContain("new accounts only");
+    }
+  });
+
+  it("keeps every refusal quiet in tone — only success celebrates", () => {
+    for (const [reason, m] of Object.entries(REFERRAL_ATTRIBUTION_MESSAGE)) {
+      expect(m.tone, reason).toBe(reason === "applied" ? "positive" : "dim");
+    }
   });
 
   it("states that the reward is months and not money", () => {

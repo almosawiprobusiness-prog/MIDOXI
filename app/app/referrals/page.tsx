@@ -213,8 +213,8 @@ export default async function ReferralsPage() {
           <ul className="divide-y divide-line text-sm">
             {[
               `Each conversion earns ${REWARD.monthsPerConversion} month of MIDO XI Pro.`,
-              `The person who joins gets ${REWARD.monthsForJoiner} free month too — this is not a one-way deal.`,
-              "A code only applies to a brand-new account. Attaching one to an existing account does nothing.",
+              `The person who joins gets ${REWARD.monthsForJoiner} free month too, credited to their next invoice — this is not a one-way deal.`,
+              "A code applies any time before that person's first subscription — an account that has been on the free OS for months still counts.",
               "Your own code on your own account is refused by the database, not just hidden in the interface.",
               "A refund or chargeback reverses the referral, and takes back the month if you have not spent it.",
               "Months stack on top of any Pro time you already have, rather than replacing it.",

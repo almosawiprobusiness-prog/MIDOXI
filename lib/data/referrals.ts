@@ -5,10 +5,12 @@ import {
   REWARD,
   generateReferralCode,
   isPlausibleReferralCode,
+  isReferralAttributionReason,
   normaliseReferralCode,
   referralUrl,
   statsFrom,
   type Referral,
+  type ReferralAttributionReason,
   type ReferralOverview,
   type Reward,
 } from "./referral-types";
@@ -154,27 +156,45 @@ export async function recordVisit(code: string): Promise<void> {
   await supabase.rpc("record_referral_visit", { p_code: c });
 }
 
-/** Link the freshly-created account to a code. Safe to call more than once. */
+/**
+ * Link an account to a code. Safe to call more than once.
+ *
+ * Since migration 0042 this is no longer signup-only: a code attaches
+ * any time before the account's first subscription, which is the whole
+ * point of the programme now that the free OS is permanent. The
+ * machine-readable `reason` rides alongside the message so callers can
+ * branch without matching on prose.
+ */
 export async function attributeReferral(
   code: string,
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; reason: ReferralAttributionReason; error?: string }> {
   const c = normaliseReferralCode(code);
   if (!isPlausibleReferralCode(c)) {
-    return { ok: false, error: "That referral code is not recognised." };
+    return { ok: false, reason: "unknown_code", error: "That referral code is not recognised." };
   }
 
   if (isDemoMode) {
     // One identity in demo, so there is nobody else to be referred by. Say so
     // rather than pretending a link was made.
-    return { ok: false, error: "Demo mode has a single account — referrals need a real signup." };
+    return {
+      ok: false,
+      reason: "failed",
+      error: "Demo mode has a single account — referrals need a real signup.",
+    };
   }
 
   const supabase = await createClient();
-  if (!supabase) return { ok: false, error: "Not connected." };
+  if (!supabase) return { ok: false, reason: "failed", error: "Not connected." };
   const { data, error } = await supabase.rpc("attribute_referral", { p_code: c });
-  if (error) return { ok: false, error: error.message };
-  const res = (data ?? {}) as { ok?: boolean; error?: string };
-  return { ok: Boolean(res.ok), error: res.error };
+  if (error) return { ok: false, reason: "failed", error: error.message };
+  const res = (data ?? {}) as { ok?: boolean; reason?: unknown; error?: string };
+  const ok = Boolean(res.ok);
+  const reason: ReferralAttributionReason = isReferralAttributionReason(res.reason)
+    ? res.reason
+    : ok
+      ? "applied"
+      : "failed";
+  return { ok, reason, error: res.error };
 }
 
 /** Spend earned months. Returns how many were applied. */
