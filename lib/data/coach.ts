@@ -12,9 +12,6 @@ import type {
   SessionPlanDetail,
   SessionBlock,
   SessionBlockInput,
-  TacticalBoard,
-  TacticalBoardInput,
-  BoardData,
   OppositionReport,
   OppositionReportInput,
   MatchPlan,
@@ -385,81 +382,14 @@ export async function replaceSessionBlocks(
   return !error;
 }
 
-// ── tactical boards ──────────────────────────────────────────
+/*
+  Tactical boards moved to `lib/data/boards.ts` in migration 0044.
 
-function rowToBoard(r: Record<string, unknown>): TacticalBoard {
-  return {
-    id: r.id as string,
-    title: (r.title as string) ?? "Board",
-    formation: (r.formation as string) ?? "4-3-3",
-    phase: (r.phase as TacticalBoard["phase"]) ?? "in-possession",
-    board: ((r.board as BoardData) ?? { tokens: [], arrows: [], zones: [] }) as BoardData,
-    notes: (r.notes as string) ?? "",
-    createdAt: (r.created_at as string) ?? new Date().toISOString(),
-    updatedAt: (r.updated_at as string) ?? new Date().toISOString(),
-  };
-}
-
-export async function listBoards(): Promise<TacticalBoard[]> {
-  if (isDemoMode) return coachStore.listBoards();
-  const supabase = await client();
-  if (!supabase) return [];
-  const { data } = await supabase.from("tactical_boards").select("*").order("updated_at", { ascending: false });
-  return (data ?? []).map(rowToBoard);
-}
-
-export async function getBoard(id: string): Promise<TacticalBoard | null> {
-  if (isDemoMode) return coachStore.getBoard(id);
-  const supabase = await client();
-  if (!supabase) return null;
-  const { data } = await supabase.from("tactical_boards").select("*").eq("id", id).maybeSingle();
-  return data ? rowToBoard(data) : null;
-}
-
-export async function createBoard(input: TacticalBoardInput): Promise<string | null> {
-  if (isDemoMode) return coachStore.createBoard(input);
-  const supabase = await client();
-  const uid = await userId();
-  if (!supabase || !uid) return null;
-  const { data } = await supabase
-    .from("tactical_boards")
-    .insert({
-      user_id: uid,
-      title: input.title,
-      formation: input.formation,
-      phase: input.phase,
-      board: input.board,
-      notes: input.notes || null,
-    })
-    .select("id")
-    .maybeSingle();
-  return (data?.id as string) ?? null;
-}
-
-export async function updateBoard(id: string, input: TacticalBoardInput): Promise<boolean> {
-  if (isDemoMode) return coachStore.updateBoard(id, input);
-  const supabase = await client();
-  if (!supabase) return false;
-  const { error } = await supabase
-    .from("tactical_boards")
-    .update({
-      title: input.title,
-      formation: input.formation,
-      phase: input.phase,
-      board: input.board,
-      notes: input.notes || null,
-    })
-    .eq("id", id);
-  return !error;
-}
-
-export async function deleteBoard(id: string): Promise<boolean> {
-  if (isDemoMode) return coachStore.deleteBoard(id);
-  const supabase = await client();
-  if (!supabase) return false;
-  const { error } = await supabase.from("tactical_boards").delete().eq("id", id);
-  return !error;
-}
+  They were here because the board began as a Coach OS feature. It is now
+  a primitive that Trainer OS, Player OS and MIDO all read, and leaving
+  the only implementation inside one role's data layer is how three
+  parallel implementations get written later.
+*/
 
 // ── opposition ───────────────────────────────────────────────
 

@@ -10,6 +10,9 @@ import { AthleteNotes } from "@/components/trainer/athlete-notes";
 import { AssessmentForm } from "@/components/trainer/assessment-form";
 import { TrendChart } from "@/components/trainer/trend";
 import { InviteButton } from "@/components/connections/invite-button";
+import { boardsFor, listBoards } from "@/lib/data/boards";
+import { BoardPicker } from "@/components/tactics/board-picker";
+import { AttachedBoards } from "@/components/tactics/attached-boards";
 
 export async function generateMetadata({ params }: PageProps<"/app/athletes/[id]">) {
   const { id } = await params;
@@ -30,10 +33,12 @@ export default async function AthletePage({ params }: PageProps<"/app/athletes/[
   const athlete = await getAthlete(id);
   if (!athlete) notFound();
 
-  const [notes, programs, assessments] = await Promise.all([
+  const [notes, programs, assessments, assigned, library] = await Promise.all([
     listAthleteNotes(id),
     listProgramsForAthlete(id),
     listAssessments(id),
+    boardsFor("athlete", id),
+    listBoards({ limit: 60 }),
   ]);
 
   const st = athleteStatusMeta(athlete.status);
@@ -213,6 +218,51 @@ export default async function AthletePage({ params }: PageProps<"/app/athletes/[
       </section>
 
       {/* Record */}
+      {/*
+        The movement this athlete is working on, drawn (§5).
+
+        "Improve movement between CB and FB" is a shape on the grass. An
+        assigned board puts it in the athlete's own MIDO XI, alongside
+        the programme that trains it.
+      */}
+      <section className="mt-8">
+        <SectionHeader label={assigned.length > 0 ? `Assigned boards · ${assigned.length}` : "Assigned boards"} />
+        {assigned.length > 0 ? (
+          <div className="space-y-3">
+            <AttachedBoards
+              attached={assigned}
+              entityType="athlete"
+              entityId={id}
+              revalidate={`/app/athletes/${id}`}
+            />
+            <BoardPicker
+              entityType="athlete"
+              entityId={id}
+              boards={library}
+              role="assigned"
+              revalidate={`/app/athletes/${id}`}
+              label="Assign another board"
+              compact
+            />
+          </div>
+        ) : (
+          <div className="panel flex flex-wrap items-center gap-3 p-4">
+            <p className="min-w-0 flex-1 text-sm leading-relaxed text-text-dim">
+              Draw the movement pattern once and assign it — the athlete opens the
+              same board in their own MIDO XI.
+            </p>
+            <BoardPicker
+              entityType="athlete"
+              entityId={id}
+              boards={library}
+              role="assigned"
+              revalidate={`/app/athletes/${id}`}
+              label="Assign a board"
+            />
+          </div>
+        )}
+      </section>
+
       <section className="mt-8">
         <SectionHeader label="Record" />
         <AthleteNotes athleteId={athlete.id} notes={notes} />

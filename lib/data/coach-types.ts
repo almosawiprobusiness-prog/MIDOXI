@@ -155,6 +155,30 @@ export function plannedMinutes(blocks: SessionBlock[]): number {
 
 // ── tactical board ───────────────────────────────────────────
 
+/*
+  The board moved to `lib/tactics` in migration 0044, because it stopped
+  being a Coach OS feature and became a primitive that Trainer OS, Player
+  OS and MIDO all use. What remains here is the V1 SHAPE — the
+  `{tokens, arrows, zones}` still stored in `tactical_boards.board` — and
+  the re-exports that keep existing importers working.
+
+  New code should import from `@/lib/tactics/types` and
+  `@/lib/tactics/document` directly.
+*/
+
+export {
+  BOARD_PHASES,
+  type BoardPhase,
+} from "@/lib/tactics/types";
+
+export {
+  FORMATIONS,
+  FORMATION_NAMES,
+} from "@/lib/tactics/document";
+
+import { documentFromFormation, toLegacy } from "@/lib/tactics/document";
+
+/** v1 token teams. Superseded by `EntityKind`, still on disk. */
 export type TokenTeam = "home" | "away" | "ball" | "cone";
 
 export interface BoardToken {
@@ -166,6 +190,7 @@ export interface BoardToken {
   y: number;
 }
 
+/** v1 arrow kinds. Superseded by `PathKind`, which adds five more. */
 export type ArrowKind = "run" | "pass" | "dribble" | "press";
 
 export interface BoardArrow {
@@ -177,7 +202,7 @@ export interface BoardArrow {
   y2: number;
 }
 
-export interface BoardZone {
+export interface BoardZoneV1 {
   id: string;
   x: number;
   y: number;
@@ -186,150 +211,22 @@ export interface BoardZone {
   label: string;
 }
 
+/** The v1 document, as `tactical_boards.board` still holds it. */
 export interface BoardData {
   tokens: BoardToken[];
   arrows: BoardArrow[];
-  zones: BoardZone[];
-}
-
-export const ARROW_KINDS: { kind: ArrowKind; label: string; color: string; dash: string }[] = [
-  { kind: "run", label: "Run", color: "var(--signal-bright)", dash: "" },
-  { kind: "pass", label: "Pass", color: "var(--positive)", dash: "6 4" },
-  { kind: "dribble", label: "Dribble", color: "var(--review)", dash: "2 3" },
-  { kind: "press", label: "Press", color: "var(--correction)", dash: "10 4" },
-];
-
-export function arrowMeta(kind: ArrowKind) {
-  return ARROW_KINDS.find((a) => a.kind === kind) ?? ARROW_KINDS[0];
-}
-
-export type BoardPhase = "in-possession" | "out-of-possession" | "transition" | "set-piece";
-
-export const BOARD_PHASES: { phase: BoardPhase; label: string }[] = [
-  { phase: "in-possession", label: "In possession" },
-  { phase: "out-of-possession", label: "Out of possession" },
-  { phase: "transition", label: "Transition" },
-  { phase: "set-piece", label: "Set piece" },
-];
-
-export interface TacticalBoard {
-  id: string;
-  title: string;
-  formation: string;
-  phase: BoardPhase;
-  board: BoardData;
-  notes: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface TacticalBoardInput {
-  title: string;
-  formation: string;
-  phase: BoardPhase;
-  board: BoardData;
-  notes: string;
+  zones: BoardZoneV1[];
 }
 
 /**
- * Formation presets as normalised coordinates, attacking upwards.
- * y=8 is the goalkeeper's line; y=88 is the opposition box.
+ * A fresh board for a formation, in the v1 shape.
+ *
+ * Now derived from `documentFromFormation` and projected back, so the
+ * one definition of a 4-3-3 lives in `lib/tactics` and this cannot drift
+ * from what the editor actually creates.
  */
-export const FORMATIONS: Record<string, { label: string; x: number; y: number }[]> = {
-  "4-3-3": [
-    { label: "GK", x: 50, y: 7 },
-    { label: "RB", x: 84, y: 24 },
-    { label: "RCB", x: 62, y: 18 },
-    { label: "LCB", x: 38, y: 18 },
-    { label: "LB", x: 16, y: 24 },
-    { label: "6", x: 50, y: 36 },
-    { label: "8", x: 66, y: 50 },
-    { label: "10", x: 34, y: 50 },
-    { label: "RW", x: 86, y: 70 },
-    { label: "CF", x: 50, y: 78 },
-    { label: "LW", x: 14, y: 70 },
-  ],
-  "4-2-3-1": [
-    { label: "GK", x: 50, y: 7 },
-    { label: "RB", x: 84, y: 24 },
-    { label: "RCB", x: 62, y: 18 },
-    { label: "LCB", x: 38, y: 18 },
-    { label: "LB", x: 16, y: 24 },
-    { label: "6", x: 62, y: 38 },
-    { label: "6", x: 38, y: 38 },
-    { label: "RW", x: 84, y: 62 },
-    { label: "10", x: 50, y: 58 },
-    { label: "LW", x: 16, y: 62 },
-    { label: "CF", x: 50, y: 80 },
-  ],
-  "4-4-2": [
-    { label: "GK", x: 50, y: 7 },
-    { label: "RB", x: 84, y: 24 },
-    { label: "RCB", x: 62, y: 18 },
-    { label: "LCB", x: 38, y: 18 },
-    { label: "LB", x: 16, y: 24 },
-    { label: "RM", x: 84, y: 48 },
-    { label: "CM", x: 60, y: 44 },
-    { label: "CM", x: 40, y: 44 },
-    { label: "LM", x: 16, y: 48 },
-    { label: "ST", x: 60, y: 76 },
-    { label: "ST", x: 40, y: 76 },
-  ],
-  "3-5-2": [
-    { label: "GK", x: 50, y: 7 },
-    { label: "RCB", x: 70, y: 18 },
-    { label: "CB", x: 50, y: 16 },
-    { label: "LCB", x: 30, y: 18 },
-    { label: "RWB", x: 90, y: 46 },
-    { label: "8", x: 66, y: 46 },
-    { label: "6", x: 50, y: 36 },
-    { label: "8", x: 34, y: 46 },
-    { label: "LWB", x: 10, y: 46 },
-    { label: "ST", x: 60, y: 76 },
-    { label: "ST", x: 40, y: 76 },
-  ],
-  "3-4-3": [
-    { label: "GK", x: 50, y: 7 },
-    { label: "RCB", x: 70, y: 18 },
-    { label: "CB", x: 50, y: 16 },
-    { label: "LCB", x: 30, y: 18 },
-    { label: "RWB", x: 90, y: 44 },
-    { label: "8", x: 62, y: 42 },
-    { label: "8", x: 38, y: 42 },
-    { label: "LWB", x: 10, y: 44 },
-    { label: "RW", x: 78, y: 72 },
-    { label: "CF", x: 50, y: 78 },
-    { label: "LW", x: 22, y: 72 },
-  ],
-};
-
-export const FORMATION_NAMES = Object.keys(FORMATIONS);
-
-/** A fresh board for a formation, with the opposition block sketched in. */
 export function boardFromFormation(formation: string): BoardData {
-  const shape = FORMATIONS[formation] ?? FORMATIONS["4-3-3"];
-  const tokens: BoardToken[] = shape.map((p, i) => ({
-    id: `h${i}`,
-    team: "home",
-    label: p.label,
-    x: p.x,
-    y: p.y,
-  }));
-  // A mirrored back four + midfield line to defend against.
-  const away: { label: string; x: number; y: number }[] = [
-    { label: "GK", x: 50, y: 95 },
-    { label: "RB", x: 18, y: 80 },
-    { label: "CB", x: 40, y: 84 },
-    { label: "CB", x: 60, y: 84 },
-    { label: "LB", x: 82, y: 80 },
-    { label: "CM", x: 34, y: 64 },
-    { label: "CM", x: 66, y: 64 },
-  ];
-  tokens.push(
-    ...away.map((p, i) => ({ id: `a${i}`, team: "away" as const, label: p.label, x: p.x, y: p.y })),
-  );
-  tokens.push({ id: "ball", team: "ball", label: "", x: 50, y: 12 });
-  return { tokens, arrows: [], zones: [] };
+  return toLegacy(documentFromFormation(formation));
 }
 
 // ── opposition ───────────────────────────────────────────────

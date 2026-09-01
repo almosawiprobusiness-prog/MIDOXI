@@ -9,6 +9,9 @@ import { quality } from "@/lib/knowledge/physical";
 import { SectionHeader } from "@/components/ui/primitives";
 import { ProgramForm } from "@/components/trainer/program-form";
 import { BuildButtons, SessionToggle } from "@/components/trainer/program-tools";
+import { boardsForMany, listBoards } from "@/lib/data/boards";
+import { BoardPicker } from "@/components/tactics/board-picker";
+import { AttachedBoards } from "@/components/tactics/attached-boards";
 
 export async function generateMetadata({ params }: PageProps<"/app/programs/[id]">) {
   const { id } = await params;
@@ -22,10 +25,13 @@ export default async function ProgramPage({ params }: PageProps<"/app/programs/[
   if (!detail) notFound();
 
   const { program, sessions } = detail;
-  const [athlete, athletes, practice] = await Promise.all([
+  const [athlete, athletes, practice, boardsBySession, library] = await Promise.all([
     program.athleteId ? getAthlete(program.athleteId) : Promise.resolve(null),
     listAthletes(),
     getTrainerPractice(),
+    // Every session's boards in one query rather than one per day.
+    boardsForMany("program_session", sessions.map((s) => s.id)),
+    listBoards({ limit: 60 }),
   ]);
 
   const weeks = byWeek(sessions);
@@ -199,6 +205,42 @@ export default async function ProgramPage({ params }: PageProps<"/app/programs/[
                             );
                           })}
                         </ul>
+
+                        {/*
+                          The movement, drawn. A trainer's session is often a
+                          shape on the grass — where the server stands, where
+                          the run starts — and describing that in a cue line
+                          is the thing this replaces.
+                        */}
+                        <div className="border-t border-line px-4 py-3">
+                          {(boardsBySession.get(s.id) ?? []).length > 0 ? (
+                            <div className="space-y-3">
+                              <AttachedBoards
+                                attached={boardsBySession.get(s.id) ?? []}
+                                entityType="program_session"
+                                entityId={s.id}
+                                revalidate={`/app/programs/${program.id}`}
+                              />
+                              <BoardPicker
+                                entityType="program_session"
+                                entityId={s.id}
+                                boards={library}
+                                revalidate={`/app/programs/${program.id}`}
+                                label="Add another board"
+                                compact
+                              />
+                            </div>
+                          ) : (
+                            <BoardPicker
+                              entityType="program_session"
+                              entityId={s.id}
+                              boards={library}
+                              revalidate={`/app/programs/${program.id}`}
+                              label="Draw this session"
+                              compact
+                            />
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>

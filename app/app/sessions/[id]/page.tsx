@@ -2,6 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Clock, Users, Grid3x3, Sparkles } from "lucide-react";
 import { getSessionPlan } from "@/lib/data/coach";
+import { boardsForMany, listBoards } from "@/lib/data/boards";
+import { BoardPicker } from "@/components/tactics/board-picker";
+import { AttachedBoards } from "@/components/tactics/attached-boards";
 import { phaseMeta, plannedMinutes, SESSION_PHASES } from "@/lib/data/coach-types";
 import { SectionHeader } from "@/components/ui/primitives";
 import { SessionForm } from "@/components/coach/session-form";
@@ -20,6 +23,16 @@ export default async function SessionPage({ params }: PageProps<"/app/sessions/[
 
   const { plan, blocks } = detail;
   const planned = plannedMinutes(blocks);
+
+  /*
+    Boards for every block in two queries rather than one per block, and
+    the coach's library once for the picker — so a six-drill session
+    still costs a constant number of round trips.
+  */
+  const [boardsByBlock, library] = await Promise.all([
+    boardsForMany("session_block", blocks.map((b) => b.id)),
+    listBoards({ limit: 60 }),
+  ]);
   const over = plan.durationMin ? planned - plan.durationMin : 0;
 
   return (
@@ -211,6 +224,41 @@ export default async function SessionPage({ params }: PageProps<"/app/sessions/[
                       </div>
                     )}
                   </div>
+
+                  {/* The tactical picture for this drill. An empty block
+                      offers the three ways in rather than saying nothing. */}
+                  <div className="border-t border-line px-4 py-3">
+                    {(boardsByBlock.get(b.id) ?? []).length > 0 ? (
+                      <div className="space-y-3">
+                        <AttachedBoards
+                          attached={boardsByBlock.get(b.id) ?? []}
+                          entityType="session_block"
+                          entityId={b.id}
+                          revalidate={`/app/sessions/${plan.id}`}
+                        />
+                        <BoardPicker
+                          entityType="session_block"
+                          entityId={b.id}
+                          boards={library}
+                          revalidate={`/app/sessions/${plan.id}`}
+                          label="Add another board"
+                          compact
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="label-tech">No tactical visualisation</span>
+                        <BoardPicker
+                          entityType="session_block"
+                          entityId={b.id}
+                          boards={library}
+                          revalidate={`/app/sessions/${plan.id}`}
+                          label="Add tactical board"
+                          compact
+                        />
+                      </div>
+                    )}
+                  </div>
                 </li>
               );
             })}
@@ -232,7 +280,7 @@ export default async function SessionPage({ params }: PageProps<"/app/sessions/[
             <Grid3x3 className="size-4" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-sm text-text-hi">Draw a block on the tactical board</span>
+            <span className="block text-sm text-text-hi">Open the tactical board library</span>
             <span className="label-tech mt-0.5 block">Tactical board</span>
           </span>
         </Link>

@@ -2,6 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Target, GraduationCap, Link2 } from "lucide-react";
 import { getSquadPlayer, listPlayerNotes } from "@/lib/data/coach";
+import { boardsFor, listBoards } from "@/lib/data/boards";
+import { BoardPicker } from "@/components/tactics/board-picker";
+import { AttachedBoards } from "@/components/tactics/attached-boards";
 import { statusMeta, noteKindMeta } from "@/lib/data/coach-types";
 import { SectionHeader } from "@/components/ui/primitives";
 import { SquadForm } from "@/components/coach/squad-form";
@@ -19,7 +22,11 @@ export default async function PlayerPage({ params }: PageProps<"/app/squad/[id]"
   const player = await getSquadPlayer(id);
   if (!player) notFound();
 
-  const notes = await listPlayerNotes(id);
+  const [notes, assigned, library] = await Promise.all([
+    listPlayerNotes(id),
+    boardsFor("squad_player", id),
+    listBoards({ limit: 60 }),
+  ]);
   const st = statusMeta(player.status);
   const byKind = notes.reduce<Record<string, number>>((acc, n) => {
     acc[n.kind] = (acc[n.kind] ?? 0) + 1;
@@ -122,6 +129,52 @@ export default async function PlayerPage({ params }: PageProps<"/app/squad/[id]"
           )}
         </section>
       </div>
+
+      {/*
+        Boards assigned to this player (§35).
+
+        Assigning is the only thing in the board system that crosses an
+        account boundary, so it is a deliberate act on a named person
+        rather than a visibility setting — migration 0045's policy reads
+        exactly these rows.
+      */}
+      <section className="mt-8">
+        <SectionHeader label={assigned.length > 0 ? `Assigned boards · ${assigned.length}` : "Assigned boards"} />
+        {assigned.length > 0 ? (
+          <div className="space-y-3">
+            <AttachedBoards
+              attached={assigned}
+              entityType="squad_player"
+              entityId={id}
+              revalidate={`/app/squad/${id}`}
+            />
+            <BoardPicker
+              entityType="squad_player"
+              entityId={id}
+              boards={library}
+              role="assigned"
+              revalidate={`/app/squad/${id}`}
+              label="Assign another board"
+              compact
+            />
+          </div>
+        ) : (
+          <div className="panel flex flex-wrap items-center gap-3 p-4">
+            <p className="min-w-0 flex-1 text-sm leading-relaxed text-text-dim">
+              Assign a tactical board and this player sees it in their own MIDO XI —
+              the same board you drew, not a copy of it.
+            </p>
+            <BoardPicker
+              entityType="squad_player"
+              entityId={id}
+              boards={library}
+              role="assigned"
+              revalidate={`/app/squad/${id}`}
+              label="Assign a board"
+            />
+          </div>
+        )}
+      </section>
 
       <section className="mt-8">
         <SectionHeader label="Development history" />

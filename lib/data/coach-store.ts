@@ -7,13 +7,10 @@ import type {
   SessionPlanInput,
   SessionBlock,
   SessionBlockInput,
-  TacticalBoard,
-  TacticalBoardInput,
   OppositionReport,
   OppositionReportInput,
   MatchPlan,
 } from "./coach-types";
-import { boardFromFormation } from "./coach-types";
 
 /*
   Coach OS demo store.
@@ -35,12 +32,11 @@ interface CoachDB {
   notes: PlayerNote[];
   plans: SessionPlan[];
   blocks: StoredBlock[];
-  boards: TacticalBoard[];
   reports: OppositionReport[];
   seq: number;
 }
 
-const SHAPE: (keyof CoachDB)[] = ["squad", "notes", "plans", "blocks", "boards", "reports", "seq"];
+const SHAPE: (keyof CoachDB)[] = ["squad", "notes", "plans", "blocks", "reports", "seq"];
 
 function iso(daysFromNow: number, hour = 10, minute = 0): string {
   const d = new Date();
@@ -146,30 +142,6 @@ function seedPlans(): { plans: SessionPlan[]; blocks: StoredBlock[] } {
   return { plans, blocks: blocks.map((b) => ({ ...b })) };
 }
 
-function seedBoards(): TacticalBoard[] {
-  const base = boardFromFormation("4-3-3");
-  return [
-    {
-      id: "tb1",
-      title: "Build-up vs a 4-4-2 press",
-      formation: "4-3-3",
-      phase: "in-possession",
-      board: {
-        ...base,
-        arrows: [
-          { id: "ar1", kind: "pass", x1: 50, y1: 12, x2: 38, y2: 18 },
-          { id: "ar2", kind: "run", x1: 84, y1: 24, x2: 84, y2: 44 },
-          { id: "ar3", kind: "pass", x1: 38, y1: 18, x2: 50, y2: 36 },
-        ],
-        zones: [{ id: "zn1", x: 30, y: 40, w: 40, h: 22, label: "Free man" }],
-      },
-      notes: "Their two strikers cannot cover three defenders. Invite the press, break it with the pivot.",
-      createdAt: iso(-6),
-      updatedAt: iso(-6),
-    },
-  ];
-}
-
 function seedReports(): OppositionReport[] {
   return [
     {
@@ -209,7 +181,6 @@ function createDB(): CoachDB {
     notes: seedNotes(),
     plans,
     blocks: blocks.map((b, i) => ({ ...b, position: i })),
-    boards: seedBoards(),
     reports: seedReports(),
     seq: 100,
   };
@@ -387,32 +358,6 @@ export const coachStore = {
     inputs.forEach((input, i) => {
       db.blocks.push({ id: nextId("bl"), planId, ...input, position: i });
     });
-  },
-
-  // ── boards ─────────────────────────────────────────────────
-  listBoards(): TacticalBoard[] {
-    return [...db.boards].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  },
-  getBoard(id: string): TacticalBoard | null {
-    return db.boards.find((b) => b.id === id) ?? null;
-  },
-  createBoard(input: TacticalBoardInput): string {
-    const id = nextId("tb");
-    const now = new Date().toISOString();
-    db.boards.push({ id, ...input, createdAt: now, updatedAt: now });
-    return id;
-  },
-  updateBoard(id: string, input: TacticalBoardInput): boolean {
-    const b = db.boards.find((x) => x.id === id);
-    if (!b) return false;
-    Object.assign(b, input, { updatedAt: new Date().toISOString() });
-    return true;
-  },
-  deleteBoard(id: string): boolean {
-    const i = db.boards.findIndex((b) => b.id === id);
-    if (i < 0) return false;
-    db.boards.splice(i, 1);
-    return true;
   },
 
   // ── opposition ─────────────────────────────────────────────

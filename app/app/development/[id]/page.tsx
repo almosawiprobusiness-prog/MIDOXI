@@ -3,6 +3,10 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { getGoalDetail } from "@/lib/data/development";
 import { listCapturesForGoal } from "@/lib/data/captures";
+import { boardsFor, listBoards } from "@/lib/data/boards";
+import { SectionHeader } from "@/components/ui/primitives";
+import { BoardPicker } from "@/components/tactics/board-picker";
+import { AttachedBoards } from "@/components/tactics/attached-boards";
 import { categoryStyle } from "@/components/ui/primitives";
 import { SavedMoments } from "@/components/film/saved-moments";
 import { GoalFormDialog } from "@/components/development/goal-form-dialog";
@@ -29,7 +33,12 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function GoalDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [detail, captures] = await Promise.all([getGoalDetail(id), listCapturesForGoal(id)]);
+  const [detail, captures, boards, library] = await Promise.all([
+    getGoalDetail(id),
+    listCapturesForGoal(id),
+    boardsFor("development_goal", id),
+    listBoards({ limit: 60 }),
+  ]);
   if (!detail) notFound();
 
   const { goal, evidence } = detail;
@@ -128,6 +137,50 @@ export default async function GoalDetailPage({ params }: { params: Promise<{ id:
           />
         </div>
       )}
+
+      {/*
+        The visual for this goal (§6).
+
+        "Improve weak-side positioning" is a spatial idea, and a sentence
+        is the worst way to hold one. The board attaches to the goal
+        itself, so the picture, the evidence and the training all point
+        at the same object.
+      */}
+      <section className="mt-8">
+        <SectionHeader label={boards.length > 0 ? `Tactical picture · ${boards.length}` : "Tactical picture"} />
+        {boards.length > 0 ? (
+          <div className="space-y-3">
+            <AttachedBoards
+              attached={boards}
+              entityType="development_goal"
+              entityId={goal.id}
+              revalidate={`/app/development/${goal.id}`}
+            />
+            <BoardPicker
+              entityType="development_goal"
+              entityId={goal.id}
+              boards={library}
+              revalidate={`/app/development/${goal.id}`}
+              label="Add another board"
+              compact
+            />
+          </div>
+        ) : (
+          <div className="panel flex flex-wrap items-center gap-3 p-4">
+            <p className="min-w-0 flex-1 text-sm leading-relaxed text-text-dim">
+              Draw what this goal looks like on a pitch — where you start, where you
+              should be, what the movement is. It stays attached to the goal.
+            </p>
+            <BoardPicker
+              entityType="development_goal"
+              entityId={goal.id}
+              boards={library}
+              revalidate={`/app/development/${goal.id}`}
+              label="Add a board"
+            />
+          </div>
+        )}
+      </section>
 
       {/* Loop + evidence */}
       <div className="mt-6">

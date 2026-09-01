@@ -1,202 +1,99 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Save, Loader2, Archive } from "lucide-react";
+import { saveBoard, removeBoard, setBoardArchived } from "@/app/app/tactics/actions";
+import { BoardEditor } from "@/components/tactics/board-editor";
+import { countDocument } from "@/lib/tactics/document";
+import { summariseLinks, type BoardLink } from "@/lib/tactics/links";
 import {
-  MousePointer2,
-  Move,
-  Spline,
-  Square,
-  Circle,
-  Eraser,
-  Save,
-  Loader2,
-  RotateCcw,
-  Trash2,
-} from "lucide-react";
-import { saveBoard, removeBoard } from "@/app/app/tactics/actions";
-import {
-  ARROW_KINDS,
   BOARD_PHASES,
-  FORMATION_NAMES,
-  arrowMeta,
-  boardFromFormation,
-  type ArrowKind,
-  type BoardArrow,
-  type BoardData,
+  BOARD_KINDS,
+  PITCH_TYPES,
+  type BoardKind,
   type BoardPhase,
-  type BoardToken,
-  type BoardZone,
+  type PitchType,
   type TacticalBoard,
-  type TokenTeam,
-} from "@/lib/data/coach-types";
+  type TacticalDocument,
+} from "@/lib/tactics/types";
+import { FORMATION_NAMES } from "@/lib/tactics/document";
 import { cn } from "@/lib/utils";
 import { ConfirmDelete, FormError, FormNote } from "@/components/forms/ui";
 
 /*
-  The tactical board.
+  The Tactics page's editing surface.
 
-  Coordinates are stored normalised (0–100 on both axes, attacking upwards) so a
-  board renders identically at any size and can be reused inside a session plan
-  or an opposition report later. The SVG works in a 100x150 space — pitch-shaped,
-  so circles stay circular.
+  What used to be a 551-line component that drew its own pitch, held its
+  own tool state and imported its own save action is now a host: it owns
+  the metadata around a board — title, phase, tags, notes — and delegates
+  everything about the board itself to `BoardEditor`. That is what lets
+  the same drawing surface appear inside a session drill and a Player's
+  personal board without any of this page coming with it.
 */
 
-const W = 100;
-const H = 150;
-
-const toSvg = (x: number, y: number) => ({ px: x, py: (100 - y) * 1.5 });
-const fromSvg = (px: number, py: number) => ({ x: px, y: 100 - py / 1.5 });
-
-const clamp = (v: number, min = 0, max = 100) => Math.min(max, Math.max(min, v));
-
-/** Keep receiving pointer events if the cursor leaves the element mid-drag. */
-function capture(e: React.PointerEvent) {
-  try {
-    (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
-  } catch {
-    // Pointer already released, or a synthetic event — dragging still works.
-  }
-}
-
-type Tool = "select" | "arrow" | "zone" | "home" | "away" | "cone" | "erase";
-
-const TOOLS: { tool: Tool; label: string; icon: typeof MousePointer2 }[] = [
-  { tool: "select", label: "Move", icon: MousePointer2 },
-  { tool: "arrow", label: "Arrow", icon: Spline },
-  { tool: "zone", label: "Zone", icon: Square },
-  { tool: "home", label: "Player", icon: Circle },
-  { tool: "away", label: "Opponent", icon: Circle },
-  { tool: "cone", label: "Cone", icon: Move },
-  { tool: "erase", label: "Erase", icon: Eraser },
-];
-
-const TEAM_STYLE: Record<TokenTeam, { fill: string; stroke: string; text: string; r: number }> = {
-  home: { fill: "var(--signal)", stroke: "var(--signal-bright)", text: "#fff", r: 4.2 },
-  away: { fill: "var(--ink-700)", stroke: "var(--text-faint)", text: "var(--text-hi)", r: 4.2 },
-  ball: { fill: "var(--text-hi)", stroke: "var(--ink-950)", text: "", r: 2.2 },
-  cone: { fill: "var(--review)", stroke: "var(--review)", text: "", r: 1.8 },
-};
-
-let seq = 0;
-const nextId = (p: string) => `${p}${Date.now().toString(36)}${seq++}`;
-
-export function TacticalBoardEditor({ board }: { board: TacticalBoard }) {
+export function TacticalBoardEditor({
+  board,
+  links = [],
+}: {
+  board: TacticalBoard;
+  links?: BoardLink[];
+}) {
   const router = useRouter();
-  const svgRef = useRef<SVGSVGElement>(null);
 
   const [title, setTitle] = useState(board.title);
+  const [kind, setKind] = useState<BoardKind>(board.kind);
   const [phase, setPhase] = useState<BoardPhase>(board.phase);
   const [formation, setFormation] = useState(board.formation || "4-3-3");
   const [notes, setNotes] = useState(board.notes);
-  const [data, setData] = useState<BoardData>({
-    tokens: board.board?.tokens ?? [],
-    arrows: board.board?.arrows ?? [],
-    zones: board.board?.zones ?? [],
-  });
-
-  const [tool, setTool] = useState<Tool>("select");
-  const [arrowKind, setArrowKind] = useState<ArrowKind>("run");
-  const [dragging, setDragging] = useState<string | null>(null);
-  const [draft, setDraft] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
+  const [tagText, setTagText] = useState(board.tags.join(", "));
+  const [doc, setDoc] = useState<TacticalDocument>(board.doc);
   const [dirty, setDirty] = useState(false);
 
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
 
-  const update = (patch: Partial<BoardData>) => {
-    setData((d) => ({ ...d, ...patch }));
+  const counts = countDocument(doc);
+  const usage = summariseLinks(links);
+
+  const touch = () => {
     setDirty(true);
+    setNote(null);
   };
 
-  /** Pointer position in normalised pitch coordinates. */
-  const point = (e: React.PointerEvent): { x: number; y: number } => {
-    const svg = svgRef.current;
-    if (!svg) return { x: 50, y: 50 };
-    const rect = svg.getBoundingClientRect();
-    const px = ((e.clientX - rect.left) / rect.width) * W;
-    const py = ((e.clientY - rect.top) / rect.height) * H;
-    const { x, y } = fromSvg(px, py);
-    return { x: clamp(x), y: clamp(y) };
-  };
-
-  const onPointerDown = (e: React.PointerEvent) => {
-    const p = point(e);
-    if (tool === "arrow" || tool === "zone") {
-      setDraft({ x1: p.x, y1: p.y, x2: p.x, y2: p.y });
-      capture(e);
-      return;
-    }
-    if (tool === "home" || tool === "away" || tool === "cone") {
-      const count = data.tokens.filter((t) => t.team === tool).length + 1;
-      const token: BoardToken = {
-        id: nextId("t"),
-        team: tool,
-        label: tool === "cone" ? "" : String(count),
-        x: p.x,
-        y: p.y,
-      };
-      update({ tokens: [...data.tokens, token] });
-    }
-  };
-
-  const onPointerMove = (e: React.PointerEvent) => {
-    if (draft) {
-      const p = point(e);
-      setDraft({ ...draft, x2: p.x, y2: p.y });
-      return;
-    }
-    if (dragging) {
-      const p = point(e);
-      update({
-        tokens: data.tokens.map((t) => (t.id === dragging ? { ...t, x: p.x, y: p.y } : t)),
-      });
-    }
-  };
-
-  const onPointerUp = () => {
-    if (draft) {
-      const dx = Math.abs(draft.x2 - draft.x1);
-      const dy = Math.abs(draft.y2 - draft.y1);
-      if (tool === "arrow" && (dx > 1.5 || dy > 1.5)) {
-        const arrow: BoardArrow = { id: nextId("a"), kind: arrowKind, ...draft };
-        update({ arrows: [...data.arrows, arrow] });
-      } else if (tool === "zone" && dx > 3 && dy > 3) {
-        const zone: BoardZone = {
-          id: nextId("z"),
-          x: Math.min(draft.x1, draft.x2),
-          y: Math.min(draft.y1, draft.y2),
-          w: dx,
-          h: dy,
-          label: "",
-        };
-        update({ zones: [...data.zones, zone] });
-      }
-      setDraft(null);
-    }
-    setDragging(null);
-  };
-
-  const erase = (kind: "token" | "arrow" | "zone", id: string) => {
-    if (tool !== "erase") return;
-    if (kind === "token") update({ tokens: data.tokens.filter((t) => t.id !== id) });
-    if (kind === "arrow") update({ arrows: data.arrows.filter((a) => a.id !== id) });
-    if (kind === "zone") update({ zones: data.zones.filter((z) => z.id !== id) });
-  };
-
-  const applyFormation = (f: string) => {
+  /* The formation lives on the board record AND in the document, so the
+     library card and the drawing cannot disagree about the shape. */
+  const chooseFormation = (f: string) => {
     setFormation(f);
-    const fresh = boardFromFormation(f);
-    // Keep whatever the coach has drawn; only the shape is replaced.
-    update({ tokens: [...fresh.tokens] });
+    touch();
+    setDoc((d) => ({ ...d, formation: f }));
+  };
+
+  const choosePitch = (type: PitchType) => {
+    setDoc((d) => ({ ...d, pitch: { ...d.pitch, type } }));
+    touch();
   };
 
   const save = () => {
     setError(null);
     setNote(null);
     start(async () => {
-      const res = await saveBoard(board.id, { title, formation, phase, board: data, notes });
+      const res = await saveBoard(board.id, {
+        title,
+        kind,
+        phase,
+        formation,
+        notes,
+        tags: tagText
+          .split(",")
+          .map((t) => t.trim().toLowerCase())
+          .filter(Boolean)
+          .slice(0, 12),
+        visibility: board.visibility,
+        origin: board.origin,
+        doc,
+      });
       if (res.ok) {
         setDirty(false);
         setNote(res.message ?? "Board saved.");
@@ -209,225 +106,15 @@ export function TacticalBoardEditor({ board }: { board: TacticalBoard }) {
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
-      {/* ── the pitch ── */}
-      <div className="min-w-0 panel overflow-hidden">
-        <div className="flex flex-wrap items-center gap-1.5 border-b border-line p-2">
-          {TOOLS.map((t) => {
-            const Icon = t.icon;
-            const active = tool === t.tool;
-            return (
-              <button
-                key={t.tool}
-                onClick={() => setTool(t.tool)}
-                title={t.label}
-                className={cn(
-                  "flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs transition-colors",
-                  active
-                    ? "border-signal-line bg-signal/10 text-signal-bright"
-                    : "border-line text-text-dim hover:border-line-strong hover:text-text",
-                )}
-              >
-                <Icon className="size-3.5" />
-                <span className="hidden sm:inline">{t.label}</span>
-              </button>
-            );
-          })}
+      <BoardEditor
+        doc={board.doc}
+        mode={kind === "personal" ? "simple" : kind === "drill" ? "drill" : "full"}
+        onChange={(next) => {
+          setDoc(next);
+          setDirty(true);
+        }}
+      />
 
-          {tool === "arrow" && (
-            <div className="ml-1 flex items-center gap-1 border-l border-line pl-2">
-              {ARROW_KINDS.map((a) => (
-                <button
-                  key={a.kind}
-                  onClick={() => setArrowKind(a.kind)}
-                  className="h-8 rounded-lg border px-2 text-xs transition-colors"
-                  style={
-                    arrowKind === a.kind
-                      ? { borderColor: a.color, color: a.color, background: "var(--signal-wash)" }
-                      : { borderColor: "var(--line-strong)", color: "var(--text-dim)" }
-                  }
-                >
-                  {a.label}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <button
-            onClick={() => update({ arrows: [], zones: [] })}
-            title="Clear drawings"
-            className="ml-auto flex h-8 items-center gap-1.5 rounded-lg border border-line px-2.5 text-xs text-text-dim transition-colors hover:border-line-strong hover:text-text"
-          >
-            <RotateCcw className="size-3.5" />
-            <span className="hidden sm:inline">Clear drawings</span>
-          </button>
-        </div>
-
-        <div className="bg-ink-950 p-3">
-          <svg
-            ref={svgRef}
-            viewBox={`0 0 ${W} ${H}`}
-            className="mx-auto block w-full max-w-[520px] touch-none select-none"
-            style={{ cursor: tool === "select" ? "default" : "crosshair" }}
-            onPointerDown={onPointerDown}
-            onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp}
-            onPointerLeave={onPointerUp}
-          >
-            <defs>
-              {ARROW_KINDS.map((a) => (
-                <marker
-                  key={a.kind}
-                  id={`head-${a.kind}`}
-                  markerWidth="4"
-                  markerHeight="4"
-                  refX="3"
-                  refY="2"
-                  orient="auto"
-                >
-                  <path d="M0,0 L4,2 L0,4 z" fill={a.color} />
-                </marker>
-              ))}
-            </defs>
-
-            {/* pitch */}
-            <rect x="0" y="0" width={W} height={H} fill="#0c1a12" />
-            <g stroke="rgba(255,255,255,0.22)" strokeWidth="0.5" fill="none">
-              <rect x="3" y="3" width={W - 6} height={H - 6} />
-              <line x1="3" y1={H / 2} x2={W - 3} y2={H / 2} />
-              <circle cx={W / 2} cy={H / 2} r="12" />
-              <circle cx={W / 2} cy={H / 2} r="0.8" fill="rgba(255,255,255,0.22)" />
-              {/* own goal end (bottom) */}
-              <rect x="21" y="3" width="58" height="23" />
-              <rect x="37" y="3" width="26" height="8" />
-              <circle cx={W / 2} cy="18" r="0.8" fill="rgba(255,255,255,0.22)" />
-              {/* attacking end (top) */}
-              <rect x="21" y={H - 26} width="58" height="23" />
-              <rect x="37" y={H - 11} width="26" height="8" />
-              <circle cx={W / 2} cy={H - 18} r="0.8" fill="rgba(255,255,255,0.22)" />
-            </g>
-
-            {/* zones */}
-            {data.zones.map((z) => {
-              const a = toSvg(z.x, z.y + z.h);
-              return (
-                <g key={z.id} onPointerDown={() => erase("zone", z.id)}>
-                  <rect
-                    x={a.px}
-                    y={a.py}
-                    width={z.w}
-                    height={z.h * 1.5}
-                    fill="rgba(123,97,255,0.12)"
-                    stroke="var(--signal-line)"
-                    strokeWidth="0.4"
-                    strokeDasharray="2 2"
-                    rx="1"
-                  />
-                  {z.label && (
-                    <text x={a.px + 1.5} y={a.py + 4} fontSize="3.5" fill="var(--signal-bright)">
-                      {z.label}
-                    </text>
-                  )}
-                </g>
-              );
-            })}
-
-            {/* arrows */}
-            {data.arrows.map((ar) => {
-              const p1 = toSvg(ar.x1, ar.y1);
-              const p2 = toSvg(ar.x2, ar.y2);
-              const meta = arrowMeta(ar.kind);
-              return (
-                <line
-                  key={ar.id}
-                  x1={p1.px}
-                  y1={p1.py}
-                  x2={p2.px}
-                  y2={p2.py}
-                  stroke={meta.color}
-                  strokeWidth="0.9"
-                  strokeDasharray={meta.dash}
-                  markerEnd={`url(#head-${ar.kind})`}
-                  onPointerDown={() => erase("arrow", ar.id)}
-                  style={{ cursor: tool === "erase" ? "pointer" : "inherit" }}
-                />
-              );
-            })}
-
-            {/* draft shape */}
-            {draft && tool === "arrow" && (
-              <line
-                x1={toSvg(draft.x1, draft.y1).px}
-                y1={toSvg(draft.x1, draft.y1).py}
-                x2={toSvg(draft.x2, draft.y2).px}
-                y2={toSvg(draft.x2, draft.y2).py}
-                stroke={arrowMeta(arrowKind).color}
-                strokeWidth="0.9"
-                strokeDasharray={arrowMeta(arrowKind).dash || "1 1"}
-                opacity="0.7"
-              />
-            )}
-            {draft && tool === "zone" && (
-              <rect
-                x={Math.min(draft.x1, draft.x2)}
-                y={toSvg(0, Math.max(draft.y1, draft.y2)).py}
-                width={Math.abs(draft.x2 - draft.x1)}
-                height={Math.abs(draft.y2 - draft.y1) * 1.5}
-                fill="rgba(123,97,255,0.1)"
-                stroke="var(--signal-line)"
-                strokeWidth="0.4"
-                strokeDasharray="2 2"
-              />
-            )}
-
-            {/* tokens */}
-            {data.tokens.map((t) => {
-              const p = toSvg(t.x, t.y);
-              const s = TEAM_STYLE[t.team];
-              return (
-                <g
-                  key={t.id}
-                  onPointerDown={(e) => {
-                    if (tool === "erase") return erase("token", t.id);
-                    if (tool !== "select") return;
-                    e.stopPropagation();
-                    setDragging(t.id);
-                    capture(e);
-                  }}
-                  style={{ cursor: tool === "select" ? "grab" : tool === "erase" ? "pointer" : "inherit" }}
-                >
-                  <circle cx={p.px} cy={p.py} r={s.r} fill={s.fill} stroke={s.stroke} strokeWidth="0.4" />
-                  {t.label && (
-                    <text
-                      x={p.px}
-                      y={p.py + 1.3}
-                      fontSize="3.2"
-                      textAnchor="middle"
-                      fill={s.text}
-                      style={{ pointerEvents: "none", fontWeight: 600 }}
-                    >
-                      {t.label}
-                    </text>
-                  )}
-                </g>
-              );
-            })}
-          </svg>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3 border-t border-line px-3 py-2">
-          <span className="label-tech">Attacking ↑</span>
-          <span className="ml-auto flex flex-wrap items-center gap-2">
-            {ARROW_KINDS.map((a) => (
-              <span key={a.kind} className="flex items-center gap-1 text-[10px] text-text-dim">
-                <span className="inline-block h-px w-4" style={{ background: a.color }} />
-                {a.label}
-              </span>
-            ))}
-          </span>
-        </div>
-      </div>
-
-      {/* ── the panel ── */}
       <div className="space-y-3">
         <div className="panel p-4">
           <label className="block">
@@ -436,11 +123,73 @@ export function TacticalBoardEditor({ board }: { board: TacticalBoard }) {
               value={title}
               onChange={(e) => {
                 setTitle(e.target.value);
-                setDirty(true);
+                touch();
               }}
               className="h-10 w-full rounded-lg border border-line bg-ink-850 px-3 text-sm text-text-hi focus:border-signal-line focus:outline-none"
             />
           </label>
+
+          <label className="mt-3 block">
+            <span className="label-tech mb-1 block">Objective</span>
+            <input
+              value={doc.objective ?? ""}
+              onChange={(e) => {
+                setDoc((d) => ({ ...d, objective: e.target.value }));
+                touch();
+              }}
+              placeholder="What should this board make happen?"
+              className="h-10 w-full rounded-lg border border-line bg-ink-850 px-3 text-sm text-text-hi placeholder:text-text-faint focus:border-signal-line focus:outline-none"
+            />
+            <span className="mt-1 block text-[11px] text-text-faint">
+              One sentence. MIDO reads this when asked about the board.
+            </span>
+          </label>
+
+          <div className="mt-3">
+            <span className="label-tech mb-1 block">Board is</span>
+            <div className="flex flex-wrap gap-1.5">
+              {BOARD_KINDS.map((k) => (
+                <button
+                  key={k.kind}
+                  type="button"
+                  onClick={() => {
+                    setKind(k.kind);
+                    touch();
+                  }}
+                  className={cn(
+                    "rounded-lg border px-2.5 py-1.5 text-xs transition-colors",
+                    kind === k.kind
+                      ? "border-signal-line bg-signal/10 text-signal-bright"
+                      : "border-line text-text-dim hover:border-line-strong hover:text-text",
+                  )}
+                >
+                  {k.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-3">
+            <span className="label-tech mb-1 block">Surface</span>
+            <div className="flex flex-wrap gap-1.5">
+              {PITCH_TYPES.map((p) => (
+                <button
+                  key={p.type}
+                  type="button"
+                  onClick={() => choosePitch(p.type)}
+                  title={p.hint}
+                  className={cn(
+                    "rounded-lg border px-2.5 py-1.5 text-xs transition-colors",
+                    doc.pitch.type === p.type
+                      ? "border-signal-line bg-signal/10 text-signal-bright"
+                      : "border-line text-text-dim hover:border-line-strong hover:text-text",
+                  )}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
           <div className="mt-3">
             <span className="label-tech mb-1 block">Formation</span>
@@ -448,7 +197,8 @@ export function TacticalBoardEditor({ board }: { board: TacticalBoard }) {
               {FORMATION_NAMES.map((f) => (
                 <button
                   key={f}
-                  onClick={() => applyFormation(f)}
+                  type="button"
+                  onClick={() => chooseFormation(f)}
                   className={cn(
                     "rounded-lg border px-2.5 py-1.5 text-xs transition-colors",
                     formation === f
@@ -461,7 +211,7 @@ export function TacticalBoardEditor({ board }: { board: TacticalBoard }) {
               ))}
             </div>
             <p className="mt-1.5 text-[11px] text-text-faint">
-              Applying a formation repositions your team; drawings stay.
+              Set the shape here; use the board&rsquo;s own tools to move anyone.
             </p>
           </div>
 
@@ -471,9 +221,10 @@ export function TacticalBoardEditor({ board }: { board: TacticalBoard }) {
               {BOARD_PHASES.map((p) => (
                 <button
                   key={p.phase}
+                  type="button"
                   onClick={() => {
                     setPhase(p.phase);
-                    setDirty(true);
+                    touch();
                   }}
                   className={cn(
                     "rounded-lg border px-2.5 py-1.5 text-xs transition-colors",
@@ -489,13 +240,26 @@ export function TacticalBoardEditor({ board }: { board: TacticalBoard }) {
           </div>
 
           <label className="mt-3 block">
+            <span className="label-tech mb-1 block">Tags</span>
+            <input
+              value={tagText}
+              onChange={(e) => {
+                setTagText(e.target.value);
+                touch();
+              }}
+              placeholder="wide trap, press trigger"
+              className="h-10 w-full rounded-lg border border-line bg-ink-850 px-3 text-sm text-text-hi placeholder:text-text-faint focus:border-signal-line focus:outline-none"
+            />
+          </label>
+
+          <label className="mt-3 block">
             <span className="label-tech mb-1 block">Notes</span>
             <textarea
               value={notes}
               rows={4}
               onChange={(e) => {
                 setNotes(e.target.value);
-                setDirty(true);
+                touch();
               }}
               placeholder="What is this board teaching? What does it create for the opponent?"
               className="w-full resize-y rounded-lg border border-line bg-ink-850 px-3 py-2 text-sm leading-relaxed text-text-hi placeholder:text-text-faint focus:border-signal-line focus:outline-none"
@@ -504,6 +268,7 @@ export function TacticalBoardEditor({ board }: { board: TacticalBoard }) {
 
           <div className="mt-4 flex items-center gap-2">
             <button
+              type="button"
               onClick={save}
               disabled={pending}
               className="flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-signal text-sm font-medium text-white transition-colors hover:bg-signal-deep disabled:opacity-60"
@@ -522,10 +287,11 @@ export function TacticalBoardEditor({ board }: { board: TacticalBoard }) {
           <div className="label-tech">On the board</div>
           <dl className="mt-2 space-y-1.5 text-sm">
             {[
-              { label: "Your players", value: data.tokens.filter((t) => t.team === "home").length },
-              { label: "Opponents", value: data.tokens.filter((t) => t.team === "away").length },
-              { label: "Arrows", value: data.arrows.length },
-              { label: "Zones", value: data.zones.length },
+              { label: "Your players", value: counts.ours },
+              { label: "Opponents", value: counts.theirs },
+              { label: "Movements", value: counts.paths },
+              { label: "Zones", value: counts.zones },
+              { label: "Phases", value: counts.frames },
             ].map((r) => (
               <div key={r.label} className="flex items-center justify-between">
                 <dt className="text-text-dim">{r.label}</dt>
@@ -533,18 +299,35 @@ export function TacticalBoardEditor({ board }: { board: TacticalBoard }) {
               </div>
             ))}
           </dl>
+
+          {usage && (
+            <p className="mt-3 border-t border-line pt-3 text-[11px] leading-relaxed text-text-dim">
+              Used by {usage}. Editing this board updates it everywhere it is
+              referenced — duplicate it first to change one place only.
+            </p>
+          )}
+
           <p className="mt-3 border-t border-line pt-3 text-[11px] leading-relaxed text-text-faint">
             Drag with <span className="text-text-dim">Move</span>. Draw with{" "}
-            <span className="text-text-dim">Arrow</span> or <span className="text-text-dim">Zone</span>.
-            Click a token or line with <span className="text-text-dim">Erase</span> to remove it.
+            <span className="text-text-dim">Movement</span> or <span className="text-text-dim">Zone</span>.
+            Click anything with <span className="text-text-dim">Erase</span> to remove it.
           </p>
         </div>
 
-        {!dirty && (
-          <p className="flex items-center justify-center gap-1.5 text-[11px] text-text-faint">
-            <Trash2 className="size-3" /> Deleting a board cannot be undone.
-          </p>
-        )}
+        <button
+          type="button"
+          onClick={() =>
+            start(async () => {
+              const res = await setBoardArchived(board.id, !board.archivedAt);
+              if (!res.ok) setError(res.error);
+              else router.refresh();
+            })
+          }
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-line py-2 text-xs text-text-faint transition-colors hover:border-line-strong hover:text-text"
+        >
+          <Archive className="size-3" />
+          {board.archivedAt ? "Restore from archive" : "Archive this board"}
+        </button>
       </div>
     </div>
   );
