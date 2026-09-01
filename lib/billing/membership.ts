@@ -107,7 +107,22 @@ export async function getMembership(): Promise<Membership> {
  * direct read of the plan.
  */
 function tierRank(id: PlanId): number {
-  const order: Record<Tier, number> = { free: 0, player: 1, touchline: 2, club: 3 };
+  /*
+    The two Touchline tiers share a rank because neither contains the other.
+    That is the right answer for what this function is FOR: picking the better
+    of a comped and a paid grant. A tie means "keep the paid one", and since
+    the caller only replaces the paid plan on a strictly greater rank, a
+    Coach subscriber holding a Trainer comp is never silently moved sideways
+    into a tier that would take their coach tools away.
+  */
+  const order: Record<Tier, number> = {
+    free: 0,
+    player: 1,
+    touchline: 2,
+    touchline_coach: 2,
+    touchline_trainer: 2,
+    club: 3,
+  };
   return order[PLANS[id]?.tier ?? "free"];
 }
 
@@ -140,6 +155,11 @@ async function compedMembership(
   const granted = String(data.tier);
   const planId: PlanId =
     granted === "club" ? "club_monthly"
+    : granted === "touchline_coach" ? "touchline_coach_monthly"
+    : granted === "touchline_trainer" ? "touchline_trainer_monthly"
+    // The retired bundle. A comp written before the split still means all
+    // three systems, and shrinking it retroactively would take away access
+    // somebody was already given.
     : granted === "touchline" ? "touchline_monthly"
     : "player_monthly";
   return {

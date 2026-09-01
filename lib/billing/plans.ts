@@ -26,12 +26,28 @@ import type { RoleId } from "@/lib/roles/roles";
   presentation and the shared shapes.
 */
 
-export type Tier = "free" | "player" | "touchline" | "club";
+export type Tier =
+  | "free"
+  | "player"
+  /*
+    LEGACY. Touchline used to be one $29 tier granting Player + Coach +
+    Trainer together. It was split into the two tiers below, because a coach
+    was paying for trainer tooling they never opened and vice versa. It is no
+    longer sold — no TIER_CARDS entry, excluded from `cheapestPlanFor` — and
+    survives only so the accounts that bought it keep exactly what they paid
+    for. Someone who genuinely needs both systems buys Club.
+  */
+  | "touchline"
+  | "touchline_coach"
+  | "touchline_trainer"
+  | "club";
 
 export type PlanId =
   | "free"
   | "player_monthly" | "player_annual"
   | "touchline_monthly" | "touchline_annual"
+  | "touchline_coach_monthly" | "touchline_coach_annual"
+  | "touchline_trainer_monthly" | "touchline_trainer_annual"
   | "club_monthly" | "club_annual";
 
 export type BillingInterval = "month" | "year";
@@ -70,6 +86,11 @@ export interface PlanDef {
   roles: RoleId[];
   /** Staff who can be attached to the organization. 1 = just the account. */
   seats: number;
+  /**
+   * Grandfathered, not sold. Kept so existing subscribers keep what they
+   * bought; hidden from the pricing page and never offered as an upgrade.
+   */
+  legacy?: boolean;
 }
 
 /** Days of full access before the first charge. Card required. */
@@ -93,15 +114,29 @@ const CLUB_AI: Entitlements = {
   study_discoveries: 250,
 };
 
+/* The retired bundle. Only grandfathered plans still name it. */
 const TOUCHLINE_ROLES: RoleId[] = ["player", "coach", "trainer"];
+/*
+  Each professional tier carries Player with it on purpose: a coach who cannot
+  see the player-side record is reading half the picture, and the person
+  running sessions is very often still playing.
+*/
+const COACH_ROLES: RoleId[] = ["player", "coach"];
+const TRAINER_ROLES: RoleId[] = ["player", "trainer"];
 const CLUB_ROLES: RoleId[] = ["player", "coach", "trainer", "club"];
 
 export const PLANS: Record<PlanId, PlanDef> = {
   free:               { id: "free",               tier: "free",      name: "MIDO XI",            priceCents: 0,      interval: null,    entitlements: {},            roles: [],              seats: 1 },
   player_monthly:     { id: "player_monthly",     tier: "player",    name: "MIDO XI Player",     priceCents: 999,    interval: "month", entitlements: PLAYER_AI,     roles: ["player"],      seats: 1 },
   player_annual:      { id: "player_annual",      tier: "player",    name: "MIDO XI Player",     priceCents: 8900,   interval: "year",  entitlements: PLAYER_AI,     roles: ["player"],      seats: 1 },
-  touchline_monthly:  { id: "touchline_monthly",  tier: "touchline", name: "MIDO XI Touchline",  priceCents: 2900,   interval: "month", entitlements: TOUCHLINE_AI,  roles: TOUCHLINE_ROLES, seats: 1 },
-  touchline_annual:   { id: "touchline_annual",   tier: "touchline", name: "MIDO XI Touchline",  priceCents: 27900,  interval: "year",  entitlements: TOUCHLINE_AI,  roles: TOUCHLINE_ROLES, seats: 1 },
+  // Grandfathered — see the Tier union. Not buyable; still honoured.
+  touchline_monthly:  { id: "touchline_monthly",  tier: "touchline", name: "MIDO XI Touchline",  priceCents: 2900,   interval: "month", entitlements: TOUCHLINE_AI,  roles: TOUCHLINE_ROLES, seats: 1, legacy: true },
+  touchline_annual:   { id: "touchline_annual",   tier: "touchline", name: "MIDO XI Touchline",  priceCents: 27900,  interval: "year",  entitlements: TOUCHLINE_AI,  roles: TOUCHLINE_ROLES, seats: 1, legacy: true },
+
+  touchline_coach_monthly:    { id: "touchline_coach_monthly",    tier: "touchline_coach",   name: "MIDO XI Touchline Coach",   priceCents: 2900,  interval: "month", entitlements: TOUCHLINE_AI, roles: COACH_ROLES,   seats: 1 },
+  touchline_coach_annual:     { id: "touchline_coach_annual",     tier: "touchline_coach",   name: "MIDO XI Touchline Coach",   priceCents: 27900, interval: "year",  entitlements: TOUCHLINE_AI, roles: COACH_ROLES,   seats: 1 },
+  touchline_trainer_monthly:  { id: "touchline_trainer_monthly",  tier: "touchline_trainer", name: "MIDO XI Touchline Trainer", priceCents: 2900,  interval: "month", entitlements: TOUCHLINE_AI, roles: TRAINER_ROLES, seats: 1 },
+  touchline_trainer_annual:   { id: "touchline_trainer_annual",   tier: "touchline_trainer", name: "MIDO XI Touchline Trainer", priceCents: 27900, interval: "year",  entitlements: TOUCHLINE_AI, roles: TRAINER_ROLES, seats: 1 },
   club_monthly:       { id: "club_monthly",       tier: "club",      name: "MIDO XI Club",       priceCents: 14900,  interval: "month", entitlements: CLUB_AI,       roles: CLUB_ROLES,      seats: 10 },
   club_annual:        { id: "club_annual",        tier: "club",      name: "MIDO XI Club",       priceCents: 149000, interval: "year",  entitlements: CLUB_AI,       roles: CLUB_ROLES,      seats: 10 },
 };
@@ -160,22 +195,46 @@ export const TIER_CARDS: TierCard[] = [
       "Ask MIDO anything, in your own words",
     ],
   },
+  /*
+    The two halves of the old Touchline, at the same price. Splitting them is
+    not a price rise dressed up as choice: it is the same $29 for the systems
+    you actually work in. A coach was paying for programme-writing tools they
+    never opened, and a trainer for opposition planning they never used.
+  */
   {
-    tier: "touchline",
-    name: "Touchline",
-    tagline: "For the people who run the session. Coach, trainer and player, in one account.",
-    monthlyId: "touchline_monthly",
-    annualId: "touchline_annual",
+    tier: "touchline_coach",
+    name: "Touchline Coach",
+    tagline: "For the people who pick the team. Your coaching week, and the player you still are.",
+    monthlyId: "touchline_coach_monthly",
+    annualId: "touchline_coach_annual",
     monthlyCents: 2900,
     annualCents: 27900,
     trialDays: TRIAL_DAYS,
-    systems: "Player + Coach + Trainer",
+    systems: "Player + Coach",
     popular: true,
     perks: [
-      "Three operating systems, one login",
+      "Two operating systems, one login",
       "Sessions drafted from your objective, editable block by block",
       "Match plans written from your own opposition notes",
+      "Squad development tracked across the group",
+      "Everything in Player",
+    ],
+  },
+  {
+    tier: "touchline_trainer",
+    name: "Touchline Trainer",
+    tagline: "For the people who build the body. Your programmes, and the player you still are.",
+    monthlyId: "touchline_trainer_monthly",
+    annualId: "touchline_trainer_annual",
+    monthlyCents: 2900,
+    annualCents: 27900,
+    trialDays: TRIAL_DAYS,
+    systems: "Player + Trainer",
+    perks: [
+      "Two operating systems, one login",
       "Physical programmes with waved weeks and a real retest",
+      "Load and readiness read across everyone you train",
+      "Sessions drafted from the athlete's own record",
       "Everything in Player",
     ],
   },
@@ -222,9 +281,24 @@ export const isProPlan = isPaidPlan;
 
 export function tierLabel(tier: Tier): string {
   if (tier === "club") return "Club";
+  if (tier === "touchline_coach") return "Touchline Coach";
+  if (tier === "touchline_trainer") return "Touchline Trainer";
   if (tier === "touchline") return "Touchline";
   if (tier === "player") return "Player";
   return "Free";
+}
+
+/**
+ * A month of this tier, in cents, at its own monthly price.
+ *
+ * Read from PLANS rather than TIER_CARDS so it still answers for a
+ * grandfathered tier that no longer has a card — the referral joiner credit
+ * asks this question, and a legacy subscriber converting must not silently
+ * be credited zero.
+ */
+export function monthlyCentsForTier(tier: Tier): number {
+  const monthly = Object.values(PLANS).find((p) => p.tier === tier && p.interval === "month");
+  return monthly?.priceCents ?? 0;
 }
 
 export function formatPrice(cents: number): string {
@@ -286,7 +360,13 @@ export function seatsFor(id: PlanId): number {
 /** The cheapest plan that unlocks a given system — for a precise upgrade prompt. */
 export function cheapestPlanFor(role: RoleId): PlanDef | null {
   const candidates = Object.values(PLANS)
-    .filter((p) => p.roles.includes(role) && p.interval === "month")
+    /*
+      `!p.legacy` matters more than it looks. The retired Touchline bundle is
+      the same $29 as the two tiers that replaced it, so on price alone it can
+      tie for first — and an upgrade prompt pointing at a plan checkout cannot
+      sell is a dead end the user has no way to understand.
+    */
+    .filter((p) => !p.legacy && p.roles.includes(role) && p.interval === "month")
     .sort((a, b) => a.priceCents - b.priceCents);
   return candidates[0] ?? null;
 }

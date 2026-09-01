@@ -67,8 +67,13 @@ const ROLES_FOR = {
   free: [],
   player_monthly: ["player"],
   player_annual: ["player"],
+  // Retired bundle, still honoured for the accounts that bought it.
   touchline_monthly: ["player", "coach", "trainer"],
   touchline_annual: ["player", "coach", "trainer"],
+  touchline_coach_monthly: ["player", "coach"],
+  touchline_coach_annual: ["player", "coach"],
+  touchline_trainer_monthly: ["player", "trainer"],
+  touchline_trainer_annual: ["player", "trainer"],
   club_monthly: ["player", "coach", "trainer", "club"],
   club_annual: ["player", "coach", "trainer", "club"],
 };
@@ -76,9 +81,19 @@ const TIER_OF = {
   free: "free",
   player_monthly: "player", player_annual: "player",
   touchline_monthly: "touchline", touchline_annual: "touchline",
+  touchline_coach_monthly: "touchline_coach", touchline_coach_annual: "touchline_coach",
+  touchline_trainer_monthly: "touchline_trainer", touchline_trainer_annual: "touchline_trainer",
   club_monthly: "club", club_annual: "club",
 };
-const RANK = { free: 0, player: 1, touchline: 2, club: 3 };
+// Coach and Trainer share a rank: same price, neither contains the other.
+const RANK = {
+  free: 0,
+  player: 1,
+  touchline: 2,
+  touchline_coach: 2,
+  touchline_trainer: 2,
+  club: 3,
+};
 const FREE_ROLES = ["player", "coach", "trainer"];
 const ACTIVE = new Set(["active", "trialing", "past_due"]);
 
@@ -109,7 +124,14 @@ for (const u of targets) {
   const s = sub?.[0];
   const c = comps?.[0];
   const paidPlan = s && ACTIVE.has(String(s.status)) ? s.plan_id : null;
-  const compPlan = c ? (c.tier === "club" ? "club_monthly" : c.tier === "touchline" ? "touchline_monthly" : "player_monthly") : null;
+  const COMP_PLAN = {
+    club: "club_monthly",
+    touchline: "touchline_monthly",
+    touchline_coach: "touchline_coach_monthly",
+    touchline_trainer: "touchline_trainer_monthly",
+    player: "player_monthly",
+  };
+  const compPlan = c ? (COMP_PLAN[c.tier] ?? "player_monthly") : null;
 
   // The rule: the better of the two live grants, never whichever was read first.
   let planId = "free";

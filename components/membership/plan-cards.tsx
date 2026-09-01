@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Check, Loader2, Sparkles, Crown, User, Users, Clock } from "lucide-react";
+import { Check, Loader2, Sparkles, Crown, User, Users, Clock, ClipboardList, Dumbbell } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { startCheckout } from "@/app/app/membership/actions";
 import {
@@ -14,7 +14,7 @@ import {
 } from "@/lib/billing/plans";
 
 /*
-  The four tiers.
+  The tiers.
 
   Plans are shaped by who you are rather than by feature bundles, so each card
   leads with the systems it opens — that is the actual difference between them,
@@ -29,11 +29,28 @@ const TIER_ICON: Record<Tier, LucideIcon> = {
   free: User,
   player: Sparkles,
   touchline: Users,
+  touchline_coach: ClipboardList,
+  touchline_trainer: Dumbbell,
   club: Crown,
 };
 
-/** Ordering so "your plan" and "upgrade" read correctly. */
-const RANK: Record<Tier, number> = { free: 0, player: 1, touchline: 2, club: 3 };
+/*
+  Ordering so "your plan" and "upgrade" read correctly.
+
+  The two Touchline tiers share rank 2 deliberately: they cost the same and
+  neither contains the other, so moving between them is a sideways switch
+  rather than an upgrade or a downgrade. `club` sits above both, and the
+  retired `touchline` bundle keeps its old rank so a grandfathered subscriber
+  still sees Club as the only step up.
+*/
+const RANK: Record<Tier, number> = {
+  free: 0,
+  player: 1,
+  touchline: 2,
+  touchline_coach: 2,
+  touchline_trainer: 2,
+  club: 3,
+};
 
 export function PlanCards({
   currentPlan,
@@ -98,6 +115,9 @@ export function PlanCards({
           const cents = interval === "month" ? card.monthlyCents : card.annualCents;
           const saving = annualSaving(card.monthlyCents, card.annualCents);
           const isDowngrade = RANK[card.tier] < RANK[currentTier];
+          // Same rank, different tier — Coach ⇄ Trainer. Neither party is
+          // moving up or down, so the button must not claim they are.
+          const isLateral = RANK[card.tier] === RANK[currentTier] && card.tier !== currentTier;
 
           return (
             <div
@@ -174,7 +194,7 @@ export function PlanCards({
                   >
                     {pendingId === planId ? (
                       <Loader2 className="size-4 animate-spin" />
-                    ) : isDowngrade ? (
+                    ) : isDowngrade || isLateral ? (
                       "Switch to this"
                     ) : card.trialDays ? (
                       `Start ${card.trialDays} days free`

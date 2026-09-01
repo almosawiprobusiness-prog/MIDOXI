@@ -50,8 +50,9 @@ export default function TermsPage() {
       <LegalSection heading="Plans & billing">
         <p>
           Player, Coach and Trainer each have a genuinely usable free tier. Paid
-          plans — Player, Touchline and Club — unlock deeper AI-assisted analysis
-          and, for Touchline and Club, additional operating systems and staff seats.
+          plans — Player, Touchline Coach, Touchline Trainer and Club — unlock
+          deeper AI-assisted analysis and, for the Touchline and Club plans,
+          additional operating systems and staff seats.
           Current pricing is shown on the Membership page in the app rather than
           restated here, so this document never drifts from what you&rsquo;re actually
           charged. Plans are billed monthly or annually through Stripe and

@@ -18,7 +18,7 @@ export const FAQ: { question: string; answer: string }[] = [
   {
     question: "Is there a free tier?",
     answer:
-      "Yes — Player, Coach and Trainer OS each have a genuinely useful free version. Paid plans start with Player at $9.99/month for deeper AI-assisted analysis, up through Touchline at $29/month for coaches and trainers working with a squad, and Club at $149/month for organisations.",
+      "Yes — Player, Coach and Trainer OS each have a genuinely useful free version. Paid plans start with Player at $9.99/month for deeper AI-assisted analysis, then Touchline Coach or Touchline Trainer at $29/month for the people running sessions, and Club at $149/month for organisations that need every system at once.",
   },
   {
     question: "Can my coach and I use it together?",

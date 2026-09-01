@@ -27,7 +27,7 @@
 
   Usage:
     node scripts/comp.mjs someone@example.com                       player, no expiry
-    node scripts/comp.mjs someone@example.com --tier touchline
+    node scripts/comp.mjs someone@example.com --tier touchline_trainer
     node scripts/comp.mjs someone@example.com --months 3
     node scripts/comp.mjs someone@example.com --source beta-invite
     node scripts/comp.mjs someone@example.com --revoke              removes this source's grant
@@ -69,10 +69,21 @@ const flag = (name, fallback = null) => {
 };
 const has = (name) => argv.includes(`--${name}`);
 
-/* Mirrors the check constraint migration 0013 put on the column. A tier
+/* Mirrors the check constraint migration 0043 put on the column. A tier
    this script would accept but the database refuses is a failure that
    should happen here, with a readable message, not as a 400 from PostgREST. */
-const TIERS = ["player", "touchline", "club"];
+const TIERS = [
+  "player",
+  "touchline_coach",
+  "touchline_trainer",
+  "club",
+  /*
+    The retired bundle (Player + Coach + Trainer in one). Grantable only so an
+    older comp can be re-issued as it was; new grants should name the half the
+    person actually works in. Migration 0043 split it.
+  */
+  "touchline",
+];
 
 /*
   `ends_at` is NOT NULL, so a date is the only way to say "no expiry".
@@ -96,7 +107,7 @@ if (has("list")) {
   console.log(`\n${live.length} live grant${live.length === 1 ? "" : "s"}\n`);
   for (const r of live) {
     const until = Date.parse(r.ends_at) >= Date.parse(FOREVER) ? "no expiry" : String(r.ends_at).slice(0, 10);
-    console.log(`  ${emailOf(r.user_id).padEnd(32)} ${r.tier.padEnd(10)} ${String(r.source).padEnd(14)} until ${until}`);
+    console.log(`  ${emailOf(r.user_id).padEnd(32)} ${r.tier.padEnd(18)} ${String(r.source).padEnd(14)} until ${until}`);
   }
   console.log("\nWhere one account holds several, getMembership() reads the furthest-future row.\n");
   process.exit(0);
@@ -104,7 +115,7 @@ if (has("list")) {
 
 const email = argv[0];
 if (!email || email.startsWith("--")) {
-  console.error("Usage: node scripts/comp.mjs <email> [--tier player|touchline|club] [--months N] [--source label] [--revoke]");
+  console.error("Usage: node scripts/comp.mjs <email> [--tier player|touchline_coach|touchline_trainer|club] [--months N] [--source label] [--revoke]");
   console.error("       node scripts/comp.mjs --list");
   process.exit(1);
 }

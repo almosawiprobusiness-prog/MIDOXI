@@ -60,8 +60,14 @@ export const env = {
   // a month's money.
   stripePricePlayerMonthly: clean(process.env.STRIPE_PRICE_PLAYER_MONTHLY),
   stripePricePlayerAnnual: clean(process.env.STRIPE_PRICE_PLAYER_ANNUAL),
+  // Grandfathered bundle — kept so an existing subscriber's price still
+  // resolves to a plan id in `planIdForPrice`. Not required (see below).
   stripePriceTouchlineMonthly: clean(process.env.STRIPE_PRICE_TOUCHLINE_MONTHLY),
   stripePriceTouchlineAnnual: clean(process.env.STRIPE_PRICE_TOUCHLINE_ANNUAL),
+  stripePriceTouchlineCoachMonthly: clean(process.env.STRIPE_PRICE_TOUCHLINE_COACH_MONTHLY),
+  stripePriceTouchlineCoachAnnual: clean(process.env.STRIPE_PRICE_TOUCHLINE_COACH_ANNUAL),
+  stripePriceTouchlineTrainerMonthly: clean(process.env.STRIPE_PRICE_TOUCHLINE_TRAINER_MONTHLY),
+  stripePriceTouchlineTrainerAnnual: clean(process.env.STRIPE_PRICE_TOUCHLINE_TRAINER_ANNUAL),
   stripePriceClubMonthly: clean(process.env.STRIPE_PRICE_CLUB_MONTHLY),
   stripePriceClubAnnual: clean(process.env.STRIPE_PRICE_CLUB_ANNUAL),
 
@@ -231,8 +237,16 @@ export function configIssues(nodeEnv = process.env.NODE_ENV): ConfigIssue[] {
     const priceVars: [string, string][] = [
       ["STRIPE_PRICE_PLAYER_MONTHLY", env.stripePricePlayerMonthly],
       ["STRIPE_PRICE_PLAYER_ANNUAL", env.stripePricePlayerAnnual],
-      ["STRIPE_PRICE_TOUCHLINE_MONTHLY", env.stripePriceTouchlineMonthly],
-      ["STRIPE_PRICE_TOUCHLINE_ANNUAL", env.stripePriceTouchlineAnnual],
+      /*
+        The retired Touchline bundle is deliberately NOT required. It is not
+        on sale, so a deployment with no price for it is correct — only an
+        account that already subscribed needs it, and `planIdForPrice`
+        returns null safely when it is unset.
+      */
+      ["STRIPE_PRICE_TOUCHLINE_COACH_MONTHLY", env.stripePriceTouchlineCoachMonthly],
+      ["STRIPE_PRICE_TOUCHLINE_COACH_ANNUAL", env.stripePriceTouchlineCoachAnnual],
+      ["STRIPE_PRICE_TOUCHLINE_TRAINER_MONTHLY", env.stripePriceTouchlineTrainerMonthly],
+      ["STRIPE_PRICE_TOUCHLINE_TRAINER_ANNUAL", env.stripePriceTouchlineTrainerAnnual],
       ["STRIPE_PRICE_CLUB_MONTHLY", env.stripePriceClubMonthly],
       ["STRIPE_PRICE_CLUB_ANNUAL", env.stripePriceClubAnnual],
     ];

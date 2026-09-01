@@ -40,6 +40,10 @@ const PRICE_ENV: Record<Exclude<PlanId, "free">, () => string> = {
   player_annual: () => env.stripePricePlayerAnnual,
   touchline_monthly: () => env.stripePriceTouchlineMonthly,
   touchline_annual: () => env.stripePriceTouchlineAnnual,
+  touchline_coach_monthly: () => env.stripePriceTouchlineCoachMonthly,
+  touchline_coach_annual: () => env.stripePriceTouchlineCoachAnnual,
+  touchline_trainer_monthly: () => env.stripePriceTouchlineTrainerMonthly,
+  touchline_trainer_annual: () => env.stripePriceTouchlineTrainerAnnual,
   club_monthly: () => env.stripePriceClubMonthly,
   club_annual: () => env.stripePriceClubAnnual,
 };

@@ -29,54 +29,112 @@ import { ROLE_IDS } from "../../lib/roles/roles";
 */
 
 const PAID = (Object.keys(PLANS) as PlanId[]).filter((id) => id !== "free");
-const RANK: Record<Tier, number> = { free: 0, player: 1, touchline: 2, club: 3 };
+/*
+  The catalogue is a branch, not a line: Touchline Coach and Touchline Trainer
+  cost the same, open different systems, and neither contains the other. They
+  share a rank because ranking them against each other would be meaningless.
+  `touchline` is the retired bundle they replaced - grandfathered, never sold.
+*/
+/** Every tier that charges money, retired ones included. */
+const PAID_TIERS = ["player", "touchline", "touchline_coach", "touchline_trainer", "club"] as const;
+
+/** The tiers a customer can actually buy today. */
+const SELLABLE_TIERS = ["player", "touchline_coach", "touchline_trainer", "club"] as const;
+
+const monthlyOf = (tier: Tier) =>
+  Object.values(PLANS).find((p) => p.tier === tier && p.interval === "month")!;
 
 describe("the ladder", () => {
   it("never prices a year above twelve months", () => {
-    for (const tier of ["player", "touchline", "club"] as const) {
-      const monthly = Object.values(PLANS).find((p) => p.tier === tier && p.interval === "month")!;
+    for (const tier of PAID_TIERS) {
+      const monthly = monthlyOf(tier);
       const annual = Object.values(PLANS).find((p) => p.tier === tier && p.interval === "year")!;
       expect(annual.priceCents, tier).toBeLessThan(monthly.priceCents * 12);
     }
   });
 
-  it("gets more expensive as it opens more", () => {
-    const monthly = Object.values(PLANS)
-      .filter((p) => p.interval === "month")
-      .sort((a, b) => RANK[a.tier] - RANK[b.tier]);
-    for (let i = 1; i < monthly.length; i++) {
-      expect(monthly[i].priceCents, monthly[i].id).toBeGreaterThan(monthly[i - 1].priceCents);
-      expect(monthly[i].roles.length, monthly[i].id).toBeGreaterThanOrEqual(
-        monthly[i - 1].roles.length,
-      );
-    }
-  });
-
-  it("makes every higher tier a superset of the one below", () => {
-    // Upgrading must never take a system away.
-    const ladder = (["player", "touchline", "club"] as const).map(
-      (t) => Object.values(PLANS).find((p) => p.tier === t && p.interval === "month")!,
-    );
-    for (let i = 1; i < ladder.length; i++) {
-      for (const role of ladder[i - 1].roles) {
-        expect(ladder[i].roles, `${ladder[i].id} dropped ${role}`).toContain(role);
+  /*
+    The linear "each step costs more than the last" rule died with the split:
+    Coach and Trainer cost the same as each other. What must still hold is the
+    thing that rule was protecting - you are never charged more for strictly
+    less - so it is asserted directly, against every pair of tiers.
+  */
+  it("never charges more for strictly less", () => {
+    for (const a of PAID_TIERS) {
+      for (const b of PAID_TIERS) {
+        if (a === b) continue;
+        const A = monthlyOf(a);
+        const B = monthlyOf(b);
+        const strictSuperset =
+          B.roles.every((r) => A.roles.includes(r)) && A.roles.length > B.roles.length;
+        if (strictSuperset) {
+          expect(A.priceCents, `${A.id} opens more than ${B.id}`).toBeGreaterThanOrEqual(
+            B.priceCents,
+          );
+        }
       }
     }
   });
 
+  it("puts Player underneath every paid tier, and Club above all of them", () => {
+    // Upgrading must never take a system away.
+    for (const tier of PAID_TIERS) {
+      expect(monthlyOf(tier).roles, tier).toContain("player");
+      for (const role of monthlyOf(tier).roles) {
+        expect(monthlyOf("club").roles, `club dropped ${role}`).toContain(role);
+      }
+    }
+  });
+
+  it("makes the two Touchline tiers siblings rather than a ladder", () => {
+    const coach = monthlyOf("touchline_coach");
+    const trainer = monthlyOf("touchline_trainer");
+    // Same money.
+    expect(coach.priceCents).toBe(trainer.priceCents);
+    // Neither is a superset of the other - that is the point of splitting them.
+    expect(coach.roles).not.toContain("trainer");
+    expect(trainer.roles).not.toContain("coach");
+    // Both systems together is what the retired bundle was, and now Club.
+    expect(monthlyOf("club").roles).toEqual(
+      expect.arrayContaining([...coach.roles, ...trainer.roles]),
+    );
+  });
+
   it("gives more AI the more you pay", () => {
     const ai = (id: PlanId) => PLANS[id].entitlements.ai_interactions ?? 0;
-    expect(ai("player_monthly")).toBeLessThan(ai("touchline_monthly"));
-    expect(ai("touchline_monthly")).toBeLessThan(ai("club_monthly"));
+    expect(ai("player_monthly")).toBeLessThan(ai("touchline_coach_monthly"));
+    expect(ai("touchline_coach_monthly")).toBe(ai("touchline_trainer_monthly"));
+    expect(ai("touchline_coach_monthly")).toBeLessThan(ai("club_monthly"));
   });
 
   it("prices the same tier identically whichever interval you buy", () => {
-    for (const tier of ["player", "touchline", "club"] as const) {
+    for (const tier of PAID_TIERS) {
       const both = Object.values(PLANS).filter((p) => p.tier === tier);
-      expect(both).toHaveLength(2);
-      expect(both[0].roles).toEqual(both[1].roles);
-      expect(both[0].entitlements).toEqual(both[1].entitlements);
-      expect(both[0].seats).toBe(both[1].seats);
+      expect(both, tier).toHaveLength(2);
+      expect(both[0].roles, tier).toEqual(both[1].roles);
+      expect(both[0].entitlements, tier).toEqual(both[1].entitlements);
+      expect(both[0].seats, tier).toBe(both[1].seats);
+    }
+  });
+});
+
+describe("the retired Touchline bundle", () => {
+  it("is still honoured, so nobody loses what they bought", () => {
+    expect(PLANS.touchline_monthly.roles).toEqual(["player", "coach", "trainer"]);
+    expect(PLANS.touchline_annual.roles).toEqual(["player", "coach", "trainer"]);
+  });
+
+  it("is marked legacy, and is the only thing that is", () => {
+    const legacy = Object.values(PLANS)
+      .filter((p) => p.legacy)
+      .map((p) => p.id);
+    expect(legacy.sort()).toEqual(["touchline_annual", "touchline_monthly"]);
+  });
+
+  it("cannot be bought - no card, and never the cheapest way in", () => {
+    expect(TIER_CARDS.map((c) => c.tier)).not.toContain("touchline");
+    for (const role of ROLE_IDS) {
+      expect(cheapestPlanFor(role)?.legacy, role).toBeFalsy();
     }
   });
 });
@@ -136,8 +194,8 @@ describe("what each tier opens", () => {
 describe("upgrade prompts", () => {
   it("names the cheapest plan that opens a given system", () => {
     expect(cheapestPlanFor("player")?.id).toBe("player_monthly");
-    expect(cheapestPlanFor("coach")?.id).toBe("touchline_monthly");
-    expect(cheapestPlanFor("trainer")?.id).toBe("touchline_monthly");
+    expect(cheapestPlanFor("coach")?.id).toBe("touchline_coach_monthly");
+    expect(cheapestPlanFor("trainer")?.id).toBe("touchline_trainer_monthly");
     expect(cheapestPlanFor("club")?.id).toBe("club_monthly");
   });
 
@@ -149,8 +207,17 @@ describe("upgrade prompts", () => {
 });
 
 describe("the cards a customer reads", () => {
-  it("has a card per tier, in ladder order", () => {
-    expect(TIER_CARDS.map((c) => c.tier)).toEqual(["free", "player", "touchline", "club"]);
+  it("has a card per sellable tier, in ladder order", () => {
+    expect(TIER_CARDS.map((c) => c.tier)).toEqual([
+      "free",
+      "player",
+      "touchline_coach",
+      "touchline_trainer",
+      "club",
+    ]);
+    for (const tier of SELLABLE_TIERS) {
+      expect(TIER_CARDS.map((c) => c.tier), tier).toContain(tier);
+    }
   });
 
   it("quotes the same prices the plans charge", () => {

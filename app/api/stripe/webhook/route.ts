@@ -4,7 +4,7 @@ import { env, features } from "@/lib/env";
 import { getStripe, planIdForPrice } from "@/lib/billing/stripe";
 import { createAdminClient } from "@/lib/supabase/server";
 import { logEvent } from "@/lib/observability/log";
-import { tierOf, TIER_CARDS } from "@/lib/billing/plans";
+import { tierOf, monthlyCentsForTier } from "@/lib/billing/plans";
 import { recordAccountUpdated, recordTrainerPurchasePaid } from "@/lib/billing/connect";
 import { REWARD } from "@/lib/data/referral-types";
 import { trackFor } from "@/lib/analytics/track";
@@ -192,7 +192,7 @@ async function creditJoiner(
     read from the canonical plan cards rather than the price they happen to be
     paying, so an annual subscriber gets a month rather than a twelfth of one.
   */
-  const monthlyCents = TIER_CARDS.find((c) => c.tier === tierOf(planId))?.monthlyCents ?? 0;
+  const monthlyCents = monthlyCentsForTier(tierOf(planId));
   const amount = monthlyCents * months;
   if (amount <= 0) return;
 
