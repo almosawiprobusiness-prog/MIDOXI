@@ -66,6 +66,22 @@ export const CAPABILITIES: Capability[] = [
     example: "How do we beat a team that presses high?",
   },
   {
+    id: "tactical-board",
+    builds: "A tactical board",
+    produces: "Players, movements and space drawn on a pitch — then editable, and attachable to a session, a goal or a player.",
+    href: "/app/tactics",
+    roles: ["player", "coach", "trainer", "club"],
+    /*
+      `both` is exact here rather than generous. Without an allowance
+      MIDO still returns a real starting shape to draw on, and says that
+      is what it did; with one it draws the idea.
+    */
+    path: "both",
+    needs: [],
+    match: /\b(tactical\s*board|draw\s+(me\s+)?(a|the)\s+\w+|board\s+(for|showing)|diagram|illustrate|whiteboard)\b/i,
+    example: "Draw a 4v4+3 for playing through midfield",
+  },
+  {
     id: "opposition",
     builds: "An opposition report",
     produces: "Shape, threats, weaknesses and set-piece habits, in your own words.",

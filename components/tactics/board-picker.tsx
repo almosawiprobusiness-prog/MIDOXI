@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Grid3x3, Plus, Loader2, Copy, Check } from "lucide-react";
+import { Grid3x3, Plus, Loader2, Copy, Check, Sparkles, Info } from "lucide-react";
 import { attachBoard, newBoardFor } from "@/app/app/tactics/actions";
+import { askDraftBoard } from "@/app/app/tactics/ai-actions";
 import { BoardView } from "./board-view";
 import { FORMATION_NAMES } from "@/lib/tactics/document";
 import type { TacticalBoard } from "@/lib/tactics/types";
@@ -51,7 +52,9 @@ export function BoardPicker({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<"saved" | "new">("saved");
+  const [tab, setTab] = useState<"saved" | "new" | "mido">("saved");
+  const [ask, setAsk] = useState("");
+  const [midoNote, setMidoNote] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [formation, setFormation] = useState("4-3-3");
   const [title, setTitle] = useState("");
@@ -93,6 +96,36 @@ export function BoardPicker({
     });
   };
 
+  /*
+    Ask MIDO to draw it, then attach what came back.
+
+    Two steps rather than one action, because the board must exist as a
+    real editable object either way — §42 forbids a generated board that
+    cannot be changed, and a draft that only lives inside an attachment
+    would be exactly that.
+  */
+  const generate = () => {
+    setError(null);
+    setMidoNote(null);
+    start(async () => {
+      const res = await askDraftBoard(ask, { formation });
+      if (!res.ok) return setError(res.error);
+      const attached = await attachBoard(res.data.boardId, entityType, entityId, {
+        revalidate,
+        role,
+      });
+      if (!attached.ok) return setError(attached.error);
+      // A composed fallback is still attached — and still said out loud.
+      if (res.data.composed || res.data.note) {
+        setMidoNote(res.data.note ?? "MIDO drew the starting shape only.");
+        router.refresh();
+        return;
+      }
+      close();
+      router.refresh();
+    });
+  };
+
   return (
     <>
       <button
@@ -108,7 +141,7 @@ export function BoardPicker({
 
       <Modal open={open} onClose={close} eyebrow="Tactical board" title={label}>
         <div className="mb-3 flex items-center gap-1 border-b border-line pb-2">
-          {(["saved", "new"] as const).map((t) => (
+          {(["saved", "new", "mido"] as const).map((t) => (
             <button
               key={t}
               type="button"
@@ -118,12 +151,47 @@ export function BoardPicker({
                 tab === t ? "bg-signal/10 text-signal-bright" : "text-text-dim hover:text-text",
               )}
             >
-              {t === "saved" ? `Saved · ${boards.length}` : "Create new"}
+              {t === "saved" ? `Saved · ${boards.length}` : t === "new" ? "Create new" : "Ask MIDO"}
             </button>
           ))}
         </div>
 
-        {tab === "saved" ? (
+        {tab === "mido" ? (
+          <>
+            <label className="block">
+              <span className="label-tech mb-1 block">What should the board show?</span>
+              <textarea
+                value={ask}
+                onChange={(e) => setAsk(e.target.value)}
+                rows={3}
+                placeholder="A 4v4+3 possession exercise for playing through midfield"
+                className="w-full resize-y rounded-lg border border-line bg-ink-850 px-3 py-2 text-sm leading-relaxed text-text-hi placeholder:text-text-faint focus:border-signal-line focus:outline-none"
+              />
+            </label>
+
+            <p className="mt-2 flex items-start gap-1.5 text-[11px] leading-relaxed text-text-faint">
+              <Info className="mt-0.5 size-3 shrink-0" />
+              MIDO draws a real board you can then move, redraw and save. It is marked as MIDO&rsquo;s
+              draft, never as yours.
+            </p>
+
+            <button
+              type="button"
+              onClick={generate}
+              disabled={pending || !ask.trim()}
+              className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-signal text-sm font-medium text-white transition-colors hover:bg-signal-deep disabled:opacity-60"
+            >
+              {pending ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+              Draw it
+            </button>
+
+            {midoNote && (
+              <p className="mt-3 rounded-lg border border-review/30 bg-review/10 px-3 py-2 text-xs leading-relaxed text-review">
+                {midoNote}
+              </p>
+            )}
+          </>
+        ) : tab === "saved" ? (
           <>
             {boards.length > 6 && (
               <input
