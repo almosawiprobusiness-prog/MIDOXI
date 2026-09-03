@@ -1,5 +1,5 @@
 import { Crown, Sparkles, Zap } from "lucide-react";
-import { features, isDemoMode } from "@/lib/env";
+import { env, features, isDemoMode } from "@/lib/env";
 import { getMembershipOverview } from "@/lib/billing/membership";
 import { tierOf, tierLabel } from "@/lib/billing/plans";
 import { SectionHeader } from "@/components/ui/primitives";
@@ -164,7 +164,12 @@ export default async function MembershipPage({
       {/* Plans */}
       <section>
         <SectionHeader label={membership.isPro ? "Change plan" : "Plans"} />
-        <PlanCards currentPlan={membership.planId} billingConfigured={features.billing} attribution={attribution} />
+        <PlanCards
+          currentPlan={membership.planId}
+          billingConfigured={features.billing}
+          quoteUrl={env.managedQuoteUrl || null}
+          attribution={attribution}
+        />
       </section>
 
       {isDemoMode && (

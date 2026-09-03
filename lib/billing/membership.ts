@@ -121,7 +121,15 @@ function tierRank(id: PlanId): number {
     touchline: 2,
     touchline_coach: 2,
     touchline_trainer: 2,
+    /*
+      `xi` shares rank 2 with the tiers it replaced because it contains all of
+      them — a Touchline subscriber holding an `xi` comp is on the same systems
+      either way, and a tie means "keep the paid one", which is right.
+    */
+    xi: 2,
     club: 3,
+    /* Managed is Club plus delivery; nothing outranks it. */
+    managed: 3,
   };
   return order[PLANS[id]?.tier ?? "free"];
 }
@@ -154,7 +162,9 @@ async function compedMembership(
   */
   const granted = String(data.tier);
   const planId: PlanId =
-    granted === "club" ? "club_monthly"
+    granted === "managed" ? "managed"
+    : granted === "xi" ? "xi_monthly"
+    : granted === "club" ? "club_monthly"
     : granted === "touchline_coach" ? "touchline_coach_monthly"
     : granted === "touchline_trainer" ? "touchline_trainer_monthly"
     // The retired bundle. A comp written before the split still means all

@@ -65,6 +65,10 @@ const rest = async (q) => {
 // catches the case where a plan gains a role and this does not.
 const ROLES_FOR = {
   free: [],
+  xi_monthly: ["player", "coach", "trainer"],
+  xi_annual: ["player", "coach", "trainer"],
+  managed: ["player", "coach", "trainer", "club"],
+  // Retired tiers below, still honoured for the accounts that bought them.
   player_monthly: ["player"],
   player_annual: ["player"],
   // Retired bundle, still honoured for the accounts that bought it.
@@ -79,6 +83,8 @@ const ROLES_FOR = {
 };
 const TIER_OF = {
   free: "free",
+  xi_monthly: "xi", xi_annual: "xi",
+  managed: "managed",
   player_monthly: "player", player_annual: "player",
   touchline_monthly: "touchline", touchline_annual: "touchline",
   touchline_coach_monthly: "touchline_coach", touchline_coach_annual: "touchline_coach",
@@ -92,7 +98,9 @@ const RANK = {
   touchline: 2,
   touchline_coach: 2,
   touchline_trainer: 2,
+  xi: 2,
   club: 3,
+  managed: 3,
 };
 const FREE_ROLES = ["player", "coach", "trainer"];
 const ACTIVE = new Set(["active", "trialing", "past_due"]);

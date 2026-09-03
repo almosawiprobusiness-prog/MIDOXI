@@ -58,6 +58,16 @@ export const env = {
   // One Stripe price per plan. Named after the tier so a mis-mapped price is
   // obvious at a glance — swapping monthly and annual charges a year's use for
   // a month's money.
+  /*
+    Where the Managed tier's "Request a quote" goes. Unset is a valid state —
+    the pricing card says quotes are not connected rather than rendering a
+    button that goes nowhere.
+  */
+  managedQuoteUrl: clean(process.env.MANAGED_QUOTE_URL),
+  stripePriceXiMonthly: clean(process.env.STRIPE_PRICE_XI_MONTHLY),
+  stripePriceXiAnnual: clean(process.env.STRIPE_PRICE_XI_ANNUAL),
+  // Grandfathered tiers below. Their prices are kept only so an existing
+  // subscriber's price still resolves to a plan id in `planIdForPrice`.
   stripePricePlayerMonthly: clean(process.env.STRIPE_PRICE_PLAYER_MONTHLY),
   stripePricePlayerAnnual: clean(process.env.STRIPE_PRICE_PLAYER_ANNUAL),
   // Grandfathered bundle — kept so an existing subscriber's price still
@@ -235,6 +245,8 @@ export function configIssues(nodeEnv = process.env.NODE_ENV): ConfigIssue[] {
   */
   if (features.billing) {
     const priceVars: [string, string][] = [
+      ["STRIPE_PRICE_XI_MONTHLY", env.stripePriceXiMonthly],
+      ["STRIPE_PRICE_XI_ANNUAL", env.stripePriceXiAnnual],
       ["STRIPE_PRICE_PLAYER_MONTHLY", env.stripePricePlayerMonthly],
       ["STRIPE_PRICE_PLAYER_ANNUAL", env.stripePricePlayerAnnual],
       /*

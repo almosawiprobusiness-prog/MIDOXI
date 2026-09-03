@@ -3,14 +3,25 @@ import type { RoleId } from "@/lib/roles/roles";
 /*
   Plan catalogue — client-safe.
 
-  MIDO XI is four operating systems over one engine, so the plans are shaped by
-  **who you are**, not by which features got bundled together. A club paying the
-  same as a fifteen-year-old is wrong in both directions.
+  Two paid tiers, and a floor:
 
     Free       one system, your choice, forever. Core tools, no AI.
-    Player     the Player OS + the AI analyst.
-    Touchline  Player + Coach + Trainer. The professional tier.
-    Club       all four, plus staff seats and the methodology engine.
+    MIDO XI    every individual system + the AI layer. You drive it. $29.
+    Managed    we run it. All four systems, staff seats, delivered in the
+               club's own identity. Quoted, never self-serve.
+
+  THE AXIS THIS FILE USED TO TURN ON, AND WHY IT CHANGED.
+
+  Plans were shaped by *who you are* — Player, Touchline Coach, Touchline
+  Trainer, Club — on the principle that a club paying the same as a
+  fifteen-year-old is wrong in both directions. That principle is intact; the
+  fifteen-year-old is simply answered by Free now, which is the whole
+  deterministic product and says so honestly. What replaces the identity ladder
+  is a DELIVERY axis: one tier the customer drives, one we run for them.
+
+  `xi` is deliberately the old Touchline bundle — Player + Coach + Trainer at
+  the same $29 — so the accounts already on `touchline_*` are already on
+  exactly the right product and lose nothing.
 
   Two things this file decides that nothing else may override:
 
@@ -28,15 +39,27 @@ import type { RoleId } from "@/lib/roles/roles";
 
 export type Tier =
   | "free"
-  | "player"
+  /** The one self-serve paid tier. Every individual system, one seat. */
+  | "xi"
+  /** Done-for-you. Quoted through the quote system, never bought in-app. */
+  | "managed"
   /*
-    LEGACY. Touchline used to be one $29 tier granting Player + Coach +
-    Trainer together. It was split into the two tiers below, because a coach
-    was paying for trainer tooling they never opened and vice versa. It is no
-    longer sold — no TIER_CARDS entry, excluded from `cheapestPlanFor` — and
-    survives only so the accounts that bought it keep exactly what they paid
-    for. Someone who genuinely needs both systems buys Club.
+    LEGACY, all of it. These tiers are no longer sold — no TIER_CARDS entry,
+    never returned by `cheapestPlanFor` — and survive so the accounts that
+    bought them keep exactly what they paid for.
+
+      player               $9.99, Player OS only. Folded into Free upward and
+                           MIDO XI downward; the AI allowance is the paid part
+                           and Free was always the honest home for the rest.
+      touchline            The Player+Coach+Trainer bundle `xi` now is.
+      touchline_coach      Split out of Touchline and never sold — no Stripe
+      touchline_trainer    price was ever created for either. Kept only
+                           because migration 0043 wrote their rows and a comp
+                           may name them.
+      club                 Folded into Managed. Clubs negotiate anyway, and a
+                           club is exactly who buys done-for-you.
   */
+  | "player"
   | "touchline"
   | "touchline_coach"
   | "touchline_trainer"
@@ -44,6 +67,9 @@ export type Tier =
 
 export type PlanId =
   | "free"
+  | "xi_monthly" | "xi_annual"
+  | "managed"
+  // Grandfathered — see the Tier union.
   | "player_monthly" | "player_annual"
   | "touchline_monthly" | "touchline_annual"
   | "touchline_coach_monthly" | "touchline_coach_annual"
@@ -91,6 +117,15 @@ export interface PlanDef {
    * bought; hidden from the pricing page and never offered as an upgrade.
    */
   legacy?: boolean;
+  /**
+   * Price lives in a quote, not in this catalogue.
+   *
+   * `priceCents: 0` on a quoted plan means "no list price", NOT "free" —
+   * anything formatting a price must check this first or it will cheerfully
+   * advertise Managed at $0. `formatPrice` cannot tell the difference on its
+   * own, which is exactly why the flag is on the plan rather than inferred.
+   */
+  quoted?: boolean;
 }
 
 /** Days of full access before the first charge. Card required. */
@@ -102,43 +137,57 @@ const PLAYER_AI: Entitlements = {
   study_discoveries: 30,
 };
 
-const TOUCHLINE_AI: Entitlements = {
+const XI_AI: Entitlements = {
   ai_interactions: 400,
   deep_analyses: 60,
   study_discoveries: 80,
 };
 
-const CLUB_AI: Entitlements = {
+const MANAGED_AI: Entitlements = {
   ai_interactions: 1500,
   deep_analyses: 200,
   study_discoveries: 250,
 };
 
-/* The retired bundle. Only grandfathered plans still name it. */
-const TOUCHLINE_ROLES: RoleId[] = ["player", "coach", "trainer"];
 /*
-  Each professional tier carries Player with it on purpose: a coach who cannot
-  see the player-side record is reading half the picture, and the person
-  running sessions is very often still playing.
+  MIDO XI carries every system a person can work in. Club OS is absent on
+  purpose: it is the organisation layer — staff, teams, the methodology every
+  coach writes inside — and it is meaningless on one seat. Seats are the honest
+  line between the two paid tiers, so that is where the line is drawn.
 */
+const XI_ROLES: RoleId[] = ["player", "coach", "trainer"];
+const MANAGED_ROLES: RoleId[] = ["player", "coach", "trainer", "club"];
+
+/* Retired shapes, preserved exactly as they were sold. */
+const TOUCHLINE_ROLES: RoleId[] = ["player", "coach", "trainer"];
 const COACH_ROLES: RoleId[] = ["player", "coach"];
 const TRAINER_ROLES: RoleId[] = ["player", "trainer"];
 const CLUB_ROLES: RoleId[] = ["player", "coach", "trainer", "club"];
 
 export const PLANS: Record<PlanId, PlanDef> = {
-  free:               { id: "free",               tier: "free",      name: "MIDO XI",            priceCents: 0,      interval: null,    entitlements: {},            roles: [],              seats: 1 },
-  player_monthly:     { id: "player_monthly",     tier: "player",    name: "MIDO XI Player",     priceCents: 999,    interval: "month", entitlements: PLAYER_AI,     roles: ["player"],      seats: 1 },
-  player_annual:      { id: "player_annual",      tier: "player",    name: "MIDO XI Player",     priceCents: 8900,   interval: "year",  entitlements: PLAYER_AI,     roles: ["player"],      seats: 1 },
-  // Grandfathered — see the Tier union. Not buyable; still honoured.
-  touchline_monthly:  { id: "touchline_monthly",  tier: "touchline", name: "MIDO XI Touchline",  priceCents: 2900,   interval: "month", entitlements: TOUCHLINE_AI,  roles: TOUCHLINE_ROLES, seats: 1, legacy: true },
-  touchline_annual:   { id: "touchline_annual",   tier: "touchline", name: "MIDO XI Touchline",  priceCents: 27900,  interval: "year",  entitlements: TOUCHLINE_AI,  roles: TOUCHLINE_ROLES, seats: 1, legacy: true },
+  free:       { id: "free",       tier: "free",    name: "MIDO XI",         priceCents: 0,     interval: null,    entitlements: {},      roles: [],           seats: 1 },
+  xi_monthly: { id: "xi_monthly", tier: "xi",      name: "MIDO XI",         priceCents: 2900,  interval: "month", entitlements: XI_AI,   roles: XI_ROLES,     seats: 1 },
+  xi_annual:  { id: "xi_annual",  tier: "xi",      name: "MIDO XI",         priceCents: 27900, interval: "year",  entitlements: XI_AI,   roles: XI_ROLES,     seats: 1 },
 
-  touchline_coach_monthly:    { id: "touchline_coach_monthly",    tier: "touchline_coach",   name: "MIDO XI Touchline Coach",   priceCents: 2900,  interval: "month", entitlements: TOUCHLINE_AI, roles: COACH_ROLES,   seats: 1 },
-  touchline_coach_annual:     { id: "touchline_coach_annual",     tier: "touchline_coach",   name: "MIDO XI Touchline Coach",   priceCents: 27900, interval: "year",  entitlements: TOUCHLINE_AI, roles: COACH_ROLES,   seats: 1 },
-  touchline_trainer_monthly:  { id: "touchline_trainer_monthly",  tier: "touchline_trainer", name: "MIDO XI Touchline Trainer", priceCents: 2900,  interval: "month", entitlements: TOUCHLINE_AI, roles: TRAINER_ROLES, seats: 1 },
-  touchline_trainer_annual:   { id: "touchline_trainer_annual",   tier: "touchline_trainer", name: "MIDO XI Touchline Trainer", priceCents: 27900, interval: "year",  entitlements: TOUCHLINE_AI, roles: TRAINER_ROLES, seats: 1 },
-  club_monthly:       { id: "club_monthly",       tier: "club",      name: "MIDO XI Club",       priceCents: 14900,  interval: "month", entitlements: CLUB_AI,       roles: CLUB_ROLES,      seats: 10 },
-  club_annual:        { id: "club_annual",        tier: "club",      name: "MIDO XI Club",       priceCents: 149000, interval: "year",  entitlements: CLUB_AI,       roles: CLUB_ROLES,      seats: 10 },
+  /*
+    Managed has no interval and no Stripe price because it is not bought in the
+    app — it is quoted, accepted and invoiced through the quote system. The row
+    exists here so entitlements, seats and role gating resolve for an account
+    that is on it; `priceCents: 0` is meaningless and `quoted` says so.
+  */
+  managed:    { id: "managed",    tier: "managed", name: "MIDO XI Managed", priceCents: 0,     interval: null,    entitlements: MANAGED_AI, roles: MANAGED_ROLES, seats: 10, quoted: true },
+
+  // ---- grandfathered. Not buyable; still honoured. ----
+  player_monthly:            { id: "player_monthly",            tier: "player",            name: "MIDO XI Player",            priceCents: 999,   interval: "month", entitlements: PLAYER_AI, roles: ["player"],      seats: 1,  legacy: true },
+  player_annual:             { id: "player_annual",             tier: "player",            name: "MIDO XI Player",            priceCents: 8900,  interval: "year",  entitlements: PLAYER_AI, roles: ["player"],      seats: 1,  legacy: true },
+  touchline_monthly:         { id: "touchline_monthly",         tier: "touchline",         name: "MIDO XI Touchline",         priceCents: 2900,  interval: "month", entitlements: XI_AI,     roles: TOUCHLINE_ROLES, seats: 1,  legacy: true },
+  touchline_annual:          { id: "touchline_annual",          tier: "touchline",         name: "MIDO XI Touchline",         priceCents: 27900, interval: "year",  entitlements: XI_AI,     roles: TOUCHLINE_ROLES, seats: 1,  legacy: true },
+  touchline_coach_monthly:   { id: "touchline_coach_monthly",   tier: "touchline_coach",   name: "MIDO XI Touchline Coach",   priceCents: 2900,  interval: "month", entitlements: XI_AI,     roles: COACH_ROLES,     seats: 1,  legacy: true },
+  touchline_coach_annual:    { id: "touchline_coach_annual",    tier: "touchline_coach",   name: "MIDO XI Touchline Coach",   priceCents: 27900, interval: "year",  entitlements: XI_AI,     roles: COACH_ROLES,     seats: 1,  legacy: true },
+  touchline_trainer_monthly: { id: "touchline_trainer_monthly", tier: "touchline_trainer", name: "MIDO XI Touchline Trainer", priceCents: 2900,  interval: "month", entitlements: XI_AI,     roles: TRAINER_ROLES,   seats: 1,  legacy: true },
+  touchline_trainer_annual:  { id: "touchline_trainer_annual",  tier: "touchline_trainer", name: "MIDO XI Touchline Trainer", priceCents: 27900, interval: "year",  entitlements: XI_AI,     roles: TRAINER_ROLES,   seats: 1,  legacy: true },
+  club_monthly:              { id: "club_monthly",              tier: "club",              name: "MIDO XI Club",              priceCents: 14900, interval: "month", entitlements: MANAGED_AI, roles: CLUB_ROLES,     seats: 10, legacy: true },
+  club_annual:               { id: "club_annual",               tier: "club",              name: "MIDO XI Club",              priceCents: 149000, interval: "year", entitlements: MANAGED_AI, roles: CLUB_ROLES,     seats: 10, legacy: true },
 };
 
 // ---------------------------------------------------------------------------
@@ -160,6 +209,10 @@ export interface TierCard {
   popular?: boolean;
   /** Shown when the tier offers a trial. */
   trialDays?: number;
+  /** No list price — the card shows a contact route instead of a number. */
+  quoted?: boolean;
+  /** What the button says when there is nothing to check out. */
+  quotedCta?: string;
 }
 
 export const TIER_CARDS: TierCard[] = [
@@ -178,81 +231,39 @@ export const TIER_CARDS: TierCard[] = [
     ],
   },
   {
-    tier: "player",
-    name: "Player",
-    tagline: "Your private development team. The analyst that reads your game with you.",
-    monthlyId: "player_monthly",
-    annualId: "player_annual",
-    monthlyCents: 999,
-    annualCents: 8900,
-    trialDays: TRIAL_DAYS,
-    systems: "Player OS",
-    perks: [
-      "Everything in Free",
-      "AI study built around your position and goals",
-      "MIDO reads your own film and tells you what it sees",
-      "Your record kept — timeline, evidence, and a monthly report for your coach",
-      "Ask MIDO anything, in your own words",
-    ],
-  },
-  /*
-    The two halves of the old Touchline, at the same price. Splitting them is
-    not a price rise dressed up as choice: it is the same $29 for the systems
-    you actually work in. A coach was paying for programme-writing tools they
-    never opened, and a trainer for opposition planning they never used.
-  */
-  {
-    tier: "touchline_coach",
-    name: "Touchline Coach",
-    tagline: "For the people who pick the team. Your coaching week, and the player you still are.",
-    monthlyId: "touchline_coach_monthly",
-    annualId: "touchline_coach_annual",
+    tier: "xi",
+    name: "MIDO XI",
+    tagline: "Every system, and the analyst that reads your football with you.",
+    monthlyId: "xi_monthly",
+    annualId: "xi_annual",
     monthlyCents: 2900,
     annualCents: 27900,
     trialDays: TRIAL_DAYS,
-    systems: "Player + Coach",
+    systems: "Player + Coach + Trainer",
     popular: true,
     perks: [
-      "Two operating systems, one login",
-      "Sessions drafted from your objective, editable block by block",
+      "Everything in Free, across all three systems",
+      "MIDO reads your own film and tells you what it sees",
+      "Sessions and programmes drafted from your objective, editable block by block",
       "Match plans written from your own opposition notes",
-      "Squad development tracked across the group",
-      "Everything in Player",
+      "Your record kept — timeline, evidence, and a report worth handing over",
     ],
   },
   {
-    tier: "touchline_trainer",
-    name: "Touchline Trainer",
-    tagline: "For the people who build the body. Your programmes, and the player you still are.",
-    monthlyId: "touchline_trainer_monthly",
-    annualId: "touchline_trainer_annual",
-    monthlyCents: 2900,
-    annualCents: 27900,
-    trialDays: TRIAL_DAYS,
-    systems: "Player + Trainer",
+    tier: "managed",
+    name: "MIDO XI Managed",
+    tagline: "We run it. You get the week's work back, in your own colours.",
+    monthlyCents: 0,
+    annualCents: 0,
+    quoted: true,
+    quotedCta: "Request a quote",
+    systems: "All four, across your staff",
     perks: [
-      "Two operating systems, one login",
-      "Physical programmes with waved weeks and a real retest",
-      "Load and readiness read across everyone you train",
-      "Sessions drafted from the athlete's own record",
-      "Everything in Player",
-    ],
-  },
-  {
-    tier: "club",
-    name: "Club",
-    tagline: "The intelligence layer across the organization — and the methodology every coach writes inside.",
-    monthlyId: "club_monthly",
-    annualId: "club_annual",
-    monthlyCents: 14900,
-    annualCents: 149000,
-    systems: "All four",
-    perks: [
-      "All four operating systems",
-      "10 staff seats, unlimited teams",
-      "Write the club methodology once — every coach's session is drafted inside it",
-      "Development trends across age groups",
-      "High-volume AI for the whole staff",
+      "Everything in MIDO XI, for the whole staff",
+      "Your film analysed and your sessions written by us",
+      "Reports delivered in your club's identity, not ours",
+      "The methodology written once — every coach's session drafted inside it",
+      "AI volume sized to your squad, not to a plan",
     ],
   },
 ];
@@ -280,6 +291,8 @@ export function isPaidPlan(id: PlanId): boolean {
 export const isProPlan = isPaidPlan;
 
 export function tierLabel(tier: Tier): string {
+  if (tier === "managed") return "Managed";
+  if (tier === "xi") return "MIDO XI";
   if (tier === "club") return "Club";
   if (tier === "touchline_coach") return "Touchline Coach";
   if (tier === "touchline_trainer") return "Touchline Trainer";
@@ -295,6 +308,10 @@ export function tierLabel(tier: Tier): string {
  * grandfathered tier that no longer has a card — the referral joiner credit
  * asks this question, and a legacy subscriber converting must not silently
  * be credited zero.
+ *
+ * Returns 0 for a quoted tier, which is correct rather than lossy: Managed is
+ * invoiced against an accepted quote, so there is no catalogue month to credit
+ * and it never enters the self-serve referral path in the first place.
  */
 export function monthlyCentsForTier(tier: Tier): number {
   const monthly = Object.values(PLANS).find((p) => p.tier === tier && p.interval === "month");
@@ -304,6 +321,17 @@ export function monthlyCentsForTier(tier: Tier): number {
 export function formatPrice(cents: number): string {
   if (cents === 0) return "Free";
   return `$${(cents / 100).toFixed(cents % 100 === 0 ? 0 : 2)}`;
+}
+
+/**
+ * What a plan costs, in words, safe for a quoted plan.
+ *
+ * `formatPrice(0)` says "Free", which is right for the free tier and a lie for
+ * Managed. Anything user-facing goes through here instead.
+ */
+export function planPriceLabel(plan: PlanDef): string {
+  if (plan.quoted) return "Quoted";
+  return formatPrice(plan.priceCents);
 }
 
 /** Months free on the annual price, for an honest "save X" label. */
@@ -361,12 +389,21 @@ export function seatsFor(id: PlanId): number {
 export function cheapestPlanFor(role: RoleId): PlanDef | null {
   const candidates = Object.values(PLANS)
     /*
-      `!p.legacy` matters more than it looks. The retired Touchline bundle is
-      the same $29 as the two tiers that replaced it, so on price alone it can
-      tie for first — and an upgrade prompt pointing at a plan checkout cannot
-      sell is a dead end the user has no way to understand.
+      `!p.legacy` matters more than it looks. Several retired tiers sit at the
+      same $29 as `xi`, so on price alone they can tie for first — and an
+      upgrade prompt pointing at a plan checkout cannot sell is a dead end the
+      user has no way to understand.
+
+      Quoted plans are candidates but never billed monthly, so they are matched
+      on `quoted` rather than on interval. Club is the only system they answer
+      for, and Managed is the only way to open it.
     */
-    .filter((p) => !p.legacy && p.roles.includes(role) && p.interval === "month")
-    .sort((a, b) => a.priceCents - b.priceCents);
+    .filter((p) => !p.legacy && p.roles.includes(role) && (p.interval === "month" || p.quoted))
+    /*
+      A quoted plan sorts last regardless of its `priceCents: 0`. Sorting on the
+      raw number would make Managed the "cheapest" way into every system and
+      send a player who wants film reads to a sales conversation.
+    */
+    .sort((a, b) => (a.quoted ? Infinity : a.priceCents) - (b.quoted ? Infinity : b.priceCents));
   return candidates[0] ?? null;
 }

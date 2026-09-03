@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   FEATURE_LABELS,
   PLANS,
+  cheapestPlanFor,
   TIER_CARDS,
   type MeteredFeature,
   type PlanId,
@@ -162,16 +163,37 @@ describe("what MIDO says when it refuses", () => {
 
   it("names the actual plan and its price", () => {
     const s = upgradeReason("deep_analyses", "player");
-    expect(s).toContain("MIDO XI Player");
-    expect(s).toContain("$9.99");
-    expect(s).toContain(String(PLANS.player_monthly.entitlements.deep_analyses));
+    expect(s).toContain("MIDO XI");
+    expect(s).toContain("$29");
+    expect(s).toContain(String(PLANS.xi_monthly.entitlements.deep_analyses));
   });
 
-  it("sends a coach to a plan that actually opens the coach system", () => {
-    // Player is cheaper, and would sell them something that does not open
-    // their own product.
-    expect(upgradeReason("ai_interactions", "coach")).toContain("Touchline");
-    expect(upgradeReason("ai_interactions", "trainer")).toContain("Touchline");
+  /*
+    One tier now opens all three individual systems, so the old failure mode —
+    selling a coach the Player tier, which does not open their own product —
+    cannot happen by picking the wrong tier. It can still happen by naming a
+    plan they cannot buy, so that is what is asserted instead.
+  */
+  it("sends everyone to a plan that actually opens their system", () => {
+    for (const role of ["player", "coach", "trainer"] as const) {
+      const plan = cheapestPlanFor(role)!;
+      expect(plan.roles, role).toContain(role);
+      expect(plan.legacy, role).toBeFalsy();
+      expect(upgradeReason("ai_interactions", role), role).toContain(plan.name);
+    }
+  });
+
+  /*
+    Club OS exists only on the quoted tier, so its refusal cannot name a price.
+    It must still name the plan and say what stays free — and must never render
+    the "Free" that `formatPrice(0)` would produce for a quoted plan.
+  */
+  it("points a club at the quoted tier without inventing a price", () => {
+    const s = upgradeReason("ai_interactions", "club");
+    expect(s).toContain("MIDO XI Managed");
+    expect(s).toMatch(/quoted/i);
+    expect(s).not.toContain("$0");
+    expect(s).not.toContain("Free/month");
   });
 
   it("always says what still works without paying", () => {

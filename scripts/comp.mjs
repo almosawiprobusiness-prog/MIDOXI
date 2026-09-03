@@ -73,6 +73,8 @@ const has = (name) => argv.includes(`--${name}`);
    this script would accept but the database refuses is a failure that
    should happen here, with a readable message, not as a 400 from PostgREST. */
 const TIERS = [
+  "xi",
+  "managed",
   "player",
   "touchline_coach",
   "touchline_trainer",

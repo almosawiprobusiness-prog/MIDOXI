@@ -60,11 +60,20 @@ export function upgradeReason(feature: MeteredFeature, role: RoleId): string {
   if (!plan) return `${copy.noun} needs a paid plan. ${copy.stillFree}`;
 
   const included = plan.entitlements[feature] ?? 0;
-  const price = `${formatPrice(plan.priceCents)}/month`;
+  if (included === 0) return `${copy.noun} needs a paid plan. ${copy.stillFree}`;
 
-  return included > 0
-    ? `${copy.noun} comes with ${plan.name} — ${price}, ${included} ${label(feature).toLowerCase()} a month. ${copy.stillFree}`
-    : `${copy.noun} needs a paid plan. ${copy.stillFree}`;
+  /*
+    A quoted plan has no monthly number to name, and `formatPrice(0)` would
+    cheerfully say "Free" — advertising Managed at nothing. Rule 1 above still
+    holds: name the plan and say what to do about it. "Quoted for your club" is
+    the honest version of a price when the price is a conversation.
+  */
+  if (plan.quoted) {
+    return `${copy.noun} across a club comes with ${plan.name}, quoted for your squad. ${copy.stillFree}`;
+  }
+
+  const price = `${formatPrice(plan.priceCents)}/month`;
+  return `${copy.noun} comes with ${plan.name} — ${price}, ${included} ${label(feature).toLowerCase()} a month. ${copy.stillFree}`;
 }
 
 /**

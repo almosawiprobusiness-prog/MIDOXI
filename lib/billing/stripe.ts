@@ -35,7 +35,14 @@ export function getStripe(): Stripe | null {
   return _stripe;
 }
 
-const PRICE_ENV: Record<Exclude<PlanId, "free">, () => string> = {
+/*
+  `managed` is absent, and its absence is the point: a quoted tier has no
+  self-serve price, so `priceIdFor` returning null makes checkout refuse it
+  rather than invent a charge. The Exclude below spells that out in the type.
+*/
+const PRICE_ENV: Record<Exclude<PlanId, "free" | "managed">, () => string> = {
+  xi_monthly: () => env.stripePriceXiMonthly,
+  xi_annual: () => env.stripePriceXiAnnual,
   player_monthly: () => env.stripePricePlayerMonthly,
   player_annual: () => env.stripePricePlayerAnnual,
   touchline_monthly: () => env.stripePriceTouchlineMonthly,
@@ -49,7 +56,7 @@ const PRICE_ENV: Record<Exclude<PlanId, "free">, () => string> = {
 };
 
 export function priceIdFor(planId: PlanId): string | null {
-  if (planId === "free") return null;
+  if (planId === "free" || planId === "managed") return null;
   return PRICE_ENV[planId]?.() || null;
 }
 

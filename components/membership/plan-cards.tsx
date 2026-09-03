@@ -27,6 +27,8 @@ import {
 
 const TIER_ICON: Record<Tier, LucideIcon> = {
   free: User,
+  xi: Sparkles,
+  managed: Crown,
   player: Sparkles,
   touchline: Users,
   touchline_coach: ClipboardList,
@@ -49,16 +51,26 @@ const RANK: Record<Tier, number> = {
   touchline: 2,
   touchline_coach: 2,
   touchline_trainer: 2,
+  xi: 2,
   club: 3,
+  managed: 3,
 };
 
 export function PlanCards({
   currentPlan,
   billingConfigured,
+  quoteUrl,
   attribution,
 }: {
   currentPlan: PlanId;
   billingConfigured: boolean;
+  /**
+   * Where "Request a quote" goes for the Managed tier. Null when the quote
+   * route has not been connected yet, and the card says so rather than
+   * offering a button that goes nowhere — the same honesty
+   * `billingConfigured` already buys for checkout.
+   */
+  quoteUrl?: string | null;
   /**
    * Conversion-source breadcrumb (e.g. Capture → Training) already
    * validated by the page; passed through to checkout untouched so the
@@ -107,7 +119,7 @@ export function PlanCards({
         {interval === "year" && <span className="chip chip-signal">Two months free on every tier</span>}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {TIER_CARDS.map((card) => {
           const Icon = TIER_ICON[card.tier];
           const isCurrent = card.tier === currentTier;
@@ -139,14 +151,20 @@ export function PlanCards({
 
               <div className="mt-3 flex items-baseline gap-1.5">
                 <span className="font-display text-3xl font-bold text-text-hi">
-                  {formatPrice(cents)}
+                  {/* `formatPrice(0)` says "Free", which is true of the free
+                      tier and a lie about Managed. */}
+                  {card.quoted ? "Quoted" : formatPrice(cents)}
                 </span>
-                {cents > 0 && (
+                {!card.quoted && cents > 0 && (
                   <span className="text-sm text-text-dim">/{interval === "month" ? "mo" : "yr"}</span>
                 )}
               </div>
 
-              {interval === "year" && cents > 0 && saving.pct > 0 && (
+              {card.quoted && (
+                <div className="mt-0.5 text-xs text-text-dim">Priced to your squad, not to a plan</div>
+              )}
+
+              {interval === "year" && !card.quoted && cents > 0 && saving.pct > 0 && (
                 <div className="mt-0.5 text-xs text-positive">
                   Save {saving.pct}% · {saving.monthsFree} months free
                 </div>
@@ -178,6 +196,19 @@ export function PlanCards({
                   <div className="flex h-11 items-center justify-center rounded-lg border border-line text-sm text-text-faint">
                     {isDowngrade ? "Cancel to return here" : "Where everyone starts"}
                   </div>
+                ) : card.quoted ? (
+                  quoteUrl ? (
+                    <a
+                      href={quoteUrl}
+                      className="flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-line-strong text-sm font-medium text-text-hi transition-colors hover:border-signal-line"
+                    >
+                      {card.quotedCta ?? "Request a quote"}
+                    </a>
+                  ) : (
+                    <div className="flex h-11 items-center justify-center rounded-lg border border-line px-3 text-center text-xs text-text-faint">
+                      Quotes not connected yet
+                    </div>
+                  )
                 ) : !billingConfigured ? (
                   <div className="flex h-11 items-center justify-center rounded-lg border border-line px-3 text-center text-xs text-text-faint">
                     Billing not connected yet
@@ -216,9 +247,10 @@ export function PlanCards({
       )}
 
       <p className="mt-4 text-xs leading-relaxed text-text-faint">
-        Free is one operating system of your choosing, and it stays free — not a trial. Paid tiers
-        add the AI analyst and the other systems. Cancel any time; your football record is yours
-        either way and exports in one click.
+        Free is one operating system of your choosing, and it stays free — not a trial. MIDO XI
+        adds the AI analyst and every system you work in. Managed is us doing the work and handing
+        it back in your colours. Cancel any time; your football record is yours either way and
+        exports in one click.
       </p>
     </div>
   );
