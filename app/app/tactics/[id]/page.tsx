@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { getBoard, linksForBoard } from "@/lib/data/boards";
 import { TacticalBoardEditor } from "@/components/coach/tactical-board";
 import { AskMido } from "@/components/tactics/ask-mido";
+import { PrepareForClient } from "@/components/managed/prepare-for-client";
 import { getActiveRole } from "@/lib/auth/session";
 
 export async function generateMetadata({ params }: PageProps<"/app/tactics/[id]">) {
@@ -48,6 +49,17 @@ export default async function BoardPage({ params }: PageProps<"/app/tactics/[id]
       */}
       <div className="mt-4">
         <AskMido boardId={board.id} role={role} />
+
+        {/* Managed: this board, into the review queue. */}
+        <div className="mt-3">
+          <PrepareForClient
+            title={board.title}
+            kind="tactical_board"
+            entityType="tactical_board"
+            entityId={board.id}
+            aiDrafted={board.origin?.source === "mido"}
+          />
+        </div>
       </div>
     </div>
   );

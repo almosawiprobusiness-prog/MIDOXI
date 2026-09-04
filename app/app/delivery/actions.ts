@@ -1,10 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getDeliverable, moveDeliverable } from "@/lib/data/deliverables";
+import { createDeliverable, getDeliverable, moveDeliverable } from "@/lib/data/deliverables";
 import { saveClubBrand } from "@/lib/data/brand";
 import { hexIssue } from "@/lib/brand/identity";
-import { transitionIssue, type DeliverableStatus } from "@/lib/data/deliverable-types";
+import { transitionIssue, type DeliverableKind, type DeliverableStatus } from "@/lib/data/deliverable-types";
 
 /*
   The review gate's write path.
@@ -60,6 +60,42 @@ export async function saveBrand(input: {
 
   const ok = await saveClubBrand(input);
   if (!ok) return { ok: false, error: "The identity could not be saved." };
+
+  revalidatePath("/app/delivery");
+  return { ok: true };
+}
+
+/**
+ * Put a piece of work into the queue, as a draft.
+ *
+ * Called from the work itself — a board, a session plan — so the deliverable
+ * always references something real. It cannot create anything past `draft`:
+ * the status is the column default, never a parameter, so there is no way in
+ * here that skips the reviewer.
+ */
+export async function prepareForClient(input: {
+  title: string;
+  kind: DeliverableKind;
+  entityType: string;
+  entityId: string;
+  aiDrafted?: boolean;
+}): Promise<ActionResult> {
+  if (!input.title.trim()) return { ok: false, error: "It needs a title before it can go out." };
+  if (!input.entityId) return { ok: false, error: "There is nothing here to deliver yet." };
+
+  const id = await createDeliverable({
+    title: input.title.trim(),
+    kind: input.kind,
+    entityType: input.entityType,
+    entityId: input.entityId,
+    aiDrafted: input.aiDrafted ?? false,
+  });
+  /*
+    Null here almost always means no organization — Managed work belongs to a
+    client, and without one there is nothing to belong to. Say that, rather
+    than "something went wrong".
+  */
+  if (!id) return { ok: false, error: "Could not prepare it. This account has no client organization yet." };
 
   revalidatePath("/app/delivery");
   return { ok: true };
