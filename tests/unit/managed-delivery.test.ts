@@ -11,6 +11,7 @@ import {
   readableOn,
   toBrand,
 } from "../../lib/brand/identity";
+import { clampLinkDays, linkState, DEFAULT_LINK_DAYS, MAX_LINK_DAYS } from "../../lib/data/deliverable-link-types";
 import {
   DELIVERABLE_STATUSES,
   canClientSee,
@@ -210,5 +211,44 @@ describe("the client's identity", () => {
 
     const mine = attribution(MIDO_BRAND);
     expect(mine.byline).toMatch(/MIDO XI/);
+  });
+});
+
+describe("the client's link", () => {
+  const at = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString();
+
+  it("does not exist until something is delivered", () => {
+    expect(linkState({ shareToken: null, shareExpiresAt: null, shareRevokedAt: null })).toBe("none");
+  });
+
+  it("is live while it has time left and has not been withdrawn", () => {
+    expect(linkState({ shareToken: "t", shareExpiresAt: at(10), shareRevokedAt: null })).toBe("live");
+  });
+
+  /*
+    Expired and revoked are separate states here so the operator can be told
+    which happened — but `/d/[token]` renders one page for both, because
+    telling a stranger a token "has expired" confirms it was once real.
+  */
+  it("stops being live when it expires or is withdrawn", () => {
+    expect(linkState({ shareToken: "t", shareExpiresAt: at(-1), shareRevokedAt: null })).toBe("expired");
+    expect(linkState({ shareToken: "t", shareExpiresAt: at(10), shareRevokedAt: at(-1) })).toBe("revoked");
+  });
+
+  it("treats withdrawal as final even if there is time left", () => {
+    // Revoked wins over an expiry still in the future.
+    expect(linkState({ shareToken: "t", shareExpiresAt: at(99), shareRevokedAt: at(-1) })).toBe("revoked");
+  });
+
+  /*
+    There is no "never". A club's document living on a permanent public URL is
+    the failure `report_shares` was built to avoid, and this inherits it.
+  */
+  it("always gives a link an expiry, and caps how long it can be", () => {
+    expect(clampLinkDays(0)).toBe(DEFAULT_LINK_DAYS);
+    expect(clampLinkDays(-5)).toBe(DEFAULT_LINK_DAYS);
+    expect(clampLinkDays(Number.NaN)).toBe(DEFAULT_LINK_DAYS);
+    expect(clampLinkDays(10_000)).toBe(MAX_LINK_DAYS);
+    expect(clampLinkDays(45)).toBe(45);
   });
 });

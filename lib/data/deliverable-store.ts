@@ -46,6 +46,9 @@ function seed(): DeliverableDB {
         submittedAt: iso(6),
         reviewedAt: null,
         deliveredAt: null,
+        shareToken: null,
+        shareExpiresAt: null,
+        shareRevokedAt: null,
       },
       {
         id: "dlv-2",
@@ -62,6 +65,9 @@ function seed(): DeliverableDB {
         submittedAt: iso(28),
         reviewedAt: iso(24),
         deliveredAt: null,
+        shareToken: null,
+        shareExpiresAt: null,
+        shareRevokedAt: null,
       },
       {
         id: "dlv-3",
@@ -77,6 +83,10 @@ function seed(): DeliverableDB {
         submittedAt: iso(180),
         reviewedAt: iso(170),
         deliveredAt: iso(168),
+        // Already with the client, so it has a live link.
+        shareToken: "demo-delivered-token-aaaaaaaaaaaa",
+        shareExpiresAt: new Date(Date.now() + 20 * 86_400_000).toISOString(),
+        shareRevokedAt: null,
       },
     ],
   };
@@ -113,6 +123,9 @@ export const deliverableStore = {
       submittedAt: null,
       reviewedAt: null,
       deliveredAt: null,
+      shareToken: null,
+      shareExpiresAt: null,
+      shareRevokedAt: null,
     });
     return id;
   },
@@ -133,7 +146,20 @@ export const deliverableStore = {
     }
     if (to === "approved" || to === "changes_requested") row.reviewedAt = now;
     if (to === "changes_requested") row.reviewNote = note?.trim() || "";
-    if (to === "delivered") row.deliveredAt = now;
+    if (to === "delivered") {
+      row.deliveredAt = now;
+      // Delivering mints the link. The two are one act.
+      row.shareToken = `demo-${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`;
+      row.shareExpiresAt = new Date(Date.now() + 30 * 86_400_000).toISOString();
+      row.shareRevokedAt = null;
+    }
+    return true;
+  },
+
+  revokeLink(id: string): boolean {
+    const row = db.rows.find((r) => r.id === id);
+    if (!row || !row.shareToken) return false;
+    row.shareRevokedAt = new Date().toISOString();
     return true;
   },
 };

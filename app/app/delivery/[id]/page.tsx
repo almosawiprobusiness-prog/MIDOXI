@@ -13,6 +13,9 @@ import { phaseMeta } from "@/lib/data/coach-types";
 import { ClubHeader } from "@/components/brand/club-header";
 import { BoardView } from "@/components/tactics/board-view";
 import { DeliverableActions } from "@/components/managed/deliverable-actions";
+import { ClientLink } from "@/components/managed/client-link";
+import { deliverableUrl, linkState } from "@/lib/data/deliverable-link-types";
+import { env } from "@/lib/env";
 
 /*
   One deliverable, as the client will receive it.
@@ -189,6 +192,20 @@ export default async function DeliverablePage({ params }: PageProps<"/app/delive
         <div className="mt-4">
           <DeliverableActions id={deliverable.id} status={deliverable.status} />
         </div>
+
+        {/* The link exists only because this was delivered — it is minted by
+            that same write, so there is nothing to generate here. */}
+        {deliverable.shareToken && (
+          <div className="mt-6 border-t border-line pt-4">
+            <div className="label-tech mb-2">The client&rsquo;s link</div>
+            <ClientLink
+              id={deliverable.id}
+              url={deliverableUrl(env.appUrl, deliverable.shareToken)}
+              state={linkState(deliverable)}
+              expiresAt={deliverable.shareExpiresAt}
+            />
+          </div>
+        )}
       </section>
     </div>
   );

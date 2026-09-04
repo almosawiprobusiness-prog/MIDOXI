@@ -60,6 +60,14 @@ export interface Deliverable {
   submittedAt: string | null;
   reviewedAt: string | null;
   deliveredAt: string | null;
+
+  /*
+    The client's link. Minted by the same move that sets `delivered`, so
+    "delivered" and "the client can actually read it" cannot disagree.
+  */
+  shareToken: string | null;
+  shareExpiresAt: string | null;
+  shareRevokedAt: string | null;
 }
 
 export interface DeliverableInput {

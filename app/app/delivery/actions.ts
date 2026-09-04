@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createDeliverable, getDeliverable, moveDeliverable } from "@/lib/data/deliverables";
 import { saveClubBrand } from "@/lib/data/brand";
+import { revokeDeliverableLink } from "@/lib/data/deliverable-links";
 import { hexIssue } from "@/lib/brand/identity";
 import { transitionIssue, type DeliverableKind, type DeliverableStatus } from "@/lib/data/deliverable-types";
 
@@ -98,5 +99,19 @@ export async function prepareForClient(input: {
   if (!id) return { ok: false, error: "Could not prepare it. This account has no client organization yet." };
 
   revalidatePath("/app/delivery");
+  return { ok: true };
+}
+
+/**
+ * Withdraw a client's link.
+ *
+ * The deliverable stays delivered. It *was* sent, and rewriting that would be
+ * editing history — only the reader's access ends.
+ */
+export async function withdrawDeliverableLink(id: string): Promise<ActionResult> {
+  const ok = await revokeDeliverableLink(id);
+  if (!ok) return { ok: false, error: "That link could not be withdrawn." };
+  revalidatePath("/app/delivery");
+  revalidatePath(`/app/delivery/${id}`);
   return { ok: true };
 }

@@ -1,5 +1,5 @@
 import "server-only";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
 import { currentOrgId } from "./club";
 import { normalizeHex, toBrand, type ClubBrand } from "@/lib/brand/identity";
@@ -90,4 +90,33 @@ export async function saveClubBrand(input: BrandInput): Promise<boolean> {
     })
     .eq("id", orgId);
   return !error;
+}
+
+/**
+ * A named organization's identity, for a reader who is not signed in.
+ *
+ * Only ever called after a delivery token has resolved — the token is the
+ * authorisation, and the org id comes from the resolved row rather than from
+ * anything the reader supplied. Returns MIDO's own brand when the club has set
+ * none, so a delivered document always has a masthead.
+ */
+export async function brandForOrg(orgId: string): Promise<ClubBrand> {
+  if (isDemoMode) return toBrand(demoBrand);
+
+  const admin = createAdminClient();
+  if (!admin) return toBrand(null);
+
+  const { data } = await admin
+    .from("organizations")
+    .select("name, short_name, crest_url, brand_primary")
+    .eq("id", orgId)
+    .maybeSingle();
+  if (!data) return toBrand(null);
+
+  return toBrand({
+    name: data.name as string,
+    shortName: data.short_name as string | null,
+    crestUrl: data.crest_url as string | null,
+    primary: data.brand_primary as string | null,
+  });
 }

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isDemoMode } from "@/lib/env";
 import { currentOrgId } from "./club";
 import { deliverableStore } from "./deliverable-store";
+import { clampLinkDays, DEFAULT_LINK_DAYS, mintToken } from "./deliverable-links";
 import {
   canClientSee,
   canTransition,
@@ -45,6 +46,9 @@ function rowToDeliverable(r: Record<string, unknown>): Deliverable {
     submittedAt: (r.submitted_at as string | null) ?? null,
     reviewedAt: (r.reviewed_at as string | null) ?? null,
     deliveredAt: (r.delivered_at as string | null) ?? null,
+    shareToken: (r.share_token as string | null) ?? null,
+    shareExpiresAt: (r.share_expires_at as string | null) ?? null,
+    shareRevokedAt: (r.share_revoked_at as string | null) ?? null,
   };
 }
 
@@ -150,7 +154,19 @@ export async function moveDeliverable(
   }
   if (to === "approved" || to === "changes_requested") patch.reviewed_at = now;
   if (to === "changes_requested") patch.review_note = note?.trim() ?? "";
-  if (to === "delivered") patch.delivered_at = now;
+  if (to === "delivered") {
+    patch.delivered_at = now;
+    /*
+      Minting here, in the same write that sets the status, is what makes
+      "delivered" mean something. A separate "create link" step would allow a
+      row that says it reached the client while nothing did.
+    */
+    patch.share_token = mintToken();
+    patch.share_expires_at = new Date(
+      Date.now() + clampLinkDays(DEFAULT_LINK_DAYS) * 86_400_000,
+    ).toISOString();
+    patch.share_revoked_at = null;
+  }
 
   const { error } = await supabase
     .from("client_deliverables")

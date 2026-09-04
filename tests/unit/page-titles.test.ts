@@ -66,6 +66,12 @@ const FIXED_TITLE_ALLOWED: Record<string, string> = {
     "revoked all render identically so that nobody can learn a token was ever " +
     "real; naming the report in the tab would leak its subject to exactly the " +
     "person the page is written to tell nothing, and put it in their history.",
+
+  "app/d/[token]/page.tsx":
+    "A delivered deliverable opened by a client holding a link. Same reasoning " +
+    "as the shared report above: the tab title would put the club's name and " +
+    "the document's title into browser history and onto any screen the reader " +
+    "shares, and a token that names its contents is no longer only a token.",
 };
 
 describe("every route names itself", () => {
