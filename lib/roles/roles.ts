@@ -28,6 +28,7 @@ import {
   Gift,
   Wallet,
   Share2,
+  PackageCheck,
   type LucideIcon,
 } from "lucide-react";
 
@@ -340,6 +341,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
       { label: "Staff", href: "/app/staff", icon: Users, hint: "Coaches & trainers", status: "live", group: "primary" },
       { label: "Methodology", href: "/app/methodology", icon: BookMarked, hint: "How we play, train, develop", status: "live", group: "primary" },
       { label: "Development", href: "/app/intelligence", icon: LineChart, hint: "Organization trends", status: "live", group: "primary" },
+      { label: "Delivery", href: "/app/delivery", icon: PackageCheck, hint: "Review before it goes out", status: "live", group: "more" },
       study,
       calendar,
       meetings,
