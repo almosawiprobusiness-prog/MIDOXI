@@ -2,7 +2,13 @@
 
 import { useState, useTransition } from "react";
 import { Sparkles, Loader2, Info } from "lucide-react";
-import { askExplainBoard, askBoardToDrill } from "@/app/app/tactics/ai-actions";
+import {
+  askExplainBoard,
+  askBoardToDrill,
+  askRedrawBoard,
+  applyBoardDocument,
+  type RedrawnBoard,
+} from "@/app/app/tactics/ai-actions";
 import type { BoardExplanation } from "@/lib/ai/board-engine";
 import type { DraftedDrill } from "@/lib/ai/board-engine";
 import { cn } from "@/lib/utils";
@@ -33,6 +39,9 @@ export function AskMido({ boardId, role }: { boardId: string; role: string }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [showPositions, setShowPositions] = useState(false);
+  const [redraw, setRedraw] = useState<RedrawnBoard | null>(null);
+  const [asking, setAsking] = useState(false);
+  const [brief, setBrief] = useState("");
   const [, start] = useTransition();
 
   const run = (key: string, fn: () => Promise<void>) => {
@@ -50,6 +59,26 @@ export function AskMido({ boardId, role }: { boardId: string; role: string }) {
       if (res.ok) setAnswer({ kind: "explanation", data: res.data });
       else setError(res.error);
       setShowPositions(false);
+    });
+
+  /*
+    Draw the idea onto this board. Two steps on purpose: MIDO proposes, a
+    person replaces. A board has no version history, so a one-click overwrite
+    would destroy work that cannot be recovered.
+  */
+  const propose = () =>
+    run("redraw", async () => {
+      const res = await askRedrawBoard(boardId, brief);
+      if (res.ok) setRedraw(res.data);
+      else setError(res.error);
+    });
+
+  const applyIt = () =>
+    run("apply", async () => {
+      if (!redraw) return;
+      const res = await applyBoardDocument(boardId, redraw.doc);
+      if (res.ok) window.location.reload();
+      else setError(res.error);
     });
 
   const drill = () =>
@@ -87,6 +116,16 @@ export function AskMido({ boardId, role }: { boardId: string; role: string }) {
           Explain by position
         </button>
 
+        <button
+          type="button"
+          onClick={() => setAsking((v) => !v)}
+          disabled={busy !== null}
+          aria-expanded={asking}
+          className={btn}
+        >
+          Draw it on this board
+        </button>
+
         {role !== "player" && (
           <button type="button" onClick={drill} disabled={busy !== null} className={btn}>
             {busy === "drill" && <Loader2 className="size-3 animate-spin" />}
@@ -108,6 +147,57 @@ export function AskMido({ boardId, role }: { boardId: string; role: string }) {
               {busy === p ? <Loader2 className="size-3 animate-spin" /> : p}
             </button>
           ))}
+        </div>
+      )}
+
+      {asking && (
+        <div className="mt-2 border-t border-line pt-2">
+          <input
+            value={brief}
+            onChange={(e) => setBrief(e.target.value)}
+            placeholder="Leave empty to draw the objective already on this board"
+            className="h-8 w-full rounded-lg border border-line bg-ink-900 px-2.5 text-xs text-text placeholder:text-text-faint focus:border-signal-line focus:outline-none"
+          />
+          <button
+            type="button"
+            onClick={propose}
+            disabled={busy !== null}
+            className="mt-2 flex h-7 items-center gap-1.5 rounded-md border border-line px-2.5 text-xs text-text-dim transition-colors hover:border-signal-line hover:text-signal-bright disabled:opacity-50"
+          >
+            {busy === "redraw" && <Loader2 className="size-3 animate-spin" />}
+            Draw it
+          </button>
+
+          {redraw && (
+            <div className="mt-3 rounded-lg border border-line bg-ink-850 p-3">
+              {(redraw.composed || redraw.note) && (
+                <p className="mb-2 flex items-start gap-1.5 text-[11px] leading-relaxed text-text-dim">
+                  <Info className="mt-0.5 size-3 shrink-0" />
+                  <span>{redraw.note ?? "This is the starting shape, not a drawn idea."}</span>
+                </p>
+              )}
+              <p className="text-xs text-text">
+                {redraw.summary.ours} of yours against {redraw.summary.theirs} ·{" "}
+                {redraw.summary.paths} movement{redraw.summary.paths === 1 ? "" : "s"} ·{" "}
+                {redraw.summary.zones} area{redraw.summary.zones === 1 ? "" : "s"}
+              </p>
+              {redraw.objective && (
+                <p className="mt-1 text-xs leading-relaxed text-text-dim">{redraw.objective}</p>
+              )}
+              <p className="mt-2 text-[11px] leading-relaxed text-text-faint">
+                Applying replaces what is on this board. There is no undo once saved.
+              </p>
+              <button
+                type="button"
+                onClick={applyIt}
+                disabled={busy !== null}
+                className="mt-2 flex h-7 items-center gap-1.5 rounded-md bg-signal px-2.5 text-xs font-medium text-white transition-colors hover:bg-signal-deep disabled:opacity-50"
+              >
+                {busy === "apply" && <Loader2 className="size-3 animate-spin" />}
+                Replace the board with this
+              </button>
+            </div>
+          )}
         </div>
       )}
 

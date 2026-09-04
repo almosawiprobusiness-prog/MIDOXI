@@ -12,7 +12,7 @@ import {
   type BoardExplanation,
   type DraftedDrill,
 } from "@/lib/ai/board-engine";
-import { toDocument } from "@/lib/tactics/document";
+import { countDocument, toDocument } from "@/lib/tactics/document";
 import type { TacticalDocument } from "@/lib/tactics/types";
 
 /*
@@ -131,6 +131,62 @@ export async function applyBoardDocument(
 
   revalidatePath(`/app/tactics/${boardId}`);
   return { ok: true, data: { boardId } };
+}
+
+// ── redraw: MIDO drafts onto a board that already exists ─────
+
+export interface RedrawnBoard {
+  doc: TacticalDocument;
+  /** What MIDO put on it, so the coach can judge before replacing anything. */
+  summary: { ours: number; theirs: number; paths: number; zones: number };
+  objective: string;
+  composed: boolean;
+  note: string | null;
+}
+
+/**
+ * Ask MIDO to draw the idea onto THIS board.
+ *
+ * Returns the document rather than writing it. There is no version history on
+ * a board, so replacing a coach's work on the strength of one click would be
+ * the one thing this codebase refuses to do everywhere else: take something
+ * away that cannot be got back. The caller shows what came out and applies it
+ * only if the person says so.
+ */
+export async function askRedrawBoard(
+  boardId: string,
+  request: string,
+): Promise<AiBoardResult<RedrawnBoard>> {
+  const board = await getBoard(boardId);
+  if (!board) return { ok: false, error: "That board no longer exists." };
+
+  /*
+    The board's own objective is the best brief there is — it is what the
+    coach already said the picture should show, and the commonest failure is
+    a board whose drawing does not match it.
+  */
+  const brief = request.trim() || board.doc.objective || board.title;
+  if (!brief) return { ok: false, error: "Say what the board should show, or give it an objective first." };
+
+  const role = await getActiveRole();
+  let drafted;
+  try {
+    drafted = await draftBoard(brief, { role, formation: board.formation });
+  } catch {
+    return { ok: false, error: "MIDO could not draw this just now." };
+  }
+
+  const count = countDocument(drafted.doc);
+  return {
+    ok: true,
+    data: {
+      doc: drafted.doc,
+      summary: { ours: count.ours, theirs: count.theirs, paths: count.paths, zones: count.zones },
+      objective: drafted.objective,
+      composed: drafted.composed,
+      note: drafted.note,
+    },
+  };
 }
 
 // ── transform: board → drill, optionally into a session ──────
