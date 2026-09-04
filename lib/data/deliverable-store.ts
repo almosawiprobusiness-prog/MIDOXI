@@ -49,6 +49,7 @@ function seed(): DeliverableDB {
         shareToken: null,
         shareExpiresAt: null,
         shareRevokedAt: null,
+        supersededBy: null,
       },
       {
         id: "dlv-2",
@@ -68,6 +69,7 @@ function seed(): DeliverableDB {
         shareToken: null,
         shareExpiresAt: null,
         shareRevokedAt: null,
+        supersededBy: null,
       },
       {
         id: "dlv-3",
@@ -87,6 +89,7 @@ function seed(): DeliverableDB {
         shareToken: "demo-delivered-token-aaaaaaaaaaaa",
         shareExpiresAt: new Date(Date.now() + 20 * 86_400_000).toISOString(),
         shareRevokedAt: null,
+        supersededBy: null,
       },
     ],
   };
@@ -126,6 +129,7 @@ export const deliverableStore = {
       shareToken: null,
       shareExpiresAt: null,
       shareRevokedAt: null,
+      supersededBy: null,
     });
     return id;
   },
@@ -153,6 +157,19 @@ export const deliverableStore = {
       row.shareExpiresAt = new Date(Date.now() + 30 * 86_400_000).toISOString();
       row.shareRevokedAt = null;
     }
+    return true;
+  },
+
+  /*
+    Replace delivered work. Two writes that must not come apart: the new draft
+    exists, and the old one stops being readable. Doing only the first leaves a
+    client holding a live link to work we have replaced.
+  */
+  supersede(id: string, newId: string): boolean {
+    const row = db.rows.find((r) => r.id === id);
+    if (!row || row.status !== "delivered" || row.supersededBy) return false;
+    row.supersededBy = newId;
+    if (row.shareToken && !row.shareRevokedAt) row.shareRevokedAt = new Date().toISOString();
     return true;
   },
 

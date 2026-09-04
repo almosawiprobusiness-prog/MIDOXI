@@ -65,7 +65,7 @@ export async function resolveDeliverableLink(
 
   const { data } = await admin
     .from("client_deliverables")
-    .select("id, org_id, status, share_expires_at, share_revoked_at")
+    .select("id, org_id, status, superseded_by, share_expires_at, share_revoked_at")
     .eq("share_token", token)
     .maybeSingle();
   if (!data) return null;
@@ -76,6 +76,14 @@ export async function resolveDeliverableLink(
     the cost of being wrong is a client reading unreviewed work.
   */
   if (data.status !== "delivered") return null;
+
+  /*
+    Superseded work is not served, even if its link were somehow still live.
+    Superseding revokes the link, so this should be unreachable — which is
+    exactly why it is here: the cost of the revoke having failed is a client
+    reading a version we replaced.
+  */
+  if (data.superseded_by) return null;
   if (
     linkState({
       shareToken: token,
@@ -116,6 +124,7 @@ export async function readDeliverableForClient(id: string): Promise<Deliverable 
     shareToken: (r.share_token as string | null) ?? null,
     shareExpiresAt: (r.share_expires_at as string | null) ?? null,
     shareRevokedAt: (r.share_revoked_at as string | null) ?? null,
+    supersededBy: (r.superseded_by as string | null) ?? null,
   };
 }
 

@@ -68,6 +68,16 @@ export interface Deliverable {
   shareToken: string | null;
   shareExpiresAt: string | null;
   shareRevokedAt: string | null;
+
+  /**
+   * The deliverable that replaced this one.
+   *
+   * Only ever set on delivered work — everything earlier can just be edited.
+   * `delivered` is terminal precisely because somebody outside the building
+   * has read it, and this is the honest way to correct that: a new document
+   * that says what changed, not a quiet rewrite of the one they have.
+   */
+  supersededBy: string | null;
 }
 
 export interface DeliverableInput {

@@ -14,6 +14,7 @@ import { ClubHeader } from "@/components/brand/club-header";
 import { BoardView } from "@/components/tactics/board-view";
 import { DeliverableActions } from "@/components/managed/deliverable-actions";
 import { ClientLink } from "@/components/managed/client-link";
+import { SupersedeButton, SupersededNote } from "@/components/managed/supersede-button";
 import { deliverableUrl, linkState } from "@/lib/data/deliverable-link-types";
 import { env } from "@/lib/env";
 
@@ -190,12 +191,25 @@ export default async function DeliverablePage({ params }: PageProps<"/app/delive
         )}
 
         <div className="mt-4">
-          <DeliverableActions id={deliverable.id} status={deliverable.status} />
+          {/*
+            Delivered work has no moves left — `nextStates` is empty and the
+            actions component says so. What it does have is the one thing the
+            gate has been telling people to do: replace it.
+          */}
+          {deliverable.status === "delivered" ? (
+            deliverable.supersededBy ? (
+              <SupersededNote newId={deliverable.supersededBy} />
+            ) : (
+              <SupersedeButton id={deliverable.id} />
+            )
+          ) : (
+            <DeliverableActions id={deliverable.id} status={deliverable.status} />
+          )}
         </div>
 
         {/* The link exists only because this was delivered — it is minted by
             that same write, so there is nothing to generate here. */}
-        {deliverable.shareToken && (
+        {deliverable.shareToken && !deliverable.supersededBy && (
           <div className="mt-6 border-t border-line pt-4">
             <div className="label-tech mb-2">The client&rsquo;s link</div>
             <ClientLink

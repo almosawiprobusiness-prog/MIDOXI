@@ -1,7 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createDeliverable, getDeliverable, moveDeliverable } from "@/lib/data/deliverables";
+import {
+  createDeliverable,
+  getDeliverable,
+  moveDeliverable,
+  supersedeDeliverable,
+} from "@/lib/data/deliverables";
 import { saveClubBrand } from "@/lib/data/brand";
 import { revokeDeliverableLink } from "@/lib/data/deliverable-links";
 import { hexIssue } from "@/lib/brand/identity";
@@ -114,4 +119,29 @@ export async function withdrawDeliverableLink(id: string): Promise<ActionResult>
   revalidatePath("/app/delivery");
   revalidatePath(`/app/delivery/${id}`);
   return { ok: true };
+}
+
+/**
+ * Replace delivered work with a new version.
+ *
+ * The one answer to a mistake that has already been read. `transitionIssue`
+ * has been telling people to do this since the gate existed; this is the
+ * doing of it.
+ */
+export async function supersede(id: string): Promise<ActionResult & { newId?: string }> {
+  const current = await getDeliverable(id);
+  if (!current) return { ok: false, error: "That deliverable no longer exists." };
+  if (current.status !== "delivered") {
+    return { ok: false, error: "Only work that has been sent needs superseding — this can still be edited." };
+  }
+  if (current.supersededBy) {
+    return { ok: false, error: "This has already been superseded." };
+  }
+
+  const newId = await supersedeDeliverable(id);
+  if (!newId) return { ok: false, error: "It could not be superseded." };
+
+  revalidatePath("/app/delivery");
+  revalidatePath(`/app/delivery/${id}`);
+  return { ok: true, newId };
 }

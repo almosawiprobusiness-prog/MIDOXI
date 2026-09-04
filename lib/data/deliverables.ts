@@ -49,6 +49,7 @@ function rowToDeliverable(r: Record<string, unknown>): Deliverable {
     shareToken: (r.share_token as string | null) ?? null,
     shareExpiresAt: (r.share_expires_at as string | null) ?? null,
     shareRevokedAt: (r.share_revoked_at as string | null) ?? null,
+    supersededBy: (r.superseded_by as string | null) ?? null,
   };
 }
 
@@ -174,4 +175,48 @@ export async function moveDeliverable(
     .eq("id", id)
     .eq("org_id", orgId);
   return !error;
+}
+
+/**
+ * Replace delivered work with a new version.
+ *
+ * Creates the replacement as a DRAFT pointing at the same work, ties the old
+ * row to it, and withdraws the old link — one act, because doing only the
+ * first half leaves the client holding a live link to something we have
+ * already decided was wrong.
+ *
+ * The replacement starts at draft like anything else. Correcting a mistake is
+ * not a reason to skip the reviewer; it is a reason to want one.
+ */
+export async function supersedeDeliverable(id: string): Promise<string | null> {
+  const current = await getDeliverable(id);
+  if (!current || current.status !== "delivered" || current.supersededBy) return null;
+
+  const newId = await createDeliverable({
+    title: current.title,
+    kind: current.kind,
+    entityType: current.entityType,
+    entityId: current.entityId,
+    aiDrafted: current.aiDrafted,
+  });
+  if (!newId) return null;
+
+  if (isDemoMode) {
+    return deliverableStore.supersede(id, newId) ? newId : null;
+  }
+
+  const supabase = await createClient();
+  const orgId = await currentOrgId();
+  if (!supabase || !orgId) return null;
+
+  const { error } = await supabase
+    .from("client_deliverables")
+    .update({
+      superseded_by: newId,
+      // The old link dies with the old version.
+      share_revoked_at: current.shareRevokedAt ?? new Date().toISOString(),
+    })
+    .eq("id", id)
+    .eq("org_id", orgId);
+  return error ? null : newId;
 }

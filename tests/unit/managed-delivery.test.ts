@@ -252,3 +252,39 @@ describe("the client's link", () => {
     expect(clampLinkDays(45)).toBe(45);
   });
 });
+
+/*
+  Superseding exists because `delivered` is terminal. These assert the two
+  claims the feature makes rather than the plumbing: the gate still refuses to
+  reopen sent work, and the replacement is not privileged for being a fix.
+*/
+describe("replacing work the client has read", () => {
+  it("is the only move left, because delivered is terminal", () => {
+    expect(nextStates("delivered")).toEqual([]);
+    // The gate's own words. Superseding is what they instruct.
+    expect(transitionIssue("delivered", "draft")).toMatch(/supersede/i);
+    expect(transitionIssue("delivered", "in_review")).toMatch(/supersede/i);
+  });
+
+  /*
+    A correction is not a reason to skip the reviewer — it is a reason to want
+    one. The replacement starts where everything starts.
+  */
+  it("starts the replacement at draft like anything else", () => {
+    expect(canClientSee("draft")).toBe(false);
+    expect(nextStates("draft")).toEqual(["in_review"]);
+    // And it still cannot reach the client without a person.
+    expect(canTransition("draft", "delivered")).toBe(false);
+  });
+
+  /*
+    The link dies with the version. `linkState` reports revoked regardless of
+    time left, which is what stops a client holding a live link to work we
+    have replaced.
+  */
+  it("kills the old link when the new version is made", () => {
+    const future = new Date(Date.now() + 30 * 86_400_000).toISOString();
+    const now = new Date().toISOString();
+    expect(linkState({ shareToken: "t", shareExpiresAt: future, shareRevokedAt: now })).toBe("revoked");
+  });
+});
