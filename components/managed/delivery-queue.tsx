@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { Loader2, Send, Check, Undo2, Sparkles, User } from "lucide-react";
 import { moveDeliverableTo } from "@/app/app/delivery/actions";
 import {
@@ -95,9 +96,14 @@ export function DeliveryQueue({ items }: { items: Deliverable[] }) {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="font-display text-base font-semibold leading-tight text-text-hi">
+                  {/* The title opens the work. Approving from a list means
+                      signing off a document you have not read. */}
+                  <Link
+                    href={`/app/delivery/${d.id}`}
+                    className="font-display text-base font-semibold leading-tight text-text-hi underline-offset-4 hover:underline"
+                  >
                     {d.title}
-                  </h3>
+                  </Link>
                   <span className={`label-tech ${TONE[d.status]}`}>{label(d.status)}</span>
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-text-faint">
