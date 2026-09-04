@@ -5,6 +5,7 @@ import { getSessionPlan } from "@/lib/data/coach";
 import { boardsForMany, listBoards } from "@/lib/data/boards";
 import { BoardPicker } from "@/components/tactics/board-picker";
 import { AttachedBoards } from "@/components/tactics/attached-boards";
+import { PrepareForClient } from "@/components/managed/prepare-for-client";
 import { phaseMeta, plannedMinutes, SESSION_PHASES } from "@/lib/data/coach-types";
 import { SectionHeader } from "@/components/ui/primitives";
 import { SessionForm } from "@/components/coach/session-form";
@@ -43,6 +44,16 @@ export default async function SessionPage({ params }: PageProps<"/app/sessions/[
       >
         <ArrowLeft className="size-3.5" /> Sessions
       </Link>
+
+      {/* Managed: this session, into the review queue. */}
+      <div className="mb-6">
+        <PrepareForClient
+          title={plan.title}
+          kind="session_plan"
+          entityType="session_plan"
+          entityId={plan.id}
+        />
+      </div>
 
       <header className="mb-6 flex flex-wrap items-start gap-3">
         <div className="min-w-0 flex-1">

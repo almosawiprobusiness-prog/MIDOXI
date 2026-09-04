@@ -403,15 +403,36 @@ export const FORMATIONS: Record<string, { label: string; x: number; y: number }[
 
 export const FORMATION_NAMES = Object.keys(FORMATIONS);
 
-/** The opposition block a new board is drawn against. */
+/*
+  The opposition block a new board is drawn against: a 4-4-2 mid-block.
+
+  It used to be a back four and two centre-mids — no front line at all. That
+  is the half of the opposition a build-up board is actually about, and
+  `in-possession` is the default phase, so the commonest first board on this
+  product contradicted its own objective: you would write "split the two
+  strikers" and there were no strikers on the pitch.
+
+  A 4-4-2 because it is the shape most teams are coached against, and a
+  complete one because deleting a player you do not need is a smaller cost
+  than not noticing an absent line until a coach reads the board back.
+*/
 const OPPOSITION_BLOCK: { label: string; x: number; y: number }[] = [
   { label: "GK", x: 50, y: 95 },
-  { label: "RB", x: 18, y: 80 },
-  { label: "CB", x: 40, y: 84 },
-  { label: "CB", x: 60, y: 84 },
-  { label: "LB", x: 82, y: 80 },
-  { label: "CM", x: 34, y: 64 },
-  { label: "CM", x: 66, y: 64 },
+
+  { label: "RB", x: 18, y: 82 },
+  { label: "CB", x: 40, y: 85 },
+  { label: "CB", x: 60, y: 85 },
+  { label: "LB", x: 82, y: 82 },
+
+  { label: "RM", x: 18, y: 64 },
+  { label: "CM", x: 39, y: 64 },
+  { label: "CM", x: 61, y: 64 },
+  { label: "LM", x: 82, y: 64 },
+
+  /* Just inside our half — a mid-block, not a high press. Where they stand
+     is what the board teaches, so the neutral default is the common one. */
+  { label: "ST", x: 43, y: 47 },
+  { label: "ST", x: 57, y: 47 },
 ];
 
 /**

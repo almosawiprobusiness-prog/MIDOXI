@@ -172,6 +172,24 @@ describe("formations", () => {
     expect(doc.frames[0].entities.some((e) => e.kind === "ball")).toBe(true);
   });
 
+  /*
+    The block used to be a back four and two centre-mids — no front line. That
+    is the half of the opposition a build-up board is about, and the default
+    phase is in-possession, so the first board anyone made contradicted its own
+    objective: "split the two strikers", with no strikers on the pitch.
+  */
+  it("gives the opponent a front line, not just a back six", () => {
+    const doc = documentFromFormation("4-3-3");
+    const theirs = doc.frames[0].entities.filter((e) => sideOf(e.kind) === "theirs");
+    const forwards = theirs.filter((e) => e.label === "ST");
+    expect(forwards.length, "a build-up board needs someone to build against").toBe(2);
+
+    // And they are upfield of their own midfield, or they are not a front line.
+    const mid = theirs.filter((e) => e.label === "CM" || e.label === "RM" || e.label === "LM");
+    const highestMid = Math.max(...mid.map((e) => e.y));
+    for (const f of forwards) expect(f.y, f.label).toBeLessThan(highestMid);
+  });
+
   it("starts with nothing drawn on it", () => {
     expect(isDrawnOn(documentFromFormation("3-5-2"))).toBe(false);
   });
@@ -332,7 +350,7 @@ describe("describing a board for MIDO", () => {
   });
 
   it("summarises a board in one scannable line", () => {
-    expect(summariseBoard(board())).toContain("11v7");
+    expect(summariseBoard(board())).toContain("11v11");
   });
 });
 
@@ -400,7 +418,8 @@ describe("counting", () => {
     const doc: TacticalDocument = documentFromFormation("4-3-3");
     const c = countDocument(doc);
     expect(c.ours).toBe(11);
-    expect(c.theirs).toBe(7);
+    // A full opposition XI — see "gives the opponent a front line" above.
+    expect(c.theirs).toBe(11);
     expect(c.frames).toBe(1);
   });
 });
