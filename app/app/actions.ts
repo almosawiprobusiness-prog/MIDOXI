@@ -31,7 +31,31 @@ export async function signOut() {
  * if the account has never used that role before, so the user lands in a
  * working workspace rather than an error.
  */
-export async function switchRole(role: RoleId): Promise<{ ok: boolean; error?: string }> {
+/*
+  Where to land after switching.
+
+  The sidebar switcher wants the new system's home. A page that is already the
+  thing you wanted — reached by a deep link, in the wrong system — wants to
+  stay put. Hence the optional path.
+
+  IT IS VALIDATED BECAUSE IT IS CALLER-SUPPLIED. An unchecked redirect target
+  is an open redirect: a crafted link could bounce someone off this action to
+  another origin wearing our URL. Only an in-app path is honoured, and only
+  ever a path — never anything that could name a host.
+*/
+function safeReturn(to: string | undefined): string {
+  if (!to) return "/app";
+  if (to.includes("\\") || to.includes("://")) return "/app";
+  // "//evil.example" is protocol-relative and would leave the origin.
+  if (to.startsWith("//")) return "/app";
+  if (!to.startsWith("/app")) return "/app";
+  return to;
+}
+
+export async function switchRole(
+  role: RoleId,
+  returnTo?: string,
+): Promise<{ ok: boolean; error?: string }> {
   if (!isRoleId(role)) return { ok: false, error: "Unknown role." };
 
   /*
@@ -77,7 +101,7 @@ export async function switchRole(role: RoleId): Promise<{ ok: boolean; error?: s
   }
 
   revalidatePath("/", "layout");
-  redirect("/app");
+  redirect(safeReturn(returnTo));
 }
 
 export interface CheckinInput {
