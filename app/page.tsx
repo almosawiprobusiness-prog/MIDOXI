@@ -9,12 +9,13 @@ import {
   ProductStory,
   PocketStatement,
 } from "@/components/marketing/product-story";
+import { OneMatchIn, HowSureIsIt } from "@/components/marketing/one-match-in";
 import { FaqAccordion } from "@/components/marketing/faq-accordion";
 import { FAQ } from "@/lib/marketing/faq";
 import { latestPosts } from "@/lib/blog/posts";
 
 export const metadata = {
-  title: "MIDO XI — Your entire football career. One system.",
+  title: "MIDO XI — Your match. Your problems. Your next session.",
   description:
     "A private football intelligence environment for players, coaches, trainers and clubs. Matches, film, training, development and AI study — one connected loop.",
 };
@@ -90,15 +91,15 @@ export default function LandingPage() {
           {/* Hero copy */}
           <div className="flex flex-1 items-center">
             <div className="mx-auto w-full max-w-6xl px-5 pb-24 pt-10">
-              <div className="chip chip-signal mb-6">Football Performance OS</div>
+              <div className="chip chip-signal mb-6">MIDO XI · Football intelligence</div>
               <h1
-                aria-label="Your entire football career. One system."
+                aria-label="Your match. Your problems. Your next session."
                 className="max-w-3xl font-display text-6xl font-bold uppercase leading-[0.98] tracking-tight text-text-hi md:text-8xl [text-shadow:0_2px_30px_rgba(0,0,0,0.75)]"
               >
                 {[
-                  <span key="l1">Your entire</span>,
-                  <span key="l2">football career.</span>,
-                  <span key="l3" className="text-signal">One system.</span>,
+                  <span key="l1">Your match.</span>,
+                  <span key="l2">Your problems.</span>,
+                  <span key="l3" className="text-signal">Your next session.</span>,
                 ].map((line, li) => (
                   <span key={li} className="block overflow-hidden pb-[0.08em] -mb-[0.08em]">
                     <span className="hero-line" style={{ animationDelay: `${0.15 + li * 0.09}s` }}>
@@ -108,24 +109,22 @@ export default function LandingPage() {
                 ))}
               </h1>
               <p className="mt-6 max-w-xl text-lg leading-relaxed text-text [text-shadow:0_1px_16px_rgba(0,0,0,0.8)]">
-                Every match, every clip, every lesson, every session. MIDO XI is the
-                private intelligence environment where serious footballers study,
-                prepare and build a career — and where film turns into real
-                improvement.
+                Give MIDO your football. It reads the film, points at the moments it
+                can actually see, and turns what happened into the work you do next.
               </p>
               <div className="mt-9 flex flex-wrap items-center gap-3">
                 <Link
                   href="/signup"
                   className="group flex items-center gap-2 rounded-xl bg-signal px-5 py-3 font-medium text-white shadow-lg shadow-black/40 transition-colors hover:bg-signal-deep"
                 >
-                  Create your player profile
+                  Let MIDO read my football
                   <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
                 </Link>
                 <Link
                   href={isDemoMode ? "/app" : "/login"}
                   className="rounded-xl border border-line-strong bg-ink-950/40 px-5 py-3 font-medium text-text backdrop-blur-sm transition-colors hover:border-signal-line hover:text-signal-bright"
                 >
-                  {isDemoMode ? "Explore the demo locker" : "Log in"}
+                  {isDemoMode ? "Explore the demo" : "Log in"}
                 </Link>
               </div>
             </div>
@@ -159,6 +158,15 @@ export default function LandingPage() {
       {/* The Locker — the product surface itself as the showpiece */}
       <LockerShowcase />
 
+      {/*
+        The argument, shown as a sequence. It sits directly under the hero
+        because the hero makes a claim and this is the evidence for it.
+      */}
+      <OneMatchIn />
+
+      {/* Confidence, as a product position rather than a field on a row. */}
+      <HowSureIsIt />
+
       {/* Development loop */}
       <section className="cv-auto relative z-10 mx-auto max-w-6xl px-5 py-14">
         <div className="label-tech mb-6">The development loop</div>
@@ -181,10 +189,10 @@ export default function LandingPage() {
           ))}
         </div>
         <p className="mt-4 max-w-2xl text-sm text-text-dim">
-          Football improvement shouldn&rsquo;t live in disconnected apps. MIDO
-          links what happened in a match to the film that explains it, the
-          insight you took, the study that sharpens it, and the training that
-          fixes it — then back to the next match.
+          Your football doesn&rsquo;t end at the final whistle. MIDO links what
+          happened in a match to the film that explains it, the priority it
+          becomes, and the session built to fix it — then back to the next
+          match, where it checks whether the work held.
         </p>
       </section>
 
@@ -317,14 +325,14 @@ export default function LandingPage() {
 
       {/* CTA — bookend of the hero */}
       <section className="cv-auto relative z-10 mx-auto max-w-6xl px-5 py-20 text-center">
-        <div className="label-tech mb-3">MIDO XI / The player system</div>
+        <div className="label-tech mb-3">MIDO XI / Football intelligence</div>
         <h2 className="mx-auto max-w-2xl font-display text-4xl font-bold uppercase tracking-tight text-text-hi md:text-6xl">
-          Your entire football career.{" "}
-          <span className="text-signal">One system.</span>
+          Give MIDO your football.{" "}
+          <span className="text-signal">See what it sees.</span>
         </h2>
         <p className="mx-auto mt-4 max-w-md text-text-dim">
-          Every match, clip, lesson and session stays connected to what you do
-          next.
+          One match is enough to start. What MIDO learns about you keeps every
+          session after it pointed at something real.
         </p>
         <Link
           href="/signup"
