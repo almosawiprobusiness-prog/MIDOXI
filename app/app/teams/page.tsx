@@ -7,16 +7,27 @@ import { PageHeader, StatBand } from "@/components/ui/kit";
 import { EmptyState, DemoNote } from "@/components/dashboards/shared";
 import { TeamForm } from "@/components/club/team-form";
 import { StaffForm } from "@/components/club/staff-form";
+import { requireRole, viewingFromOtherOs } from "@/lib/auth/guard";
+import { ROLES } from "@/lib/roles/roles";
+import { OsNotice } from "@/components/shell/os-notice";
 
 export const metadata = { title: "Teams — MIDO XI" };
 
 export default async function TeamsPage() {
+  /* Club OS. `requireRole` is the entitlement gate; being in another
+     system is only context, so that is a notice rather than a refusal —
+     see lib/auth/guard.ts. */
+  const user = await requireRole("club");
+  const elsewhere = viewingFromOtherOs(user, "club");
+
   const [teams, staff] = await Promise.all([listTeams(), listStaff()]);
   const unstaffed = teamsWithoutStaff(teams);
   const recorded = teams.reduce((n, t) => n + (t.squadSize ?? 0), 0);
 
   return (
     <div className="mx-auto max-w-[1100px] px-4 py-8 md:px-6">
+      {elsewhere && <OsNotice role="club" label={ROLES.club.label} />}
+
       <PageHeader
         icon={Network}
         title="Teams"

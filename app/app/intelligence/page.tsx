@@ -6,10 +6,19 @@ import { isDemoMode } from "@/lib/env";
 import { PageHeader, StatBand, ProgressRow } from "@/components/ui/kit";
 import { SectionHeader } from "@/components/ui/primitives";
 import { EmptyState, DemoNote } from "@/components/dashboards/shared";
+import { requireRole, viewingFromOtherOs } from "@/lib/auth/guard";
+import { ROLES } from "@/lib/roles/roles";
+import { OsNotice } from "@/components/shell/os-notice";
 
 export const metadata = { title: "Development trends — MIDO XI" };
 
 export default async function ClubIntelligencePage() {
+  /* Club OS. `requireRole` is the entitlement gate; being in another
+     system is only context, so that is a notice rather than a refusal —
+     see lib/auth/guard.ts. */
+  const user = await requireRole("club");
+  const elsewhere = viewingFromOtherOs(user, "club");
+
   const [club, sections] = await Promise.all([getClubOverview(), listMethodology()]);
   const unstaffed = teamsWithoutStaff(club.teams);
   const activeStaff = club.staff.filter((s) => s.status !== "left");
@@ -44,6 +53,8 @@ export default async function ClubIntelligencePage() {
 
   return (
     <div className="mx-auto max-w-[1100px] px-4 py-8 md:px-6">
+      {elsewhere && <OsNotice role="club" label={ROLES.club.label} />}
+
       <PageHeader
         icon={LineChart}
         title="Development trends"

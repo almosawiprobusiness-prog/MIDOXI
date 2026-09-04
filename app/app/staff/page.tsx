@@ -7,10 +7,19 @@ import { SectionHeader } from "@/components/ui/primitives";
 import { EmptyState, DemoNote } from "@/components/dashboards/shared";
 import { StaffForm } from "@/components/club/staff-form";
 import { InviteButton } from "@/components/connections/invite-button";
+import { requireRole, viewingFromOtherOs } from "@/lib/auth/guard";
+import { ROLES } from "@/lib/roles/roles";
+import { OsNotice } from "@/components/shell/os-notice";
 
 export const metadata = { title: "Staff — MIDO XI" };
 
 export default async function StaffPage() {
+  /* Club OS. `requireRole` is the entitlement gate; being in another
+     system is only context, so that is a notice rather than a refusal —
+     see lib/auth/guard.ts. */
+  const user = await requireRole("club");
+  const elsewhere = viewingFromOtherOs(user, "club");
+
   const [staff, teams] = await Promise.all([listStaff(), listTeams()]);
   const teamName = new Map(teams.map((t) => [t.id, t.name]));
   const activeStaff = staff.filter((s) => s.status !== "left");
@@ -23,6 +32,8 @@ export default async function StaffPage() {
 
   return (
     <div className="mx-auto max-w-[1100px] px-4 py-8 md:px-6">
+      {elsewhere && <OsNotice role="club" label={ROLES.club.label} />}
+
       <PageHeader
         icon={Users}
         title="Staff"
