@@ -18,6 +18,7 @@ function toPlanBlock(b: Record<string, unknown>): PlanBlock {
     detail: (b.notes as string) ?? "",
     work: (b.rest as string) ?? "",
     source: (b.distance as string) ?? "",
+    why: (b.why as string) || undefined,
   };
 }
 
@@ -39,6 +40,16 @@ function merge(
     improved: (log?.improved as string) ?? "",
     feltOff: (log?.felt_off as string) ?? "",
     plan: plan.length ? plan : undefined,
+    /*
+      Provenance only when the key is there. A label alone would be a claim
+      about where the session came from with nothing behind it.
+    */
+    builtFrom: session.built_from_key
+      ? {
+          key: String(session.built_from_key),
+          label: String(session.built_from_label ?? session.built_from_key),
+        }
+      : null,
   };
 }
 

@@ -55,6 +55,16 @@ function SessionRow({ e }: { e: TrainingEntry }) {
             <Target className="size-3 text-text-faint" /> {e.objective}
           </div>
         ) : null}
+        {/*
+          Why this session exists at all. A player opening it on Thursday
+          should not have to remember what Sunday's film said.
+        */}
+        {e.builtFrom ? (
+          <div className="mt-2 flex flex-wrap items-baseline gap-x-2 border-l-2 border-signal-line pl-2.5 text-xs">
+            <span className="label-tech !text-text-faint">Built from</span>
+            <span className="text-text">{e.builtFrom.label}</span>
+          </div>
+        ) : null}
         {e.plan?.length ? (
           <div className="mt-2 space-y-1 border-t border-line pt-2">
             {e.plan.map((b, i) => (
@@ -62,6 +72,9 @@ function SessionRow({ e }: { e: TrainingEntry }) {
                 <span className="text-text">{b.name}</span>
                 <span className="data-mono text-text-faint">{b.work}</span>
                 {b.source ? <span className="text-[10px] uppercase tracking-wide text-signal-bright">{b.source}</span> : null}
+                {b.why ? (
+                  <span className="basis-full text-[11px] leading-relaxed text-text-faint">{b.why}</span>
+                ) : null}
               </div>
             ))}
           </div>

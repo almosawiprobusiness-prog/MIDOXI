@@ -11,7 +11,28 @@ export interface PlanBlock {
   name: string;
   detail: string;
   work: string;
+  /** Human label for where this block came from — "Your film", a goal title. */
   source: string;
+  /**
+   * Why this block is here, as the engine wrote it at draft time.
+   *
+   * It used to live only in the draft dialog, which meant the reasoning
+   * survived exactly as long as the modal was open. The work without the
+   * argument for it is a drill list.
+   */
+  why?: string;
+}
+
+/**
+ * What a session was built around.
+ *
+ * Both halves are stored. The key can go stale — a priority gets achieved,
+ * a goal gets deleted — and a session that can no longer resolve its origin
+ * should still be able to say what it was for.
+ */
+export interface BuiltFrom {
+  key: string;
+  label: string;
 }
 
 export interface TrainingInput {
@@ -27,6 +48,8 @@ export interface TrainingInput {
   feltOff?: string;
   /** The accepted plan, when this session came from the session engine. */
   plan?: PlanBlock[];
+  /** The focus this session was drafted around, when there was one. */
+  builtFrom?: BuiltFrom | null;
   /**
    * Film concepts the plan trained, for the TRAINING_LOGGED payload —
    * this is what lets reports say "trained what the film showed".

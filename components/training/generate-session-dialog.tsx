@@ -175,7 +175,18 @@ export function GenerateSessionDialog({ initialFocus }: { initialFocus?: string 
         detail: b.detail,
         work: b.work,
         source: sources[b.sourceKey] ?? "",
+        // The argument for the block, kept. It used to live only in this
+        // dialog, so the reasoning died when the modal closed.
+        why: b.why || undefined,
       })),
+      /*
+        What the session was built around. Resolved to a label here, while
+        the source is still in hand — a goal can be achieved or deleted
+        later, and the session should still be able to say what it was for.
+      */
+      builtFrom: brief.focusKey
+        ? { key: brief.focusKey, label: sources[brief.focusKey] ?? brief.focusKey }
+        : null,
       concepts: [...new Set(concepts)],
     });
     if (res.ok) {

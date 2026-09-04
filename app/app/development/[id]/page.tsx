@@ -12,6 +12,7 @@ import { SavedMoments } from "@/components/film/saved-moments";
 import { GoalFormDialog } from "@/components/development/goal-form-dialog";
 import { DeleteGoalButton } from "@/components/development/delete-goal-button";
 import { GoalLoop } from "@/components/development/goal-loop";
+import { BuildNextWork } from "@/components/development/build-next-work";
 import { ShareArtifact } from "@/components/community/share-artifact";
 import type { DevelopmentGoal } from "@/lib/types";
 
@@ -84,6 +85,17 @@ export default async function GoalDetailPage({ params }: { params: Promise<{ id:
               <DeleteGoalButton id={goal.id} title={goal.title} />
             </div>
           </div>
+
+          {/*
+            The loop closes here. An achieved priority does not need next
+            work — offering it would be asking the player to keep training
+            something they have finished.
+          */}
+          {goal.status !== "achieved" && (
+            <div className="mt-5 border-t border-line pt-5">
+              <BuildNextWork goalId={goal.id} evidenceCount={evidence.length} />
+            </div>
+          )}
 
           {/* Progress */}
           <div className="mt-5">

@@ -94,6 +94,7 @@ async function writePlan(
       notes: b.detail,
       rest: b.work,
       distance: b.source || null,
+      why: b.why || null,
       position: i,
     })),
   );
@@ -121,6 +122,12 @@ export async function createTraining(input: TrainingInput): Promise<Result> {
       scheduled_at: input.scheduledAt,
       duration_min: input.durationMin ?? null,
       objective: input.objective || null,
+      /*
+        The session's own provenance. Written on creation only — a session
+        cannot acquire a reason for existing after the fact.
+      */
+      built_from_key: input.builtFrom?.key ?? null,
+      built_from_label: input.builtFrom?.label ?? null,
     })
     .select("id")
     .single();
